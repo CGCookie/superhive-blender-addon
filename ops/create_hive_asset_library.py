@@ -1,6 +1,13 @@
+from typing import TYPE_CHECKING
 import bpy
 from bpy.types import Operator, UILayout, Context
-from bpy.props import StringProperty, EnumProperty
+from bpy.props import StringProperty, EnumProperty, BoolProperty
+from pathlib import Path
+
+from .. import __package__ as base_package
+
+if TYPE_CHECKING:
+    from ..ui import prefs
 
 
 class SH_OT_CreateHiveAssetLibrary(Operator):
@@ -9,107 +16,116 @@ class SH_OT_CreateHiveAssetLibrary(Operator):
     bl_description = "Create a new asset library for the Superhive system"
     bl_options = {'REGISTER', 'UNDO'}
 
+    ui_width = 400
+
     library_name: StringProperty(
         name="Asset Library Name",
         description="The name of the asset library to create",
-    )
-
-    directory: StringProperty(
-        name="Asset Library Directory",
-        description="The directory to store assets in for the new library",
     )
 
     draw_phase: EnumProperty(
         items=(
             ("NAME", "Name", "Get a name"),
             ("NAME_EXISTS", "Name Exists", "The name already exists"),
-            ("DIR", "Directory", "Get a dir"),
-            ("DIR_EXISTS", "Directory Exists", "The directory already exists"),
-            ("COMPLETE", "Complete", "Complete the creation of the asset library"),
+            ("COMPLETE", "Complete",
+             "Complete the creation of the asset library"),
         )
     )
 
     def draw(self, context):
         layout = self.layout
+        layout.use_property_split = True
+        layout.activate_init = True
         if self.draw_phase == "NAME":
             self.draw_get_name(layout)
         elif self.draw_phase == "NAME_EXISTS":
             self.draw_name_exists(layout)
-        elif self.draw_phase == "DIR":
-            self.draw_get_dir(layout)
-        elif self.draw_phase == "DIR_EXISTS":
-            self.draw_dir_exists(layout)
         elif self.draw_phase == "COMPLETE":
             self.draw_complete(layout)
 
     def draw_get_name(self, layout: UILayout):
-        layout.label(text="Enter the name of the new asset library")
-        layout.prop(self, "library_name")
+        row = layout.row()
+        row.alignment = 'CENTER'
+        row.label(text="Enter the name of the new asset library")
+
+        lib_exists = bool(self.asset_lib_prefs.get(self.library_name))
+        row = layout.row()
+        row.activate_init = True
+        row.alert = lib_exists
+        row.prop(self, "library_name")
+        if lib_exists:
+            row = layout.row()
+            row.alert = True
+            row.alignment = 'RIGHT'
+            row.label(text="An asset library with the same name already exists.")
 
     def draw_name_exists(self, layout: UILayout):
-        layout.label(text="An asset library with the same name already exists.")
-        layout.label(text="Please choose another.")
-        layout.prop(self, "library_name")
+        row = layout.row()
+        row.alert = True
+        row.alignment = 'CENTER'
+        row.label(text="An asset library with the same name already exists.")
 
-    def draw_get_dir(self, layout: UILayout):
-        layout.label(text="Enter the directory for the new asset library")
-        layout.prop(self, "directory")
+        row = layout.row()
+        row.alignment = 'CENTER'
+        row.label(text="Please choose another.")
 
-    def draw_dir_exists(self, layout: UILayout):
-        layout.label(text="An asset library with the same directory already exists.")
-        layout.label(text="Please choose another.")
-        layout.prop(self, "directory")
+        lib_exists = bool(self.asset_lib_prefs.get(self.library_name))
+        row = layout.row()
+        row.alert = lib_exists
+        row.activate_init = True
+        row.prop(self, "library_name")
+        if lib_exists:
+            row = layout.row()
+            row.alert = True
+            row.alignment = 'RIGHT'
+            row.label(text="An asset library with the same name already exists.")
 
     def draw_complete(self, layout: UILayout):
-        layout.label(text="The asset library has been created.")
-        layout.label(text="Enjoy filling it with assets!")
+        row = layout.row()
+        row.alignment = 'CENTER'
+        row.label(text="The asset library has been created.")
+        row = layout.row()
+        row.alignment = 'CENTER'
+        row.label(text="Enjoy filling it with assets!")
 
     def invoke(self, context, event):
         self.draw_phase = "NAME"
 
         self.library_name = ""
-        self.directory = ""
 
-        context.window_manager.modal_handler_add(self)
+        self.asset_lib_prefs = context.preferences.filepaths.asset_libraries
 
-        return {'RUNNING_MODAL'}
+        return context.window_manager.invoke_props_dialog(self, width=self.ui_width)
 
-    def modal(self, context, event):
-        if not self.library_name and self.draw_phase == "NAME":
-            return context.window_manager.invoke_popup(self)
+    def execute(self, context):
         if self.library_name and self.draw_phase == "NAME":
             return self.check_library_name(context)
-        if self.draw_phase == "NAME_EXISTS":
+        elif self.draw_phase == "NAME_EXISTS":
             return self.check_library_name(context)
-        if self.draw_phase == "DIR":
-            return self.check_dir(context)
-        if self.draw_phase == "DIR_EXISTS":
-            return self.check_dir(context)
         if self.draw_phase == "COMPLETE":
+            # context.space_data.params.asset_library_reference = self.library_name
             return {'FINISHED'}
 
     def check_library_name(self, context: Context):
-        lib = context.preferences.filepaths.asset_libraries.get(self.library_name)
+        lib = self.asset_lib_prefs.get(self.library_name)
         if lib:
             self.draw_phase = "NAME_EXISTS"
+            context.window_manager.invoke_props_dialog(self, width=self.ui_width)
+            return {'RUNNING_MODAL'}
         else:
-            self.draw_phase = "DIR"
-        return context.window_manager.invoke_popup(self)
-
-    def check_dir(self, context: Context):
-        for asset_lib in context.preferences.filepaths.asset_libraries:
-            if asset_lib.path == self.directory:
-                self.draw_phase = "DIR_EXISTS"
-                break
-        if self.draw_phase == "DIR":
-            self.draw_phase = "COMPLETE"
             self.create_asset_library(context)
-        return context.window_manager.invoke_popup(self)
+            self.draw_phase = "COMPLETE"
+            context.window_manager.invoke_props_dialog(self, width=self.ui_width)
+            return {'RUNNING_MODAL'}
 
     def create_asset_library(self, context: Context):
-        context.preferences.filepaths.asset_libraries.new(
+        pref_settings: 'prefs.SH_AddonPreferences' = context.preferences.addons[base_package].preferences
+        dir: Path = Path(pref_settings.library_directory) / self.library_name.replace(" ", "_").casefold()
+        dir.mkdir(parents=True, exist_ok=True)
+
+        self.asset_lib_prefs.new(
             name=self.library_name,
-            directory=self.directory
+            directory=str(dir)
         )
 
 
