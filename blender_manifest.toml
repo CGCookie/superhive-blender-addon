@@ -1,17 +1,14 @@
 schema_version = "1.0.0"
-
-# Example of manifest file for a Blender extension
-# Change the values according to your extension
 id = "superhive_creator_extension" # Unique identifier for the extension.
-version = "1.0.0"
 name = "Superhive Creator Extension"
+version = "1.0.0"
 tagline = "This is an extension for Superhive asset creators to aid in the creation and uploading of asset libraries"
 maintainer = "Zach Eastin, Richard Trainer"
 # Supported types: "add-on", "theme"
 type = "add-on"
 
 # Optional link to documentation, support, source files, etc
-# website = "https://extensions.blender.org/add-ons/my-example-package/"
+website = "https://github.com/CGCookie/superhive-blender-addon"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
@@ -57,10 +54,10 @@ license = [
 ## Keep this a single short sentence without a period (.) at the end.
 ## For longer explanations use the documentation or detail page.
 #
-# [permissions]
+# clipboard = "Copy and paste bone transforms"
+[permissions]
 network = "Need to sync motion-capture data to server"
 files = "Import/export FBX from/to disk"
-clipboard = "Copy and paste bone transforms"
 
 # Optional: build setting.
 # https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build
