@@ -19,7 +19,7 @@ Created by Zach Eastin, Richard Traynor, Superhive
 print()
 print()
 print(f"Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(80, '-'))
-from . import ui, settings, ops, helpers
+from . import hive_mind, ui, settings, ops, helpers
 
 
 def _call_globals(attr_name):
