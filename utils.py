@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import Union
 import uuid
+from contextlib import contextmanager
 
 
 class Catalog:
@@ -227,6 +228,23 @@ class Catalog:
 
 class CatalogsFile:
     def __init__(self, dir: Path, is_new=False) -> None:
+        """
+        Initialize the Utils class.
+
+        Parameters
+        ----------
+        dir : Path
+            The directory path.
+        is_new : bool, optional
+            Flag indicating if the directory is new, by default False.
+
+        Notes
+        -----
+        - If `is_new` is False, the catalogs file will be loaded or raised a `FileNotFoundError` if not found.
+        - If the catalogs file is not found in the specified directory, the class will attempt to find the catalogs file in parent directories before raising a `FileNotFoundError`.
+        - If `is_new` is True, a file won't be created until `write_file` is called.
+        """
+
         self.path = Path(dir) / "blender_assets.cats.txt"
         """The path to the catalogs file."""
 
@@ -237,6 +255,7 @@ class CatalogsFile:
             if is_new:
                 return
 
+            # Try to find the catalogs file in a parent directory
             dir = self.path.parent
             found_new = False
             while dir != dir.parent:
@@ -447,6 +466,13 @@ class CatalogsFile:
             catalog.data = self
             catalog.ensure_correct_child_parenting()
 
+
+# Context manager for opening and then saving the catalogs file
+@contextmanager
+def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
+    a = CatalogsFile(path, is_new=is_new)
+    yield a
+    a.write_file()
 
 # if __name__ == "__main__":
 #     a = CatalogsFile(Path("C:\\Users\\Zach\\Documents\\Blender\\Assets"))

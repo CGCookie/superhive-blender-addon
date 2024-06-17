@@ -44,24 +44,43 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         asset: AssetRepresentation = context.asset
 
-        if asset.metadata.sh_uuid == "":
-            layout.operator("superhive.convert_assets_to_hive")
-            return
-        
+        # if asset.metadata.sh_uuid == "":
+        #     layout.operator("superhive.convert_assets_to_hive")
+        #     return
+
         layout.prop(asset, "name")
-        layout.prop(asset.metadata, "sh_description")
+        # layout.prop(asset.metadata, "sh_description")
         layout.prop(asset.metadata, "author")
-        layout.prop(asset.metadata, "sh_license")
-        layout.prop(asset.metadata, "sh_created_blender_version")
-        
+        # layout.prop(asset.metadata, "sh_license")
+        # layout.prop(asset.metadata, "sh_created_blender_version")
 
         if prefs.display_extras:
             layout.label(text="Extra information is displayed")
-            layout.label(text=f"UUID: {asset.metadata.sh_uuid}")
+            # layout.label(text=f"UUID: {asset.metadata.sh_uuid}")
+
+
+class SH_PT_LibrarySettings(Panel):
+    bl_idname = "SH_PT_LibrarySettings"
+    bl_label = "Superhive"
+    bl_space_type = "FILE_BROWSER"
+    bl_region_type = "TOOLS"
+    # bl_category = "Superhive"
+    bl_order = 1000
+    bl_options = {'HIDE_HEADER'}
+
+    @classmethod
+    def poll(cls, context):
+        return asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data) and context.scene.superhive.library_mode == "SUPERHIVE"
+
+    def draw(self, context):
+        layout: UILayout = self.layout
+
+        layout.operator("superhive.add_categories_to_library")
 
 
 classes = (
     SH_PT_AssetSettings,
+    SH_PT_LibrarySettings,
 )
 
 
