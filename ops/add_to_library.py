@@ -1,16 +1,10 @@
-# from typing import TYPE_CHECKING
 import bpy
-from bpy.types import Operator, AssetRepresentation, Context, UserAssetLibrary
-from bpy.props import StringProperty, BoolProperty
+from bpy.types import Operator, AssetRepresentation, UserAssetLibrary
+from bpy.props import BoolProperty, EnumProperty
 from pathlib import Path
-from fuzzywuzzy import process, fuzz
+# from fuzzywuzzy import process, fuzz
 
 from ..utils import CatalogsFile, Catalog
-
-# from .. import __package__ as base_package
-
-# if TYPE_CHECKING:
-#     from ..ui import prefs
 
 
 class SH_OT_AddToLibrary(Operator):
@@ -19,20 +13,13 @@ class SH_OT_AddToLibrary(Operator):
     bl_description = "Add the selected asset(s) to a library"
     bl_options = {"REGISTER", "UNDO"}
 
-    def _search_library_items(self, context: Context, edit_text: str):
-        asset_libs = context.preferences.filepaths.asset_libraries
-        lib_names = [lib.name for lib in asset_libs]
-        if edit_text:
-            items = process.extract(
-                edit_text, lib_names, limit=5, scorer=fuzz.partial_ratio
-            )
-            return [(item, f"Match: {match}%") for item, match in items]
-        return [(item, item) for item in lib_names]
+    # TODO: Remove fuzzywuzzy if not used in other places
 
-    library: StringProperty(
-        name="Library Name",
-        description="The name of the asset library to add the asset to",
-        search=_search_library_items,
+    def _get_library_items(self, context):
+        asset_libs = context.preferences.filepaths.asset_libraries
+        return [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+    library: EnumProperty(
+        items=_get_library_items,
     )
 
     delete_after: BoolProperty(
@@ -56,7 +43,6 @@ class SH_OT_AddToLibrary(Operator):
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
-        layout.prop(self, "library")
         layout.prop(self, "keep_blend_files_as_is")
         layout.prop(self, "copy_catalogs")
         if self.keep_blend_files_as_is:
@@ -173,7 +159,6 @@ class SH_OT_AddToLibrary(Operator):
         with bpy.types.BlendData.temp_data() as bpy_data:
             bpy_data: bpy.types.BlendData
             for asset in assets:
-                print(asset.name, ",", asset.id_type, ",", asset.full_library_path)
                 data_type = self.asset_types_to_id_types[asset.id_type]
                 with bpy_data.libraries.load(asset.full_library_path) as (
                     data_from,
@@ -190,8 +175,6 @@ class SH_OT_AddToLibrary(Operator):
 
                     if asset_item:
                         getattr(data_to, data_type).append(asset_item)
-                    else:
-                        print(f"  - Not found in '{asset.full_library_path}'")
 
                 if data := getattr(data_to, data_type):
                     if self.copy_catalogs:
@@ -212,20 +195,14 @@ class SH_OT_AddToLibrary(Operator):
                             cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
                             if cat:
                                 catalogs.append(cat)
-                            else:
-                                print(
-                                    f"     - Catalog '{asset.metadata.catalog_simple_name}' Not Found! | {asset.metadata.catalog_id}"
-                                )
-                    print(f"  - Writing to blend | {dir / f'{asset.name}.blend'}")
-                    print(f"      - Assets written: {data}")
                     bpy_data.libraries.write(
                         str(dir / f"{asset.name}.blend"), set(data), compress=True
                     )
 
-        print("Catalogs:")
+        # print("Catalogs:")
         catfile = CatalogsFile(dir, is_new=True)
         for catalog in catalogs:
-            print(f"   - {catalog.get_line()}")
+            # print(f"   - {catalog.get_line()}")
             catfile.add_catalog_from_other(catalog)
         catfile.write_file()
 
@@ -246,8 +223,13 @@ class SH_OT_AddToLibrary(Operator):
         for blend_file in blend_files:
             src = Path(blend_file)
             dst = dir / src.name
-            print(f"  - Copying blend file | {src} -> {dst}")
+            # print(f"  - Copying blend file | {src} -> {dst}")
             dst.write_bytes(src.read_bytes())
+
+# TODO: Remove from library (needs to not just delete the blend file,
+# TODO: but check if other assets are in the blend and decide between
+# TODO: deleting (no other assets) or removing the asset from the blend
+# TODO: (other assets) and just removing the asset tag)
 
 
 classes = (SH_OT_AddToLibrary,)
