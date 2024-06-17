@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Union
 import uuid
 from contextlib import contextmanager
+from bpy.types import AssetRepresentation, UserAssetLibrary
 
 
 class Catalog:
@@ -84,6 +85,13 @@ class Catalog:
         """
         if id in self.children:
             del self.children[id]
+
+    def remove_self(self) -> None:
+        """Remove this catalog from its parent's children."""
+        if isinstance(self.data, Catalog):
+            self.data.remove_child(self.id)
+        else:
+            self.data.remove_catalog(self.id)
 
     def load_path(self) -> None:
         """
@@ -224,6 +232,14 @@ class Catalog:
         for catalog in self.children.values():
             catalog.data = self
             catalog.ensure_correct_child_parenting()
+
+    def get_catalogs(self) -> list['Catalog']:
+        """Return a list of all catalogs in the file as a 1-Dimensional list."""
+        catalogs = []
+        for catalog in self.children.values():
+            catalogs.append(catalog)
+            catalogs.extend(catalog.get_catalogs())
+        return catalogs
 
 
 class CatalogsFile:
@@ -466,6 +482,13 @@ class CatalogsFile:
             catalog.data = self
             catalog.ensure_correct_child_parenting()
 
+    def get_catalogs(self) -> list[Catalog]:
+        """Return a list of all catalogs in the file as a 1-Dimensional list."""
+        catalogs = []
+        for catalog in self.catalogs.values():
+            catalogs.append(catalog)
+            catalogs.extend(catalog.get_catalogs())
+        return catalogs
 
 # Context manager for opening and then saving the catalogs file
 @contextmanager
@@ -474,6 +497,24 @@ def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
     yield a
     a.write_file()
 
-# if __name__ == "__main__":
-#     a = CatalogsFile(Path("C:\\Users\\Zach\\Documents\\Blender\\Assets"))
-#     a.print_catalog_tree()
+
+def gather_assets_of_library(lib: UserAssetLibrary) -> list[AssetRepresentation]:
+    """
+    Gather all assets of a library.
+
+    Parameters
+    ----------
+    lib : UserAssetLibrary
+        The library to gather assets from.
+
+    Returns
+    -------
+    list[AssetRepresentation]
+        A list of all assets in the library.
+    """
+    assets = []
+
+    # Go through all assets and see if their path is relative to the library path
+    # ! Currently no way to access all assets, only those visible in the UI
+
+    return assets

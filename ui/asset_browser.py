@@ -76,6 +76,7 @@ class SH_PT_LibrarySettings(Panel):
         layout: UILayout = self.layout
 
         layout.operator("superhive.add_categories_to_library")
+        layout.operator("superhive.remove_empty_catalogs")
 
 
 classes = (
