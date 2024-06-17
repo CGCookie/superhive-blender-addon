@@ -1,8 +1,11 @@
 # Utilities for interacting with the blender_assets.cats.txt file
-from pathlib import Path
-from typing import Union
 import uuid
 from contextlib import contextmanager
+from pathlib import Path
+from platform import system
+from subprocess import Popen
+from typing import Union
+
 from bpy.types import AssetRepresentation, UserAssetLibrary
 
 
@@ -518,3 +521,28 @@ def gather_assets_of_library(lib: UserAssetLibrary) -> list[AssetRepresentation]
     # ! Currently no way to access all assets, only those visible in the UI
 
     return assets
+
+
+def open_location(fpath: str, win_open=False):
+    """
+    Opens the file explorer or finder window to the specified file path.
+
+    Args:
+    - fpath (str): The file path to open.
+    - win_open (bool): If True and the operating system is Windows, the file will be opened with the default program.
+
+    Returns:
+    - None
+    """
+    os = system()
+    if os == "Windows":
+        if win_open:
+            from os import startfile
+            startfile(fpath)
+        else:
+            Popen(["explorer", "/select,", fpath])
+    elif os == "Darwin":
+        Popen(["open", fpath])
+    else:
+        Popen(["xdg-open", fpath])
+

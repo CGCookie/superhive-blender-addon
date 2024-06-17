@@ -8,14 +8,19 @@ from bpy_extras import asset_utils
 from .. import __package__ as base_package
 
 if TYPE_CHECKING:
+    from ..settings import scene
     from . import prefs as sh_prefs
 
 
 def draw_assetbrowser_header(self, context: Context):
     space_data = context.space_data
+    layout: UILayout = self.layout
+
+    scene_sets: 'scene.SH_Scene' = context.scene.superhive
+    if scene_sets.header_progress_bar.show:
+        scene_sets.header_progress_bar.draw(layout)
 
     if asset_utils.SpaceAssetInfo.is_asset_browser(space_data):
-        layout: UILayout = self.layout
         layout.prop(context.scene.superhive, "library_mode", text="")
         layout.operator(
             "superhive.create_hive_asset_library",
@@ -77,6 +82,7 @@ class SH_PT_LibrarySettings(Panel):
 
         layout.operator("superhive.add_categories_to_library")
         layout.operator("superhive.remove_empty_catalogs")
+        layout.operator("superhive.export_library", text="Export to Superhive")
 
 
 classes = (
