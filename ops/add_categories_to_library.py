@@ -1,7 +1,5 @@
-from pathlib import Path
-
 import bpy
-from bpy.types import Operator, UserAssetLibrary
+from bpy.types import Operator
 from bpy_extras import asset_utils
 
 from .. import hive_mind, utils
@@ -18,7 +16,7 @@ class SH_OT_AddCategoriesToLibrary(Operator):
         description="Load categories from Superhive API",
         default=False,
     )
-    
+
     clear_existing: bpy.props.BoolProperty(
         name="Clear Existing",
         description="Clear existing categories",
@@ -38,25 +36,21 @@ class SH_OT_AddCategoriesToLibrary(Operator):
         return self.execute(context)
 
     def execute(self, context: bpy.types.Context) -> set[str]:
-        lib_name: str = context.space_data.params.asset_library_reference
-        lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(lib_name)
+        lib = utils.from_active(context, load_catalogs=True)
 
-        if not lib:
-            self.report({"ERROR"}, f"Asset library '{lib_name}' not found")
-            return {"CANCELLED"}
+        lib_path_exists: bool = lib.path.exists()
+        if not lib_path_exists:
+            lib.path.mkdir(parents=True)
 
-        lib_path = Path(lib.path)
-        if not lib_path.exists():
-            lib_path.mkdir(parents=True)
-
-        file_path = lib_path/"blender_assets.cats.txt"
-        if self.clear_existing and file_path.exists():
-            file_path.unlink()
+        if self.clear_existing and lib.catalogs.exists():
+            lib.catalogs.delete_file()
+            lib.catalogs.write_empty_file()
+            lib.catalogs.load_catalogs()
 
         if self.load_from_superhive:
             hive_mind.load_categories()
 
-        with utils.open_catalogs_file(lib.path, is_new=not file_path.exists()) as cat_file:
+        with lib.open_catalogs_file() as cat_file:
             cat_file: utils.CatalogsFile
             for category_uuid, sub_list in hive_mind.SUBCATEGORIES.items():
                 cat_info = hive_mind.CATEGORIES.get(category_uuid)
@@ -69,7 +63,7 @@ class SH_OT_AddCategoriesToLibrary(Operator):
                         sub = cat.add_child(sub_info["name"], id=sub_uuid)
 
         bpy.ops.asset.library_refresh()
-        
+
         return {"FINISHED"}
 
 

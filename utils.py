@@ -1,4 +1,5 @@
 # Utilities for interacting with the blender_assets.cats.txt file
+import subprocess
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -6,7 +7,9 @@ from platform import system
 from subprocess import Popen
 from typing import Union
 
-from bpy.types import AssetRepresentation, UserAssetLibrary
+import bpy
+from bpy.types import Area, AssetRepresentation, Context, UserAssetLibrary
+from bpy_extras import asset_utils
 
 
 class Catalog:
@@ -25,12 +28,14 @@ class Catalog:
         data : Union["CatalogsFile", "Catalog"]
             The parent Catalog or CatalogsFile object.
         name : str
-            The name or `simple_name` of the Catalog object. Will set `simple_name` and `name` if `path` is not provided.
+            The name or `simple_name` of the Catalog object.
+            Will set `simple_name` and `name` if `path` is not provided.
         id : str, optional
             The unique identifier for the Catalog object. If not provided, a new UUID (uuid4) will be generated.
         path : str, optional
-            The path associated with the Catalog object. If provided, the name of the Catalog object will be extracted from the path.
-        
+            The path associated with the Catalog object.
+            If provided, the name of the Catalog object will be extracted from the path.
+
         Returns
         -------
         None
@@ -70,6 +75,7 @@ class Catalog:
         Catalog
             The child catalog that was added.
         """
+        id = id or str(uuid.uuid4())
         self.children[id] = Catalog(self, name, id=id, path=path or self.load_path())
         return self.children[id]
 
@@ -120,13 +126,13 @@ class Catalog:
         return lines
 
     def get_line(self) -> str:
-            """
-            Returns a formatted string representing the line information.
+        """
+        Returns a formatted string representing the line information.
 
-            Returns:
-                str: A string in the format "{id}:{path}:{simple_name}\n".
-            """
-            return f"{self.id}:{self.path}:{self.simple_name}\n"
+        Returns:
+            str: A string in the format "{id}:{path}:{simple_name}\n".
+        """
+        return f"{self.id}:{self.path}:{self.simple_name}\n"
 
     def print_catalog_tree(self, indent=0) -> None:
         """
@@ -148,24 +154,24 @@ class Catalog:
             catalog.print_catalog_tree(indent + 1)
 
     def find_catalog(self, id: str) -> "Catalog":
-            """
-            Find a catalog with the given ID among this catalog's children.
+        """
+        Find a catalog with the given ID among this catalog's children.
 
-            Parameters:
-            - id (str): The ID of the catalog to find.
+        Parameters:
+        - id (str): The ID of the catalog to find.
 
-            Returns:
-            - Catalog: The catalog with the given ID, if found. Otherwise, None.
-            """
+        Returns:
+        - Catalog: The catalog with the given ID, if found. Otherwise, None.
+        """
 
-            cat = self.children.get(id)
+        cat = self.children.get(id)
+        if cat:
+            return cat
+
+        for catalog in self.children.values():
+            cat = catalog.find_catalog(id)
             if cat:
                 return cat
-
-            for catalog in self.children.values():
-                cat = catalog.find_catalog(id)
-                if cat:
-                    return cat
 
     def generate_id_path(self) -> list[tuple[str, str]]:
         """Generate the path of ids to this catalog.
@@ -212,7 +218,7 @@ class Catalog:
         >>> catalog = get_catalog_by_path(path_parts)
         >>> print(catalog)
         <Catalog object at 0x7f8a9c6a7a90>
-        """
+        """  # noqa: E501
         if len(path_parts) == 1 and path_parts[0] in self.children:
             return self.children.get(path_parts[0])
 
@@ -231,7 +237,7 @@ class Catalog:
 
         Returns:
             None
-        """
+        """  # noqa: E501
         for catalog in self.children.values():
             catalog.data = self
             catalog.ensure_correct_child_parenting()
@@ -262,7 +268,7 @@ class CatalogsFile:
         - If `is_new` is False, the catalogs file will be loaded or raised a `FileNotFoundError` if not found.
         - If the catalogs file is not found in the specified directory, the class will attempt to find the catalogs file in parent directories before raising a `FileNotFoundError`.
         - If `is_new` is True, a file won't be created until `write_file` is called.
-        """
+        """  # noqa: E501
 
         self.path = Path(dir) / "blender_assets.cats.txt"
         """The path to the catalogs file."""
@@ -279,7 +285,8 @@ class CatalogsFile:
             found_new = False
             while dir != dir.parent:
                 dir = dir.parent
-                if (dir / "blender_assets.cats.txt").exists():
+                
+                if self.has_file(dir):
                     found_new = True
                     self.path = dir / "blender_assets.cats.txt"
                     break
@@ -290,15 +297,22 @@ class CatalogsFile:
 
         self.load_catalogs()
 
-    initial_text = '# This is an Asset Catalog Definition file for Blender.\n#\n# Empty lines and lines starting with `#` will be ignored.\n# The first non-ignored line should be the version indicator.\n# Other lines are of the format "UUID:catalog/path/for/assets:simple catalog name"'
+    initial_text = '# This is an Asset Catalog Definition file for Blender.\n#\n# Empty lines and lines starting with `#` will be ignored.\n# The first non-ignored line should be the version indicator.\n# Other lines are of the format "UUID:catalog/path/for/assets:simple catalog name"'  # noqa: E501
 
     VERSION = 1
+
+    @classmethod
+    def has_file(cls, path: Path) -> bool:
+        """Check if the specified directory contains a `blender_assets.cats.txt` file."""
+        return (path / "blender_assets.cats.txt").exists()
 
     def exists(self) -> bool:
         return self.path.exists()
 
     def load_catalogs(self):
         """Load `catalogs` from file"""
+        self.catalogs.clear()
+        
         unassigned_catalogs: dict[str, Catalog] = {}
         with open(self.path) as file:
             for line in file:
@@ -327,6 +341,10 @@ class CatalogsFile:
             self.catalogs[catalog.id] = catalog
 
         self.ensure_correct_child_parenting()
+
+    def delete_file(self) -> None:
+        if self.exists():
+            self.path.unlink()
 
     def add_catalog(
         self, name: str, id: str = None, path: str = None, auto_place=False
@@ -360,6 +378,7 @@ class CatalogsFile:
         - If `auto_place` is False or `path` is not provided, the method will add the catalog at the root level.
 
         """
+        id = id or str(uuid.uuid4())
         if auto_place and path:
             parent_path = path.split("/")
             if len(parent_path) > 1:
@@ -399,6 +418,12 @@ class CatalogsFile:
             for line in self.get_catalog_lines():
                 file.write(line)
 
+    def write_empty_file(self) -> None:
+        """Write an empty catalogs file."""
+        with open(self.path, "w") as file:
+            file.write(self.initial_text + "\n\n")
+            file.write(f"VERSION {self.VERSION}\n\n")
+
     def print_catalog_tree(self) -> None:
         """Print the catalog tree to the console."""
         print(f"Catalog file: {self.path}")
@@ -407,27 +432,27 @@ class CatalogsFile:
             catalog.print_catalog_tree()
 
     def find_catalog(self, id: str) -> Catalog:
-            """
-            Find a catalog by its ID.
+        """
+        Find a catalog by its ID.
 
-            Parameters
-            ----------
-            id : str
-                The ID of the catalog to find.
+        Parameters
+        ----------
+        id : str
+            The ID of the catalog to find.
 
-            Returns
-            -------
-            Catalog
-                The found catalog, or None if not found.
-            """
-            cat = self.catalogs.get(id)
+        Returns
+        -------
+        Catalog
+            The found catalog, or None if not found.
+        """
+        cat = self.catalogs.get(id)
+        if cat:
+            return cat
+
+        for catalog in self.catalogs.values():
+            cat = catalog.find_catalog(id)
             if cat:
                 return cat
-
-            for catalog in self.catalogs.values():
-                cat = catalog.find_catalog(id)
-                if cat:
-                    return cat
 
     def get_catalog_by_path(self, path: str) -> Catalog:
         """
@@ -493,6 +518,7 @@ class CatalogsFile:
             catalogs.extend(catalog.get_catalogs())
         return catalogs
 
+
 # Context manager for opening and then saving the catalogs file
 @contextmanager
 def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
@@ -501,7 +527,188 @@ def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
     a.write_file()
 
 
-def gather_assets_of_library(lib: UserAssetLibrary) -> list[AssetRepresentation]:
+class Asset:
+    def __init__(self, asset: AssetRepresentation) -> None:
+        self.name = asset.name
+        self.blend_path = asset.full_library_path
+        # asset.full_path
+        self.id_type = asset.id_type
+        self.author = asset.metadata.author
+        self.description = asset.metadata.description
+        self.license = asset.metadata.license
+        self.copyright = asset.metadata.copyright
+        self.catalog_simple_name = asset.metadata.catalog_simple_name
+        self.catalog_id = asset.metadata.catalog_id
+        self.tags = [
+            tag.name
+            for tag in asset.metadata.tags
+        ]
+    
+    def update_asset(self) -> None:
+        """Open asset's blend file and update the asset's metadata."""
+        proc = subprocess.run(
+        [
+            r"C:\Users\Zach\Documents\Blender_Versions\daily\blender-4.2\blender.exe",
+            "-b",
+            "--factory-startup",
+            str(blend_file),
+            "-P",
+            str(python_file),
+        ],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+    )
+        
+
+
+class Assets:
+    def __init__(self, assets: list[AssetRepresentation]) -> None:
+        self._dict: dict[str, Asset] = {
+            asset.name: Asset(asset)
+            for asset in assets
+        }
+
+
+class AssetLibrary:
+    def __init__(self, library: UserAssetLibrary, context: Context = None, load_assets=False, load_catalogs=False) -> None:
+        if not library:
+            raise ValueError("No library provided.")
+
+        self.context: Context = context
+        self.area: Area = None
+        if context:
+            self.area = next((
+                area
+                for window in context.window_manager.windows
+                for area in window.screen.areas
+                if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+            ), None)
+
+        self.library: UserAssetLibrary = library
+        self.name = library.name
+        self.path: Path = Path(library.path)
+
+        self.assets: Assets = None
+        self.catalogs: CatalogsFile = None
+
+        if load_catalogs:
+            self.load_catalogs()
+
+        if load_assets:
+            if not context:
+                raise ValueError("Context must be provided to load assets.")
+            self.load_assets()
+
+    def get_context(self) -> Context:
+        if not self.context:
+            raise ValueError("Context not set. Please set `context` before calling this method.")
+        return self.context
+
+    def load_catalogs(self):
+        is_new = not CatalogsFile.has_file(self.path)
+        self.catalogs = CatalogsFile(self.path, is_new=is_new)
+
+    def get_possible_assets(self) -> list[AssetRepresentation]:
+        C = self.get_context()
+        with display_all_assets_in_library(C):
+            return C.selected_assets[:]
+
+    def load_assets(self):
+        self.assets = Assets(self.get_possible_assets())
+
+    @contextmanager
+    def open_catalogs_file(self) -> CatalogsFile:
+        if not self.catalogs:
+            yield None
+        else:
+            yield self.catalogs
+            self.catalogs.write_file()
+
+
+def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
+    if not area:
+        area = next((
+            area
+            for window in context.window_manager.windows
+            for area in window.screen.areas
+            if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+        ), None)
+
+    if not area:
+        raise ValueError("No areas set to an Asset Browser found.")
+
+    lib_name: str = context.space_data.params.asset_library_reference
+    return context.preferences.filepaths.asset_libraries.get(lib_name)
+
+
+def from_name(name: str, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
+    """Gets a library by name and returns an AssetLibrary object."""
+    lib = bpy.context.preferences.filepaths.asset_libraries.get(name)
+    if not lib:
+        raise ValueError(f"Library with name '{name}' not found.")
+    return AssetLibrary(
+        lib, context=context, load_assets=load_assets, load_catalogs=load_catalogs
+    )
+
+
+def from_active(context: Context, area: Area = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
+    """Gets the active library from the UI context and returns an AssetLibrary object."""
+    return AssetLibrary(
+        get_active_bpy_library_from_context(context, area=area),
+        context=context, load_assets=load_assets, load_catalogs=load_catalogs
+    )
+
+
+def create_new(name: str, directory: Path, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
+    """Creates a new UserAssetLibrary from a passed directory and returns an AssetLibrary object."""
+    lib = bpy.context.preferences.filepaths.asset_libraries.new(
+        name=name,
+        directory=directory
+    )
+    return AssetLibrary(
+        lib, context=context,
+        load_assets=load_assets,
+        load_catalogs=load_catalogs
+    )
+
+
+@contextmanager
+def display_all_assets_in_library(context: Context) -> None:
+    """Makes all possible assets visible in the UI for the duration of the context manager. Assets are all selected so running `context.selected_assets` will return all assets."""
+    ## Gather Current State ##
+    # Params
+    active_params = {
+        item: getattr(context.space_data.params.filter_asset_id, item)
+        for item in dir(context.space_data.params.filter_asset_id)
+        if "filter" in item
+    }
+
+    # Search
+    orig_search = context.space_data.params.filter_search
+
+    # Selected Items
+    orig_selected_assets = context.selected_assets
+
+    context.space_data.deselect_all()
+    bpy.ops.file.select_all(action='SELECT')
+
+    yield
+
+    ## Restore State ##
+    # Params
+    for item, value in active_params.items():
+        setattr(context.space_data.params.filter_asset_id, item, value)
+
+    # Search
+    context.space_data.params.filter_search = orig_search
+
+    # Selected Items
+    context.space_data.deselect_all()
+    for asset in orig_selected_assets:
+        context.space_data.activate_asset_by_id(asset)
+
+
+def gather_assets_of_library(lib: Context) -> list[AssetRepresentation]:
     """
     Gather all assets of a library.
 
@@ -545,4 +752,3 @@ def open_location(fpath: str, win_open=False):
         Popen(["open", fpath])
     else:
         Popen(["xdg-open", fpath])
-

@@ -4,7 +4,7 @@ from bpy.props import BoolProperty, EnumProperty
 from pathlib import Path
 # from fuzzywuzzy import process, fuzz
 
-from ..utils import CatalogsFile, Catalog
+from .. import utils
 
 
 class SH_OT_AddToLibrary(Operator):
@@ -119,6 +119,28 @@ class SH_OT_AddToLibrary(Operator):
     }
 
     def execute(self, context):
+        lib = utils.from_name(
+            self.library, context=context,
+            load_catalogs=True
+        )
+
+        lib.path.mkdir(parents=True, exist_ok=True)
+
+        assets = context.selected_assets
+
+        if self.keep_blend_files_as_is:
+            self.add_to_library_keep(assets, lib.path)
+        else:
+            self.add_to_library_split(assets, lib)
+
+        try:
+            bpy.ops.asset.library_refresh()
+        except Exception as e:
+            print(f"An error occurred while refreshing the asset library: {e}")
+
+        return {"FINISHED"}
+
+    def _execute(self, context):
         lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(
             self.library
         )
@@ -145,7 +167,7 @@ class SH_OT_AddToLibrary(Operator):
 
         return {"FINISHED"}
 
-    def add_to_library_split(self, assets: list[AssetRepresentation], dir: Path):
+    def add_to_library_split(self, assets: list[AssetRepresentation], lib: utils.AssetLibrary):
         """Add the selected assets to the library by splitting them into separate blend files.
 
         Parameters
@@ -155,7 +177,7 @@ class SH_OT_AddToLibrary(Operator):
         dir : Path
             The directory of the library to add the assets to
         """
-        catalogs: list[Catalog] = []
+        catalogs: list[utils.Catalog] = []
         with bpy.types.BlendData.temp_data() as bpy_data:
             bpy_data: bpy.types.BlendData
             for asset in assets:
@@ -178,33 +200,31 @@ class SH_OT_AddToLibrary(Operator):
 
                 if data := getattr(data_to, data_type):
                     if self.copy_catalogs:
-                        asset_catfile = CatalogsFile(
+                        asset_catfile = utils.CatalogsFile(
                             Path(asset.full_library_path).parent
                         )
                         if not asset_catfile.catalogs:
-                            asset_catfile = CatalogsFile(
+                            asset_catfile = utils.CatalogsFile(
                                 Path(asset.full_library_path).parent.parent
                             )
                         cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
                         if cat:
                             catalogs.append(cat)
                         else:
-                            asset_catfile = CatalogsFile(
+                            asset_catfile = utils.CatalogsFile(
                                 Path(asset.full_library_path).parent.parent
                             )
                             cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
                             if cat:
                                 catalogs.append(cat)
                     bpy_data.libraries.write(
-                        str(dir / f"{asset.name}.blend"), set(data), compress=True
+                        str(lib.path / f"{asset.name}.blend"), set(data), compress=True
                     )
 
-        # print("Catalogs:")
-        catfile = CatalogsFile(dir, is_new=True)
-        for catalog in catalogs:
-            # print(f"   - {catalog.get_line()}")
-            catfile.add_catalog_from_other(catalog)
-        catfile.write_file()
+        with lib.open_catalogs_file() as catfile:
+            catfile: utils.CatalogsFile
+            for catalog in catalogs:
+                catfile.add_catalog_from_other(catalog)
 
     def add_to_library_keep(self, assets: list[AssetRepresentation], dir: Path):
         """Add the selected assets to the library without

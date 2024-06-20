@@ -16,7 +16,7 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
         is_asset_browser = asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data)
         if not is_asset_browser:
             cls.poll_message_set("`context.space_data` must be Asset Browser")
-        
+
         lib_not_all = context.space_data.params.asset_library_reference != "ALL"
         if not lib_not_all:
             cls.poll_message_set("Active library must not be 'ALL'")
@@ -24,6 +24,26 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
         return is_asset_browser and lib_not_all
 
     def execute(self, context):
+        lib = utils.from_active(context, load_assets=True, load_catalogs=True)
+
+        # Gather catalogs used by assets
+        catalog_ids = {
+            asset.metadata.catalog_id
+            for asset in lib.get_possible_assets()
+        }
+
+        with lib.open_catalogs_file() as cat_file:
+            cat_file: utils.CatalogsFile
+
+            for cat in cat_file.get_catalogs():
+                if cat.id not in catalog_ids:
+                    cat.remove_self()
+
+        bpy.ops.asset.library_refresh()
+
+        return {'FINISHED'}
+    
+    def _execute(self, context):
         lib_name: str = context.space_data.params.asset_library_reference
         lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(lib_name)
 

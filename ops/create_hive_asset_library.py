@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 import bpy
 from bpy.types import Operator, UILayout, Context
-from bpy.props import StringProperty, EnumProperty, BoolProperty
+from bpy.props import StringProperty, EnumProperty
 from pathlib import Path
 
 from .. import __package__ as base_package
