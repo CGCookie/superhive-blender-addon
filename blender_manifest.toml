@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 id = "superhive_creator_extension" # Unique identifier for the extension.
 name = "Superhive Creator Extension"
 version = "1.0.0"
-tagline = "This is an extension for Superhive asset creators to aid in the creation and uploading of asset libraries"
+tagline = "Aid in the creation and uploading of asset libraries"
 maintainer = "Zach Eastin, Richard Trainer"
 # Supported types: "add-on", "theme"
 type = "add-on"
@@ -12,6 +12,7 @@ website = "https://github.com/CGCookie/superhive-blender-addon"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
+# tags = ["Asset Browser", "Development", "Pipeline"]
 tags = ["Development", "Pipeline"]
 
 blender_version_min = "4.2.0"
