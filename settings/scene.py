@@ -1,12 +1,12 @@
 import bpy
 import bpy.utils
 from bpy.types import PropertyGroup, UILayout
-from bpy.props import EnumProperty, PointerProperty, IntProperty, BoolProperty, StringProperty
+from bpy.props import EnumProperty, PointerProperty, FloatProperty, BoolProperty, StringProperty
 from time import time
 
 
 class ProgressBar(PropertyGroup):
-    progress: IntProperty(subtype="PERCENTAGE", min=0, max=100)
+    progress: FloatProperty(subtype="PERCENTAGE", min=0, max=100)
     show: BoolProperty()
     label: StringProperty()
     """Label for the progress bar. This is the text that will be displayed on the progress bar."""

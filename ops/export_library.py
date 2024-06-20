@@ -36,9 +36,12 @@ if find_spec("lzma"):
         "Compress files using LZMA compression algorithm. This is the slowest option but gives the best compression ratio. NOT RECOMMENDED as not all OS's include this library when extracting/importing(ZIP_LZMA)"
     ))
 
+
 class EmptyCompressor(object):
     def flush(self):
         return bytes(0)
+
+
 class ZipFileParallel(zipfile.ZipFile):
     """
     Example
@@ -219,7 +222,7 @@ class SH_OT_ExportLibrary(Operator):
 
         if self.updated:
             self.updated = False
-            self.prog.progress = int(self.files_written / self.total_files * 100)
+            self.prog.progress = round(self.files_written / self.total_files * 100, 2)
         self.prog.update_formated_time()
 
         if (event.type == "ESC" and event.mouse_region_x > 0 and event.mouse_region_y > 0) or self.prog.cancel:
@@ -272,6 +275,7 @@ class SH_OT_ExportLibrary(Operator):
         self.z.writestr(str(file.relative_to(self.directory)), file.read_bytes())
         self.files_written += 1
         self.updated = True
+        print(f"{(self.files_written/self.total_files)*100:.2f}%")
 
 
 classes = (
