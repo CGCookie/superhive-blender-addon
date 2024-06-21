@@ -1,8 +1,8 @@
 import bpy
 from bpy.types import Operator
-from bpy_extras import asset_utils
 
 from .. import hive_mind, utils
+from . import polls
 
 
 class SH_OT_AddCategoriesToLibrary(Operator):
@@ -25,11 +25,7 @@ class SH_OT_AddCategoriesToLibrary(Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        is_asset_browser = asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data)
-        if not is_asset_browser:
-            cls.poll_message_set("`context.space_data` must be Asset Browser")
-
-        return is_asset_browser
+        return polls.is_asset_browser(context, cls=cls)
 
     def invoke(self, context, event):
         self.alt = event.alt

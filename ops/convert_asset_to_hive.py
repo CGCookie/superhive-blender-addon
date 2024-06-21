@@ -1,8 +1,8 @@
 import bpy
 from bpy.types import Operator
-from bpy_extras import asset_utils
 
 from ..helpers import asset_helper
+from . import polls
 
 
 class SH_OT_ConvertAssetsToHive(Operator):
@@ -13,12 +13,10 @@ class SH_OT_ConvertAssetsToHive(Operator):
 
     @classmethod
     def poll(cls, context):
-        is_asset_browser = asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data)
+        is_asset_browser = polls.is_asset_browser(context, cls=cls)
         if is_asset_browser and context.selected_assets:
             return True
-        
-        if not is_asset_browser:
-            cls.poll_message_set("Context must be in the asset browser")
+
         elif not context.selected_assets:
             cls.poll_message_set(
                 "Please select an asset to convert to a hive asset")

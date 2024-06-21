@@ -4,6 +4,7 @@ from bpy.types import Context, Panel, UILayout, AssetRepresentation
 from bpy_extras import asset_utils
 
 # from ..helpers import asset_helper
+from ..ops import polls
 
 from .. import __package__ as base_package
 
@@ -13,14 +14,13 @@ if TYPE_CHECKING:
 
 
 def draw_assetbrowser_header(self, context: Context):
-    space_data = context.space_data
     layout: UILayout = self.layout
 
     scene_sets: 'scene.SH_Scene' = context.scene.superhive
     if scene_sets.header_progress_bar.show:
         scene_sets.header_progress_bar.draw(layout)
 
-    if asset_utils.SpaceAssetInfo.is_asset_browser(space_data):
+    if polls.is_asset_browser(context):
         layout.prop(context.scene.superhive, "library_mode", text="")
         layout.operator(
             "superhive.create_hive_asset_library",
@@ -29,19 +29,32 @@ def draw_assetbrowser_header(self, context: Context):
 
 
 class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
-    bl_label = "Superhive"
+    bl_label = ""
     bl_order = 1000
+    bl_options = {"HEADER_LAYOUT_EXPAND"}
 
     @classmethod
     def poll(cls, context: Context) -> bool:
         return context.scene.superhive.library_mode == "SUPERHIVE"
 
+    def draw_header(self, context: Context) -> None:
+        layout = self.layout
+        layout.alignment = "LEFT"
+        layout.label(text="Superhive")
+
+        asset = context.asset
+        if asset and asset.metadata.sh_is_dirty():
+            row = layout.row()
+            row.active = False
+            row.label(text="*Unsaved Changes")
+
     def draw(self, context):
         layout: UILayout = self.layout
+        layout.use_property_split = True
 
         prefs: 'sh_prefs.SH_AddonPreferences' = context.preferences.addons[base_package].preferences
 
-        if not context.selected_assets:
+        if not context.asset:
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text="Please select an asset")
@@ -53,15 +66,42 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         #     layout.operator("superhive.convert_assets_to_hive")
         #     return
 
-        layout.prop(asset, "name")
-        # layout.prop(asset.metadata, "sh_description")
-        layout.prop(asset.metadata, "author")
-        # layout.prop(asset.metadata, "sh_license")
+        def set_is_dirty_text(prop: str, text: str = None):
+            if getattr(asset.metadata, f"sh_is_dirty_{prop}"):
+                return f"{text or prop.title()}*"
+            return None
+
+        layout.prop(asset.metadata, "sh_name", text=set_is_dirty_text("name"))
+        layout.prop(asset.metadata, "sh_description", text=set_is_dirty_text("description"))
+        layout.prop(asset.metadata, "sh_author", text=set_is_dirty_text("author"))
+        layout.prop(asset.metadata, "sh_license", text=set_is_dirty_text("license"))
+        layout.prop(asset.metadata, "sh_catalog", text=set_is_dirty_text("catalog"))
+        layout.prop(asset.metadata, "sh_copyright", text=set_is_dirty_text("copyright"))
         # layout.prop(asset.metadata, "sh_created_blender_version")
+
+        layout.label(text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:")
+        row = layout.row()
+        row.template_list(
+            "SH_UL_TagList",
+            "",
+            asset.metadata.sh_tags,
+            "tags",
+            asset.metadata.sh_tags,
+            "active_index",
+            item_dyntip_propname="desc",
+        )
+        col = row.column(align=True)
+        col.operator("superhive.add_tags", icon="ADD", text="")
+        col.operator("superhive.remove_tag", icon="REMOVE", text="")
+        col.operator("superhive.reset_tag", icon="FILE_REFRESH", text="")
 
         if prefs.display_extras:
             layout.label(text="Extra information is displayed")
-            # layout.label(text=f"UUID: {asset.metadata.sh_uuid}")
+            layout.label(text=f"UUID: {asset.metadata.sh_uuid}")
+
+        row = layout.row()
+        row.active = asset.metadata.sh_is_dirty()
+        row.operator("superhive.update_asset", icon="FILE_REFRESH")
 
 
 class SH_PT_LibrarySettings(Panel):
@@ -75,7 +115,7 @@ class SH_PT_LibrarySettings(Panel):
 
     @classmethod
     def poll(cls, context):
-        return asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data) and context.scene.superhive.library_mode == "SUPERHIVE"
+        return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "SUPERHIVE"
 
     def draw(self, context):
         layout: UILayout = self.layout

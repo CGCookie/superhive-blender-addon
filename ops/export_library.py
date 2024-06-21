@@ -7,11 +7,11 @@ import time
 import bpy
 from bpy.types import Operator, UserAssetLibrary, Context
 from bpy.props import EnumProperty, IntProperty
-from bpy_extras import asset_utils
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
 
 from .. import utils
+from . import polls
 
 if TYPE_CHECKING:
     from ..settings import scene
@@ -145,8 +145,7 @@ class SH_OT_ExportLibrary(Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        if not asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data):
-            cls.poll_message_set("`context.space_data` must be Asset Browser")
+        if not polls.is_asset_browser(context, cls=cls):
             return False
 
         scene_sets: 'scene.SH_Scene' = context.scene.superhive

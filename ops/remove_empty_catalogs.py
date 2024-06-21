@@ -1,8 +1,9 @@
 from pathlib import Path
 import bpy
 from bpy.types import Operator, UserAssetLibrary
-from bpy_extras import asset_utils
+
 from .. import utils
+from . import polls
 
 
 class SH_OT_RemoveEmptyCatalogs(Operator):
@@ -13,9 +14,7 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
-        is_asset_browser = asset_utils.SpaceAssetInfo.is_asset_browser(context.space_data)
-        if not is_asset_browser:
-            cls.poll_message_set("`context.space_data` must be Asset Browser")
+        is_asset_browser = polls.is_asset_browser(context, cls=cls)
 
         lib_not_all = context.space_data.params.asset_library_reference != "ALL"
         if not lib_not_all:
