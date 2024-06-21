@@ -48,8 +48,8 @@ class SH_OT_AddCategoriesToLibrary(Operator):
 
         with lib.open_catalogs_file() as cat_file:
             cat_file: utils.CatalogsFile
-            for category_uuid, sub_list in hive_mind.SUBCATEGORIES.items():
-                cat_info = hive_mind.CATEGORIES.get(category_uuid)
+            for category_uuid, sub_list in hive_mind.SUBCATEGORIES_DICT.items():
+                cat_info = hive_mind.CATEGORIES_DICT.get(category_uuid)
                 cat = cat_file.find_catalog(category_uuid)
                 if not cat:
                     cat = cat_file.add_catalog(cat_info["name"], id=category_uuid)

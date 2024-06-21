@@ -4,6 +4,10 @@ from bpy.types import PropertyGroup, UILayout
 from bpy.props import EnumProperty, PointerProperty, FloatProperty, BoolProperty, StringProperty
 from time import time
 
+from .. import hive_mind
+
+from .. import utils
+
 
 class ProgressBar(PropertyGroup):
     progress: FloatProperty(subtype="PERCENTAGE", min=0, max=100)
@@ -73,6 +77,9 @@ class SH_Scene(PropertyGroup):
         name="Library Mode",
         description="Choose which asset library settings to use",
     )
+
+    utils = utils
+    hivemind = hive_mind
 
     def __ignore__(self):
         self.header_progress_bar: ProgressBar

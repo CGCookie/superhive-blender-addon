@@ -5,11 +5,58 @@ from contextlib import contextmanager
 from pathlib import Path
 from platform import system
 from subprocess import Popen
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import bpy
 from bpy.types import Area, AssetRepresentation, Context, UserAssetLibrary
 from bpy_extras import asset_utils
+
+
+if TYPE_CHECKING:
+    from .ui.prefs import SH_AddonPreferences
+
+
+ASSET_TYPES_TO_ID_TYPES = {
+    "ACTION": "actions",
+    "ARMATURE": "armatures",
+    "BRUSH": "brushes",
+    "CACHEFILE": "cache_files",
+    "CAMERA": "cameras",
+    "COLLECTION": "collections",
+    "CURVE": "curves",
+    "CURVES": "curves",
+    "FONT": "fonts",
+    "GREASEPENCIL": "grease_pencils",
+    "GREASEPENCIL_V3": "grease_pencils",
+    "IMAGE": "images",
+    "KEY": "shape_keys",
+    "LATTICE": "lattices",
+    "LIBRARY": "libraries",
+    "LIGHT": "lights",
+    "LIGHT_PROBE": "lightprobes",
+    "LINESTYLE": "linestyles",
+    "MASK": "masks",
+    "MATERIAL": "materials",
+    "MESH": "meshes",
+    "META": "metaballs",
+    "MOVIECLIP": "movieclips",
+    "NODETREE": "node_groups",
+    "OBJECT": "objects",
+    "PAINTCURVE": "paint_curves",
+    "PALETTE": "palettes",
+    "PARTICLE": "particles",
+    "POINTCLOUD": "",
+    "SCENE": "scenes",
+    "SCREEN": "screens",
+    "SOUND": "sounds",
+    "SPEAKER": "speakers",
+    "TEXT": "texts",
+    "TEXTURE": "textures",
+    "VOLUME": "volumes",
+    "WINDOWMANAGER": "window_managers",
+    "WORKSPACE": "workspaces",
+    "WORLD": "worlds",
+}
 
 
 class Catalog:
@@ -529,44 +576,98 @@ def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
 
 class Asset:
     def __init__(self, asset: AssetRepresentation) -> None:
+        self.orig_asset = asset
         self.name = asset.name
+        """The original `name` of the asset. Not a new one"""
+        self.new_name = asset.metadata.sh_name
         self.blend_path = asset.full_library_path
+        """The original `full_library_path` of the asset. Not a new one"""
         # asset.full_path
         self.id_type = asset.id_type
-        self.author = asset.metadata.author
-        self.description = asset.metadata.description
-        self.license = asset.metadata.license
-        self.copyright = asset.metadata.copyright
+        """The original `id_type` of the asset. Not a new one"""
+        self.uuid = asset.metadata.sh_uuid
+        self.author = asset.metadata.sh_author
+        self.description = asset.metadata.sh_description
+        self.license = asset.metadata.sh_license
+        self.copyright = asset.metadata.sh_copyright
         self.catalog_simple_name = asset.metadata.catalog_simple_name
-        self.catalog_id = asset.metadata.catalog_id
+        """The original `catalog_simple_name` of the asset. Not a new one"""
+        self.catalog_id = asset.metadata.sh_catalog
         self.tags = [
             tag.name
-            for tag in asset.metadata.tags
+            for tag in asset.metadata.sh_tags.tags
         ]
-    
-    def update_asset(self) -> None:
+        self.icon_path = None
+
+    def update_asset(self, blender_exe: str) -> None:
         """Open asset's blend file and update the asset's metadata."""
-        proc = subprocess.run(
-        [
-            r"C:\Users\Zach\Documents\Blender_Versions\daily\blender-4.2\blender.exe",
-            "-b",
-            "--factory-startup",
-            str(blend_file),
-            "-P",
-            str(python_file),
-        ],
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-    )
-        
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "update_asset.py"
+        proc: subprocess.CompletedProcess = subprocess.run(
+            [
+                blender_exe,
+                "-b",
+                "--factory-startup",
+                str(self.blend_path),
+                "-P",
+                str(python_file),
+                self.name,  # old asset name
+                self.new_name,  # new asset name
+                ASSET_TYPES_TO_ID_TYPES.get(self.id_type),
+                self.author,
+                self.description,
+                self.license,
+                self.copyright,
+                self.catalog_id,
+                ",".join(self.tags),
+                str(self.icon_path),
+            ],
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
+        if proc.returncode:
+            print(f"    - Error: {proc.stderr.decode()}")
+        print("".center(100, "-"))
+        text = proc.stdout.decode()
+        text.splitlines()
+        new_text = "\n".join(
+            line
+            for line in text.splitlines()
+            if line.startswith("|")
+        )
+        print(new_text)
+        print("".center(100, "-"))
+        print()
 
 
 class Assets:
     def __init__(self, assets: list[AssetRepresentation]) -> None:
-        self._dict: dict[str, Asset] = {
-            asset.name: Asset(asset)
-            for asset in assets
-        }
+        self._dict: dict[str, Asset] = {}
+        self._list: list[Asset] = []
+
+        for asset in assets:
+            a = Asset(asset)
+            self._dict[a.name] = a
+            self._list.append(a)
+
+    def __getitem__(self, key_or_index: str | int) -> Asset:
+        if isinstance(key_or_index, str):
+            return self._dict[key_or_index]
+        return self._list[key_or_index]
+
+    def __iter__(self):
+        return iter(self._list)
+
+    def __len__(self):
+        return len(self._list)
+
+    def __contains__(self, item: str):
+        return item in self._dict
+
+    def __repr__(self):
+        return f"Assets({self._list})"
+
+    def __str__(self):
+        return str(self._list)
 
 
 class AssetLibrary:
@@ -611,7 +712,7 @@ class AssetLibrary:
     def get_possible_assets(self) -> list[AssetRepresentation]:
         C = self.get_context()
         with display_all_assets_in_library(C):
-            return C.selected_assets[:]
+            return C.selected_assets[:] if C.selected_assets else []
 
     def load_assets(self):
         self.assets = Assets(self.get_possible_assets())
@@ -623,6 +724,22 @@ class AssetLibrary:
         else:
             yield self.catalogs
             self.catalogs.write_file()
+
+    @classmethod
+    def create_bpy_library(cls, name: str, path: str) -> UserAssetLibrary:
+        """Create a new UserAssetLibrary in Blender."""
+        return bpy.context.preferences.filepaths.asset_libraries.new(name=name, directory=path)
+
+    @classmethod
+    def create_new_library(cls, name: str, path: str, context: Context = None, load_assets=False, load_catalogs=False) -> 'AssetLibrary':
+        """Create a new `UserAssetLibrary` in Blender and then create a new `AssetLibrary` object from that library."""
+        lib = cls.create_bpy_library(name, path)
+        return cls(
+            lib,
+            context=context,
+            load_assets=load_assets,
+            load_catalogs=load_catalogs,
+        )
 
 
 def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
@@ -661,12 +778,9 @@ def from_active(context: Context, area: Area = None, load_assets=False, load_cat
 
 def create_new(name: str, directory: Path, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
     """Creates a new UserAssetLibrary from a passed directory and returns an AssetLibrary object."""
-    lib = bpy.context.preferences.filepaths.asset_libraries.new(
-        name=name,
-        directory=directory
-    )
-    return AssetLibrary(
-        lib, context=context,
+    return AssetLibrary.create_new_library(
+        name, directory,
+        context=context,
         load_assets=load_assets,
         load_catalogs=load_catalogs
     )
@@ -687,7 +801,7 @@ def display_all_assets_in_library(context: Context) -> None:
     orig_search = context.space_data.params.filter_search
 
     # Selected Items
-    orig_selected_assets = context.selected_assets
+    orig_selected_assets = context.selected_assets or []
 
     context.space_data.deselect_all()
     bpy.ops.file.select_all(action='SELECT')
@@ -705,7 +819,10 @@ def display_all_assets_in_library(context: Context) -> None:
     # Selected Items
     context.space_data.deselect_all()
     for asset in orig_selected_assets:
-        context.space_data.activate_asset_by_id(asset)
+        context.space_data.activate_asset_by_id(asset.local_id)
+        # context.space_data.activate_file_by_relative_path(
+        #     relative_path=asset.name
+        # )
 
 
 def gather_assets_of_library(lib: Context) -> list[AssetRepresentation]:
@@ -752,3 +869,8 @@ def open_location(fpath: str, win_open=False):
         Popen(["open", fpath])
     else:
         Popen(["xdg-open", fpath])
+
+
+def get_prefs() -> 'SH_AddonPreferences':
+    return bpy.context.preferences.addons[__package__].preferences
+

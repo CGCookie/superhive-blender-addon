@@ -1,64 +1,104 @@
 """The place to grab general settings and lists"""
 
-LICENSES: tuple[tuple[str]] = None
-TAGS: tuple[tuple[str]] = None
-CATEGORIES: dict[tuple[str]] = None
-SUBCATEGORIES: dict[tuple[str]] = None
+LICENSES_ENUM: list[tuple[str, str, str, int]] = None
+"""Enum for blender UI"""
+LICENSES_DICT = None
+
+TAGS_ENUM: list[tuple[str, str, str, int]] = None
+"""Enum for blender UI"""
+TAGS_DICT = None
+
+CATEGORIES_DICT: dict[tuple[str]] = None
+"""Dict of category uuids as keys and category dicts as values"""
+SUBCATEGORIES_DICT: dict[tuple[str]] = None
+"""Dict of category uuids as keys and subcategory dicts as values"""
+CATALOG_ENUM: list[tuple[str, str, str, int]] = None
+"""Enum for blender UI"""
+CATALOG_DICT: dict = None
 
 
 def load_licenses():
     # TODO: Get licenses from Superhive API
-    global LICENSES
-    LICENSES = (
+    # ! Licenses need to be sent with a unique integer id
+    global LICENSES_ENUM
+    global LICENSES_DICT
+    LICENSES_ENUM = [
+        # (
+        #     "None", "None",
+        #     "No license is applied to the product.",
+        #     0
+        # ),
         (
-            "SRF",
-            "Standard Royalty Free",
-            "Grants users the ability to make use of the purchased product for personal, educational, or commercial purposes with exceptions",
-        ),
-        (
-            "CC-BY",
-            "Creative Commons Attribution",
+            "CC-BY", "Creative Commons Attribution",
             "Grants users the freedom to copy and redistribute the material in any medium or format and adapt, remix, transform, and build upon the material for any purpose, even commercially. Attribution is required.",
+            1,
         ),
         (
-            "EDITORIAL",
-            "Editorial",
+            "SRF", "Standard Royalty Free",
+            "Grants users the ability to make use of the purchased product for personal, educational, or commercial purposes with exceptions",
+            2,
+        ),
+        (
+            "EDITORIAL", "Editorial",
             "The Editorial License grants users the ability to make single use of the purchased product for editorial use",
+            3,
+        ),
+    ]
+    
+    LICENSES_ENUM.append(
+        (
+            "UNRECOGNIZED", "Unrecognized License",
+            "The license for this product either doesn't exist or is not recognized by Superhive",
+            444
         ),
     )
+    
+    LICENSES_DICT = {
+        id: {"index": i, "id": id, "name": name, "description": desc, "id_int": id_int}
+        for i, (id, name, desc, id_int) in enumerate(LICENSES_ENUM)
+    }
 
 
 def load_tags():
     # TODO: Get tags from Superhive API
-    global TAGS
-    TAGS = (
-        ("Architecture", "Architecture", "Architecture"),
-        ("Vehicle", "Vehicle", "Vehicle"),
-        ("Prop", "Prop", "Prop"),
-        ("Environment", "Environment", "Environment"),
-        ("Character", "Character", "Character"),
-        ("Material", "Material", "Material"),
-        ("Texture", "Texture", "Texture"),
+    # ! Tags need to be sent with a unique integer id
+    global TAGS_ENUM
+    global TAGS_DICT
+    TAGS_ENUM = [
+        ("Add-on", "Add-on", "Add-on"),
         ("Animation", "Animation", "Animation"),
+        ("Architecture", "Architecture", "Architecture"),
+        ("Character", "Character", "Character"),
+        ("Documentation", "Documentation", "Documentation"),
+        ("Environment", "Environment", "Environment"),
         ("FX", "FX", "FX"),
         ("Lighting", "Lighting", "Lighting"),
-        ("Sound", "Sound", "Sound"),
+        ("Material", "Material", "Material"),
         ("Music", "Music", "Music"),
-        ("UI", "UI", "UI"),
-        ("Script", "Script", "Script"),
-        ("Plugin", "Plugin", "Plugin"),
-        ("Addon", "Addon", "Addon"),
-        ("Template", "Template", "Template"),
-        ("Tutorial", "Tutorial", "Tutorial"),
-        ("Documentation", "Documentation", "Documentation"),
         ("Other", "Other", "Other"),
-    )
+        ("Plugin", "Plugin", "Plugin"),
+        ("Prop", "Prop", "Prop"),
+        ("Script", "Script", "Script"),
+        ("Sound", "Sound", "Sound"),
+        ("Template", "Template", "Template"),
+        ("Texture", "Texture", "Texture"),
+        ("Tutorial", "Tutorial", "Tutorial"),
+        ("UI", "UI", "UI"),
+        ("Vehicle", "Vehicle", "Vehicle"),
+    ]
+    TAGS_DICT = {
+        id: {"id": id, "name": name, "description": desc}
+        for id, name, desc in TAGS_ENUM
+    }
 
 
 def load_categories():
-    # TODO: Get categories from Superhive API
-    global CATEGORIES
-    global SUBCATEGORIES
+    # TODO: Get catalogs from Superhive API
+    # ! Catalogs need to be sent with a unique integer id
+    global CATEGORIES_DICT
+    global SUBCATEGORIES_DICT
+    global CATALOG_ENUM
+    global CATALOG_DICT
 
     def enum_list_to_dict(*lst: tuple) -> dict:
         lst = sorted(lst, key=lambda x: x[1])
@@ -67,20 +107,22 @@ def load_categories():
                 "id": item[0],
                 "name": item[1].replace("-", ""),
                 "description": item[2],
+                "id_int": item[3] if len(item) > 3 else None,
             }
             for item in lst
         }
 
-    CATEGORIES = enum_list_to_dict(
+    models_uuid = "21dafe8b-0f28-4b5b-9db1-3cb08836fa19"
+    CATEGORIES_DICT = enum_list_to_dict(
         ("750c1acf-b947-4ee3-9377-ac71df9703e2", "Render Setups", "Render Setups"),
         ("74b09ef6-606c-40c0-ab08-bfe997971147", "Modifier Setups", "Modifier Setups"),
         ("504d79b3-5cca-455f-a571-99f131beb3fe", "Surfacing", "Surfacing"),
-        ("21dafe8b-0f28-4b5b-9db1-3cb08836fa19", "Models", "Models"),
+        (models_uuid, "Models", "Models"),
         ("f2fdf7d8-2172-4b8c-afd9-5fabfadc1608", "Addons", "Addons"),
         ("81da85a3-3553-4ad3-a58d-3dd7f5e71faf", "Training", "Training"),
     )
 
-    SUBCATEGORIES = {
+    SUBCATEGORIES_DICT = {
         "750c1acf-b947-4ee3-9377-ac71df9703e2": enum_list_to_dict(  # Render Setups
             ("1e118c47-4c11-4b3e-959b-7757e5293988", "Compositing Presets", "Compositing Presets"),
             ("b0191cf5-6b33-494d-98f7-0919c36a9c7b", "Studio Lighting", "Studio Lighting"),
@@ -113,41 +155,41 @@ def load_categories():
             ("a3eec9d0-e6dd-46b1-8712-c6777e025006", "Wood", "Wood"),
             ("2e9f1a40-a240-4dc6-b15d-0bd6dc9d76bd", "Concrete", "Concrete"),
         ),
-        "21dafe8b-0f28-4b5b-9db1-3cb08836fa19": enum_list_to_dict(  # Models
-            ("ae651e01-64f5-4c89-8c9e-405a13c70bb9", "Characters", "Characters"),
-            ("b6218691-814f-47aa-bae8-d9ac6d2339a9", "Animals", "Animals"),
-            ("dfecfe11-d5b7-4bd7-bc05-d68b8fbd72b2", "Base Meshes", "Base Meshes"),
-            ("c8ff7dc6-80c7-4d30-920d-6664238d9b89", "3D Printable", "3D Printable"),
-            ("2b186ef1-5bbb-4e6a-8c82-c7d7f926cba5", "Motion Graphics", "Motion Graphics"),
-            ("5e8e183f-cb84-4164-ba35-7af448cc47e8", "Creatures", "Creatures"),
-            ("19ad727c-3d84-497b-94cd-4e4f62c06f8a", "Sci-Fi", "Sci-Fi"),
-            ("1ee5f173-997b-4c23-9e85-5cad98c9e1b0", "Humans", "Humans"),
-            ("2fe148e3-781c-41ce-8676-f6870778da77", "Weapons & Armor", "Weapons & Armor",),
-            ("f5f944f4-1599-4fd6-841f-0a2e8c712a36", "Asset Libraries", "Asset Libraries",),
-            ("8c45d1e6-87aa-4add-9530-a1742b468aa2", "Animation", "Animation"),
-            ("540b025e-772f-4756-b452-c37c94c89be0", "Architecture", "Architecture"),
-            ("870b2998-c290-4956-83e2-491a48975d5e", "Clothes & Accessories", "Clothes & Accessories"),
-            ("5a1fc884-a2b0-45d6-8858-d506f274a700", "Decals", "Decals"),
-            ("34eb4c8c-4278-49a7-a18b-e5d1baaa848f", "Buildings", "Buildings"),
-            ("88162bd5-a098-41d3-a8ca-fb2d44782e25", "Anatomy", "Anatomy"),
-            ("ae5885e3-ba3c-4e35-9e45-444f0a4079ac", "Game Ready", "Game Ready"),
-            ("93e4af11-e524-46a4-8d60-abed0cf91231", "Design Elements", "Design Elements"),
-            ("139791a5-51f5-4bde-88b3-d7045641dc75", "Tools", "Tools"),
-            ("abecd690-510c-439f-a29c-95cbdc0b919f", "Engines & Parts", "Engines & Parts"),
-            ("66a54ffe-175b-4381-a35a-64bd90338259", "Nature", "Nature"),
-            ("f7bfd511-0913-4c96-8e65-5be285e879e6", "Fantasy & Fiction", "Fantasy & Fiction"),
-            ("e6d16081-248a-49ea-bf06-785cc407caa7", "Music", "Music"),
-            ("09e2e3ba-881c-4612-b435-33e7fb7fcc84", "Urban", "Urban"),
-            ("77393a0c-9007-4e7e-baa3-b7e476a6f1bc", "Vehicles", "Vehicles"),
-            ("0738c45f-8f82-4f75-b7f7-2aff67de79dd", "Toys & Games", "Toys & Games"),
-            ("80522baf-b443-408c-826e-f655a4246bb6", "Miscellaneous", "Miscellaneous"),
-            ("1edfacc6-fd4a-437c-8a38-5adb2f93d950", "Furnishings", "Furnishings"),
-            ("d86db79d-ff29-4d61-a3e5-6ecca19862dd", "Science", "Science"),
-            ("a13af679-3718-4b3b-8d09-9d1e07a2ec07", "Sports", "Sports"),
-            ("7286a6c5-9ed2-4279-a7bb-fd7c7a9ac155", "Products", "Products"),
-            ("7b0faac1-eb4b-4888-bd66-d3cecf04cb5d", "Food & Drinks", "Food & Drinks"),
-            ("3d756712-b8d0-4619-8f92-e491d4aeb43e", "Electronics", "Electronics"),
-            ("ad7a8519-355b-464a-8319-b3407a2ba29f", "Parametric Models", "Parametric Models"),
+        models_uuid: enum_list_to_dict(  # Models
+            ("c8ff7dc6-80c7-4d30-920d-6664238d9b89", "3D Printable", "3D Printable", 0),
+            ("88162bd5-a098-41d3-a8ca-fb2d44782e25", "Anatomy", "Anatomy", 1),
+            ("8c45d1e6-87aa-4add-9530-a1742b468aa2", "Animation", "Animation", 2),
+            ("b6218691-814f-47aa-bae8-d9ac6d2339a9", "Animals", "Animals", 3),
+            ("540b025e-772f-4756-b452-c37c94c89be0", "Architecture", "Architecture", 4),
+            ("f5f944f4-1599-4fd6-841f-0a2e8c712a36", "Asset Libraries", "Asset Libraries", 5),
+            ("dfecfe11-d5b7-4bd7-bc05-d68b8fbd72b2", "Base Meshes", "Base Meshes", 6),
+            ("34eb4c8c-4278-49a7-a18b-e5d1baaa848f", "Buildings", "Buildings", 7),
+            ("ae651e01-64f5-4c89-8c9e-405a13c70bb9", "Characters", "Characters", 8),
+            ("870b2998-c290-4956-83e2-491a48975d5e", "Clothes & Accessories", "Clothes & Accessories", 9),
+            ("5e8e183f-cb84-4164-ba35-7af448cc47e8", "Creatures", "Creatures", 10),
+            ("5a1fc884-a2b0-45d6-8858-d506f274a700", "Decals", "Decals", 11),
+            ("93e4af11-e524-46a4-8d60-abed0cf91231", "Design Elements", "Design Elements", 12),
+            ("3d756712-b8d0-4619-8f92-e491d4aeb43e", "Electronics", "Electronics", 13),
+            ("abecd690-510c-439f-a29c-95cbdc0b919f", "Engines & Parts", "Engines & Parts", 14),
+            ("f7bfd511-0913-4c96-8e65-5be285e879e6", "Fantasy & Fiction", "Fantasy & Fiction", 15),
+            ("7b0faac1-eb4b-4888-bd66-d3cecf04cb5d", "Food & Drinks", "Food & Drinks", 16),
+            ("1edfacc6-fd4a-437c-8a38-5adb2f93d950", "Furnishings", "Furnishings", 17),
+            ("ae5885e3-ba3c-4e35-9e45-444f0a4079ac", "Game Ready", "Game Ready", 18),
+            ("1ee5f173-997b-4c23-9e85-5cad98c9e1b0", "Humans", "Humans", 19),
+            ("80522baf-b443-408c-826e-f655a4246bb6", "Miscellaneous", "Miscellaneous", 20),
+            ("2b186ef1-5bbb-4e6a-8c82-c7d7f926cba5", "Motion Graphics", "Motion Graphics", 21),
+            ("e6d16081-248a-49ea-bf06-785cc407caa7", "Music", "Music", 22),
+            ("66a54ffe-175b-4381-a35a-64bd90338259", "Nature", "Nature", 23),
+            ("ad7a8519-355b-464a-8319-b3407a2ba29f", "Parametric Models", "Parametric Models", 24),
+            ("7286a6c5-9ed2-4279-a7bb-fd7c7a9ac155", "Products", "Products", 25),
+            ("19ad727c-3d84-497b-94cd-4e4f62c06f8a", "Sci-Fi", "Sci-Fi", 26),
+            ("d86db79d-ff29-4d61-a3e5-6ecca19862dd", "Science", "Science", 27),
+            ("a13af679-3718-4b3b-8d09-9d1e07a2ec07", "Sports", "Sports", 28),
+            ("139791a5-51f5-4bde-88b3-d7045641dc75", "Tools", "Tools", 29),
+            ("0738c45f-8f82-4f75-b7f7-2aff67de79dd", "Toys & Games", "Toys & Games", 30),
+            ("09e2e3ba-881c-4612-b435-33e7fb7fcc84", "Urban", "Urban", 31),
+            ("77393a0c-9007-4e7e-baa3-b7e476a6f1bc", "Vehicles", "Vehicles", 32),
+            ("2fe148e3-781c-41ce-8676-f6870778da77", "Weapons & Armor", "Weapons & Armor", 33),
         ),
         "f2fdf7d8-2172-4b8c-afd9-5fabfadc1608": enum_list_to_dict(  # Addons
             ("a4fb032b-68b1-460b-b67a-529c38072618", "Import & Export", "Import & Export"),
@@ -168,22 +210,40 @@ def load_categories():
         ),
     }
 
+    CATALOG_ENUM = [
+        (subcat["id"], subcat["name"], subcat["description"], subcat["id_int"] if "id_int" in subcat else None)
+        for subcat in SUBCATEGORIES_DICT.get(models_uuid, {}).values()
+    ]
+    CATALOG_ENUM.append(
+        ("UNRECOGNIZED", "Unrecognized Catalog", "The set catalog is not supported by Superhive", 444)
+    )
 
-def get_licenses() -> tuple[tuple[str]]:
-    global LICENSES
-    return LICENSES
+    CATALOG_DICT = {
+        id: {
+            "id": id,
+            "name": name,
+            "description": desc,
+            "id_int": id_int,
+        }
+        for id, name, desc, id_int in CATALOG_ENUM
+    }
 
 
-def get_tags() -> tuple[tuple[str]]:
-    global TAGS
-    return TAGS
+def get_licenses(_=None, __=None) -> tuple[tuple[str]]:
+    global LICENSES_ENUM
+    return LICENSES_ENUM
 
 
-def get_categories() -> tuple[tuple[str]]:
-    global CATEGORIES
-    return CATEGORIES
+def get_tags(_=None, __=None) -> tuple[tuple[str]]:
+    global TAGS_ENUM
+    return TAGS_ENUM
+
+
+def get_categories(_=None, __=None) -> tuple[tuple[str]]:
+    global CATALOG_ENUM
+    return CATALOG_ENUM
 
 
 load_categories()
-load_tags()
+load_licenses()
 load_tags()

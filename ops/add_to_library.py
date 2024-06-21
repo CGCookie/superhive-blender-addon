@@ -76,48 +76,6 @@ class SH_OT_AddToLibrary(Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
 
-    asset_types_to_id_types = {
-        "ACTION": "actions",
-        "ARMATURE": "armatures",
-        "BRUSH": "brushes",
-        "CACHEFILE": "cache_files",
-        "CAMERA": "cameras",
-        "COLLECTION": "collections",
-        "CURVE": "curves",
-        "CURVES": "curves",
-        "FONT": "fonts",
-        "GREASEPENCIL": "grease_pencils",
-        "GREASEPENCIL_V3": "grease_pencils",
-        "IMAGE": "images",
-        "KEY": "shape_keys",
-        "LATTICE": "lattices",
-        "LIBRARY": "libraries",
-        "LIGHT": "lights",
-        "LIGHT_PROBE": "lightprobes",
-        "LINESTYLE": "linestyles",
-        "MASK": "masks",
-        "MATERIAL": "materials",
-        "MESH": "meshes",
-        "META": "metaballs",
-        "MOVIECLIP": "movieclips",
-        "NODETREE": "node_groups",
-        "OBJECT": "objects",
-        "PAINTCURVE": "paint_curves",
-        "PALETTE": "palettes",
-        "PARTICLE": "particles",
-        "POINTCLOUD": "",
-        "SCENE": "scenes",
-        "SCREEN": "screens",
-        "SOUND": "sounds",
-        "SPEAKER": "speakers",
-        "TEXT": "texts",
-        "TEXTURE": "textures",
-        "VOLUME": "volumes",
-        "WINDOWMANAGER": "window_managers",
-        "WORKSPACE": "workspaces",
-        "WORLD": "worlds",
-    }
-
     def execute(self, context):
         lib = utils.from_name(
             self.library, context=context,
@@ -181,7 +139,7 @@ class SH_OT_AddToLibrary(Operator):
         with bpy.types.BlendData.temp_data() as bpy_data:
             bpy_data: bpy.types.BlendData
             for asset in assets:
-                data_type = self.asset_types_to_id_types[asset.id_type]
+                data_type = utils.ASSET_TYPES_TO_ID_TYPES[asset.id_type]
                 with bpy_data.libraries.load(asset.full_library_path) as (
                     data_from,
                     data_to,
