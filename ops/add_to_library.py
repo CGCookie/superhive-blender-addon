@@ -1,10 +1,14 @@
-import bpy
-from bpy.types import Operator, AssetRepresentation, UserAssetLibrary
-from bpy.props import BoolProperty, EnumProperty
 from pathlib import Path
-# from fuzzywuzzy import process, fuzz
+from typing import Any, Literal
 
-from .. import utils
+import bpy
+from bpy.props import (BoolProperty, BoolVectorProperty, EnumProperty,
+                       StringProperty)
+from bpy.types import AssetRepresentation, Operator
+
+from .. import hive_mind, utils
+
+# from fuzzywuzzy import process, fuzz
 
 
 class SH_OT_AddToLibrary(Operator):
@@ -15,9 +19,19 @@ class SH_OT_AddToLibrary(Operator):
 
     # TODO: Remove fuzzywuzzy if not used in other places
 
+    new_library_name: StringProperty(
+        name="New Library Name",
+        description="The name of the new library to create",
+        default="",
+    )
+
     def _get_library_items(self, context):
         asset_libs = context.preferences.filepaths.asset_libraries
-        return [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+        items = [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+        items.append(
+            ("NEW", "New", "Create a new library and add the asset(s) to it", "ADD", 333)
+        )
+        return items
     library: EnumProperty(
         items=_get_library_items,
     )
@@ -43,6 +57,19 @@ class SH_OT_AddToLibrary(Operator):
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
+
+        if self.library == "NEW":
+            row = layout.row()
+            row.alert = not self.new_library_name
+            row.activate_init = True
+            row.prop(self, "new_library_name")
+
+            if self.new_library_name in context.preferences.filepaths.asset_libraries:
+                row = layout.row()
+                row.alert = True
+                row.alignment = "CENTER"
+                row.label(text=f"Library `{self.new_library_name}` already exists")
+
         layout.prop(self, "keep_blend_files_as_is")
         layout.prop(self, "copy_catalogs")
         if self.keep_blend_files_as_is:
@@ -77,10 +104,27 @@ class SH_OT_AddToLibrary(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        lib = utils.from_name(
-            self.library, context=context,
-            load_catalogs=True
-        )
+        if self.library == "NEW":
+            if not self.new_library_name:
+                self.report({"ERROR"}, "Name not entered for new library")
+                return {"CANCELLED"}
+            if self.new_library_name in context.preferences.filepaths.asset_libraries:
+                self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
+                return {"CANCELLED"}
+
+            dir: Path = Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
+            dir.mkdir(parents=True, exist_ok=True)
+            lib = utils.AssetLibrary.create_new_library(
+                self.new_library_name, str(dir),
+                context=context, load_catalogs=True
+            )
+            self.is_new_library = True
+        else:
+            lib = utils.from_name(
+                self.library, context=context,
+                load_catalogs=True
+            )
+            self.is_new_library = False
 
         lib.path.mkdir(parents=True, exist_ok=True)
 
@@ -90,33 +134,6 @@ class SH_OT_AddToLibrary(Operator):
             self.add_to_library_keep(assets, lib.path)
         else:
             self.add_to_library_split(assets, lib)
-
-        try:
-            bpy.ops.asset.library_refresh()
-        except Exception as e:
-            print(f"An error occurred while refreshing the asset library: {e}")
-
-        return {"FINISHED"}
-
-    def _execute(self, context):
-        lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(
-            self.library
-        )
-
-        if not lib:
-            self.report({"ERROR"}, f"Library `{self.library}` not found")
-            return {"CANCELLED"}
-
-        dir = Path(lib.path)
-
-        dir.mkdir(parents=True, exist_ok=True)
-
-        assets = context.selected_assets
-
-        if self.keep_blend_files_as_is:
-            self.add_to_library_keep(assets, dir)
-        else:
-            self.add_to_library_split(assets, dir)
 
         try:
             bpy.ops.asset.library_refresh()
@@ -170,7 +187,8 @@ class SH_OT_AddToLibrary(Operator):
                             catalogs.append(cat)
                         else:
                             asset_catfile = utils.CatalogsFile(
-                                Path(asset.full_library_path).parent.parent
+                                Path(asset.full_library_path).parent.parent,
+                                is_new=self.is_new_library
                             )
                             cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
                             if cat:
@@ -210,7 +228,161 @@ class SH_OT_AddToLibrary(Operator):
 # TODO: (other assets) and just removing the asset tag)
 
 
-classes = (SH_OT_AddToLibrary,)
+class SH_OT_AddAsAssetToLibrary(Operator):
+    bl_idname: Any | Literal['superhive.add_to_library'] = "superhive.add_as_asset_to_library"
+    bl_label = "Add to Library"
+    bl_description = "Mark as asset, set default data, and add to a library"
+    bl_options = {"REGISTER", "UNDO"}
+
+    new_library_name: StringProperty(
+        name="New Library Name",
+        description="The name of the new library to create",
+        default="",
+    )
+
+    def _get_library_items(self, context):
+        asset_libs = context.preferences.filepaths.asset_libraries
+        items = [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+        items.append(
+            ("NEW", "New", "Create a new library and add the asset(s) to it", "ADD", 333)
+        )
+        return items
+    library: EnumProperty(
+        items=_get_library_items,
+    )
+
+    name: StringProperty(
+        name="Name",
+        description="The name of the asset",
+    )
+
+    description: StringProperty(
+        name="Description",
+        description="The description of the asset",
+    )
+
+    author: StringProperty(
+        name="Author",
+        description="The author of the asset",
+    )
+
+    license: EnumProperty(
+        name="License",
+        description="The license of the asset",
+        items=hive_mind.LICENSES_ENUM,
+    )
+
+    catalog: EnumProperty(
+        name="Catalog",
+        description="The Superhive supported catalog of the asset",
+        items=hive_mind.CATALOG_ENUM,
+    )
+
+    copyright: StringProperty(
+        name="Copyright",
+        description="The copyright of the asset",
+    )
+
+    tags: BoolVectorProperty(
+        name="Tags",
+        description="The Superhive supported tags of the asset",
+        size=len(hive_mind.TAGS_ENUM),
+    )
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        if self.library == "NEW":
+            row = layout.row()
+            row.alert = not self.new_library_name
+            row.activate_init = True
+            row.prop(self, "new_library_name")
+
+            if self.new_library_name in context.preferences.filepaths.asset_libraries:
+                row = layout.row()
+                row.alert = True
+                row.alignment = "CENTER"
+                row.label(text=f"Library `{self.new_library_name}` already exists")
+
+        layout.prop(self, "description")
+        layout.prop(self, "author")
+        layout.prop(self, "license")
+        layout.prop(self, "catalog")
+        layout.prop(self, "copyright")
+
+        layout.label(text="Tags:")
+        grid = layout.grid_flow(columns=3, even_columns=True)
+        for i, tag in enumerate(hive_mind.TAGS_ENUM):
+            grid.prop(self, "tags", index=i, text=tag[1]) 
+
+    def invoke(self, context, event):
+        prefs = utils.get_prefs()
+        self.name = context.object.name
+        self.author = prefs.default_author_name
+        self.license = prefs.default_license
+        self.copyright = prefs.default_copyright
+
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        if self.library == "NEW":
+            if not self.new_library_name:
+                self.report({"ERROR"}, "Name not entered for new library")
+                return {"CANCELLED"}
+            if self.new_library_name in context.preferences.filepaths.asset_libraries:
+                self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
+                return {"CANCELLED"}
+
+            dir: Path = Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
+            dir.mkdir(parents=True, exist_ok=True)
+            lib = utils.AssetLibrary.create_new_library(
+                self.new_library_name, str(dir),
+                context=context, load_catalogs=True
+            )
+            self.is_new_library = True
+        else:
+            lib = utils.from_name(
+                self.library, context=context,
+                load_catalogs=True
+            )
+            self.is_new_library = False
+
+        lib.path.mkdir(parents=True, exist_ok=True)
+
+        obj = context.object
+        obj.asset_mark()
+        obj.asset_data.description = self.description
+        obj.asset_data.author = self.author
+        obj.asset_data.license = self.license
+        obj.asset_data.catalog_id = self.catalog
+        obj.asset_data.copyright = self.copyright
+
+        prefs = utils.get_prefs()
+        obj.asset_data.author = prefs.default_author_name
+        obj.asset_data.license = prefs.default_license
+
+        for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
+            if value:
+                obj.asset_data.tags.new(tag[1], skip_if_exists=True)
+
+        # TODO: Handle Icons
+
+        bpy.data.libraries.write(str(lib.path / f"{obj.name}.blend"), set([obj]), compress=True)
+
+        try:
+            bpy.ops.asset.library_refresh()
+        except Exception as e:
+            print(f"An error occurred while refreshing the asset library: {e}")
+
+        context.space_data.activate_asset_by_id(obj)
+
+        return {"FINISHED"}
+
+classes = (
+    SH_OT_AddToLibrary,
+    SH_OT_AddAsAssetToLibrary,
+)
 
 
 def register():

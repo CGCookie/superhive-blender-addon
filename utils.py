@@ -332,7 +332,7 @@ class CatalogsFile:
             found_new = False
             while dir != dir.parent:
                 dir = dir.parent
-                
+
                 if self.has_file(dir):
                     found_new = True
                     self.path = dir / "blender_assets.cats.txt"

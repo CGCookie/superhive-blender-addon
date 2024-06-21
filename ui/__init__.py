@@ -1,4 +1,5 @@
-from . import prefs, asset_browser, asset_browser_context_menu
+from . import (asset_browser, asset_browser_context_menu, object_context_menu,
+               prefs)
 
 
 def _call_globals(attr_name):

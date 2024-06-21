@@ -66,12 +66,20 @@ class SH_AddonPreferences(AddonPreferences):
     default_author_name: StringProperty(
         name="Author Name",
         description="The name to put by default in the author field",
+        default="Company Name" # TODO: Delete this default
     )
 
     default_license: EnumProperty(
         name="Default License",
         description="The default license to use for new assets",
         items=hive_mind.get_licenses,
+        default=2, # TODO: Don't hardcode this
+    )
+
+    default_copyright: StringProperty(
+        name="Default Copyright",
+        description="The default copyright info to use for new assets",
+        default="",
     )
 
     library_directory: StringProperty(
