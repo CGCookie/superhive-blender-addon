@@ -48,6 +48,10 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             row.active = False
             row.label(text="*Unsaved Changes")
 
+            row = layout.row()
+            row.alignment = "RIGHT"
+            row.operator("superhive.reset_asset_metadata", icon="FILE_REFRESH", text="")
+
     def draw(self, context):
         layout: UILayout = self.layout
         layout.use_property_split = True
@@ -62,24 +66,27 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         asset: AssetRepresentation = context.asset
 
-        # if asset.metadata.sh_uuid == "":
-        #     layout.operator("superhive.convert_assets_to_hive")
-        #     return
-
         def set_is_dirty_text(prop: str, text: str = None):
             if getattr(asset.metadata, f"sh_is_dirty_{prop}"):
                 return f"{text or prop.title()}*"
             return None
 
-        layout.prop(asset.metadata, "sh_name", text=set_is_dirty_text("name"))
-        layout.prop(asset.metadata, "sh_description", text=set_is_dirty_text("description"))
-        layout.prop(asset.metadata, "sh_author", text=set_is_dirty_text("author"))
-        layout.prop(asset.metadata, "sh_license", text=set_is_dirty_text("license"))
-        layout.prop(asset.metadata, "sh_catalog", text=set_is_dirty_text("catalog"))
-        layout.prop(asset.metadata, "sh_copyright", text=set_is_dirty_text("copyright"))
-        # layout.prop(asset.metadata, "sh_created_blender_version")
+        def display_metadata(layout: UILayout, data, prop: str, orig_prop: str, orig_value: str):
+            row = layout.row(align=True)
+            row.prop(asset.metadata, prop, text=set_is_dirty_text(orig_prop))
+            if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
+                op = row.operator("superhive.reset_asset_metadata_property", icon="FORWARD", text="")
+                op.property = prop
+                op.original_value = orig_value
 
-        layout.label(text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:")
+        display_metadata(layout, asset, "sh_name", "name", asset.name)
+        display_metadata(layout, asset, "sh_description", "description", asset.metadata.description)
+        display_metadata(layout, asset, "sh_author", "author", asset.metadata.author)
+        display_metadata(layout, asset, "sh_license", "license", asset.metadata.license)
+        display_metadata(layout, asset, "sh_catalog", "catalog", asset.metadata.catalog_id)
+        display_metadata(layout, asset, "sh_copyright", "copyright", asset.metadata.copyright)
+
+        layout.label(text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG")
         row = layout.row()
         row.template_list(
             "SH_UL_TagList",

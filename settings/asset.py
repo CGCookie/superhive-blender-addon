@@ -117,7 +117,7 @@ class SH_AssetTags(PropertyGroup):
         else:
             i = self.tags.find(tag)
             self.tags.remove(i)
-        
+
         if context:
             self.update_is_dirty(context)
 
@@ -245,15 +245,10 @@ def register():
         if item:
             return item.get("id_int", 444)
 
-        if "-" in self.catalog_simple_name:
-            set_cat_name = self.catalog_simple_name.split("-")[-1]
-        else:
-            set_cat_name = self.catalog_simple_name
-        item = next((
-            val
-            for val in hive_mind.CATALOG_DICT.values()
-            if val["name"] == set_cat_name
-        ), None)
+        item = hive_mind.get_catalog_by_name(
+            self.catalog_simple_name, is_catalog_simple_name=True
+        )
+
         return item.get("id_int", 444) if item else 444
 
     def _set_asset_catalog(self: AssetMetaData, value) -> dict:
@@ -299,11 +294,7 @@ def register():
         if item:
             return item.get("id_int", 444)
 
-        item = next((
-            val
-            for val in hive_mind.LICENSES_DICT.values()
-            if val["name"] == self.license
-        ), None)
+        item = hive_mind.get_license_by_name(self.license)
         return item.get("id_int", 444) if item else 444
 
     def _set_asset_license(self: AssetMetaData, value) -> dict:

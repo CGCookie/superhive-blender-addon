@@ -230,18 +230,46 @@ def load_categories():
 
 
 def get_licenses(_=None, __=None) -> tuple[tuple[str]]:
+    """Get the licenses enum for Blender UI"""
     global LICENSES_ENUM
     return LICENSES_ENUM
 
 
+def get_license_by_name(name: str) -> dict:
+    """Get the license by name"""
+    global LICENSES_DICT
+
+    return next((
+        val
+        for val in LICENSES_DICT.values()
+        if val["name"] == name
+    ), None)
+
+
 def get_tags(_=None, __=None) -> tuple[tuple[str]]:
+    """Get the tags enum for Blender UI"""
     global TAGS_ENUM
     return TAGS_ENUM
 
 
 def get_categories(_=None, __=None) -> tuple[tuple[str]]:
+    """Get the catalog enum for Blender UI"""
     global CATALOG_ENUM
     return CATALOG_ENUM
+
+
+def get_catalog_by_name(name: str, is_catalog_simple_name=False) -> dict:
+    """Get the catalog by name"""
+    global CATALOG_DICT
+
+    if is_catalog_simple_name and "-" in name:
+        name = name.split("-")[-1]
+
+    return next((
+        val
+        for val in CATALOG_DICT.values()
+        if val["name"] == name
+    ), None)
 
 
 load_categories()

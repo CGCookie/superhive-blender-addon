@@ -11,9 +11,12 @@ import bpy
 from bpy.types import Area, AssetRepresentation, Context, UserAssetLibrary
 from bpy_extras import asset_utils
 
+from . import hive_mind
+
 
 if TYPE_CHECKING:
     from .ui.prefs import SH_AddonPreferences
+    from .settings import asset as asset_settings
 
 
 ASSET_TYPES_TO_ID_TYPES = {
@@ -637,6 +640,47 @@ class Asset:
         print(new_text)
         print("".center(100, "-"))
         print()
+
+    def reset_metadata(self, context: Context) -> None:
+        """Reset the metadata of the asset."""
+        self.orig_asset.metadata.sh_name = self.name
+        self.orig_asset.metadata.sh_is_dirty_name = False
+
+        self.orig_asset.metadata.sh_author = self.orig_asset.metadata.author
+        self.orig_asset.metadata.sh_is_dirty_author = False
+
+        self.orig_asset.metadata.sh_description = self.orig_asset.metadata.description
+        self.orig_asset.metadata.sh_is_dirty_description = False
+
+        self.orig_asset.metadata.sh_copyright = self.orig_asset.metadata.copyright
+        self.orig_asset.metadata.sh_is_dirty_copyright = False
+
+        license = hive_mind.LICENSES_DICT.get(self.orig_asset.metadata.license)
+        if not license:
+            license = hive_mind.get_license_by_name(self.orig_asset.metadata.license)
+        if license:
+            self.orig_asset.metadata.sh_license = license["id"]
+        else:
+            self.orig_asset.metadata.sh_license = "UNRECOGNIZED"
+        self.orig_asset.metadata.sh_is_dirty_license = False
+
+        catalog = hive_mind.CATALOG_DICT.get(self.orig_asset.metadata.catalog_id)
+        if not catalog:
+            catalog = hive_mind.get_catalog_by_name(
+                self.orig_asset.metadata.catalog_simple_name,
+                is_catalog_simple_name=True,
+            )
+        if catalog:
+            self.orig_asset.metadata.sh_catalog = catalog["id"]
+        else:
+            self.orig_asset.metadata.sh_catalog = "UNRECOGNIZED"
+        self.orig_asset.metadata.sh_is_dirty_catalog = False
+
+        sh_tags: 'asset_settings.SH_AssetTags' = self.orig_asset.metadata.sh_tags
+        sh_tags.clear(context)
+        for tag in self.orig_asset.metadata.tags:
+            sh_tags.new_tag(tag.name, context)
+        self.orig_asset.metadata.sh_is_dirty_tags = False
 
 
 class Assets:

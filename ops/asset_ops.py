@@ -1,3 +1,4 @@
+from ctypes import util
 from typing import TYPE_CHECKING
 
 import bpy
@@ -66,27 +67,29 @@ class SH_OT_ResetAssetMetadataProperty(Operator):
         return polls.is_asset_browser(context, cls=cls) and context.asset
 
     def execute(self, context):
-        context.asset.metadata[self.property] = self.original_value
+        if self.property == "tags":
+            # self.original_value should be a list of tags separated by commas
+            tags = self.original_value.split(",")
+            sh_tags: 'asset_settings.SH_AssetTags' = context.asset.metadata.sh_tags
+            for tag in tags:
+                sh_tags.new_tag(tag, context=context)
+        else:
+            setattr(context.asset.metadata, self.property, self.original_value)
         return {"FINISHED"}
 
 
-# class SH_OT_ResetAssetMetadata(Operator):
-#     bl_idname = "superhive.reset_asset_metadata"
-#     bl_label = "Reset Asset Metadata"
-#     bl_description = "Reset the asset metadata of selected assets. Resets all assets if none are selected."
-#     bl_options = {"REGISTER", "UNDO"}
+class SH_OT_ResetAssetMetadata(Operator):
+    bl_idname = "superhive.reset_asset_metadata"
+    bl_label = "Reset Asset Metadata"
+    bl_description = "Reset the asset metadata of selected assets. Resets all assets if none are selected."
+    bl_options = {"REGISTER", "UNDO"}
 
-#     def execute(self, context):
-#         lib = utils.from_active(context, load_assets=True)
+    def execute(self, context):
+        asset = utils.Asset(context.asset)
 
-#         if not lib.assets:
-#             self.report({"ERROR"}, "No assets found")
-#             return {"CANCELLED"}
+        asset.reset_metadata(context)
 
-#         for asset in lib.assets:
-#             asset.reset_metadata()
-
-#         return {"FINISHED"}
+        return {"FINISHED"}
 
 
 class SH_OT_AddTags(Operator):
@@ -174,6 +177,7 @@ classes = (
     SH_OT_ResetTags,
     SH_OT_UpdateAsset,
     SH_OT_ResetAssetMetadataProperty,
+    SH_OT_ResetAssetMetadata,
 )
 
 
