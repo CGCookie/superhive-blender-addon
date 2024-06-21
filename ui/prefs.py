@@ -6,8 +6,9 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty,
                        IntProperty, StringProperty)
 from bpy.types import AddonPreferences, PropertyGroup, UILayout, UIList
 
+
 from .. import __package__ as base_package
-from .. import utils
+from .. import utils, hive_mind
 
 
 class SH_UL_BlenderVersions(UIList):
@@ -70,16 +71,7 @@ class SH_AddonPreferences(AddonPreferences):
     default_license: EnumProperty(
         name="Default License",
         description="The default license to use for new assets",
-        items=(
-            ("CC0", "CC0", "CC0"),
-            ("CC-BY", "CC-BY", "CC-BY"),
-            ("CC-BY-SA", "CC-BY-SA", "CC-BY-SA"),
-            ("CC-BY-NC", "CC-BY-NC", "CC-BY-NC"),
-            ("CC-BY-ND", "CC-BY-ND", "CC-BY-ND"),
-            ("CC-BY-NC-SA", "CC-BY-NC-SA", "CC-BY-NC-SA"),
-            ("CC-BY-NC-ND", "CC-BY-NC-ND", "CC-BY-NC-ND"),
-        ),
-        default="CC0",
+        items=hive_mind.get_licenses,
     )
 
     library_directory: StringProperty(
