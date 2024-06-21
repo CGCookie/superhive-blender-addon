@@ -23,7 +23,7 @@ class SH_OT_GatherBlenderExes(Operator):
             p = Path(path)
             for bexe in p.glob(f"**/{executable_name}"):
                 prefs.add_blender_version(
-                    bexe.parent.name, str(bexe)
+                    bexe.parent.name.replace("-", " ").title(), str(bexe)
                 )
 
         return {"FINISHED"}
