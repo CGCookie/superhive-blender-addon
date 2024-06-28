@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING
+
 import bpy
-from bpy.types import Context, Panel, UILayout, AssetRepresentation
+from bpy.types import AssetRepresentation, Context, Panel, UILayout
 from bpy_extras import asset_utils
 
+from .. import __package__ as base_package
 # from ..helpers import asset_helper
 from ..ops import polls
-
-from .. import __package__ as base_package
 
 if TYPE_CHECKING:
     from ..settings import scene
@@ -56,14 +56,19 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         layout: UILayout = self.layout
         layout.use_property_split = True
 
-        prefs: 'sh_prefs.SH_AddonPreferences' = context.preferences.addons[base_package].preferences
-
         if not context.asset:
             row = layout.row()
             row.alignment = "CENTER"
-            row.label(text="Please select an asset")
+            row.label(text="Please select asset(s)")
             return
+        
+        if len(context.selected_assets) > 1:
+            self.draw_multiple_assets(context, layout)
+        else:
+            self.draw_single_asset(context, layout)
 
+    def draw_single_asset(self, context: Context, layout: UILayout):
+        prefs: 'sh_prefs.SH_AddonPreferences' = context.preferences.addons[base_package].preferences
         asset: AssetRepresentation = context.asset
 
         def set_is_dirty_text(prop: str, text: str = None):
@@ -110,6 +115,15 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         row.active = asset.metadata.sh_is_dirty()
         row.operator("superhive.update_asset", icon="FILE_REFRESH")
 
+    def draw_multiple_assets(self, context: Context, layout: UILayout):
+        layout.label(text="Multiple assets selected")
+        scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        col = layout.column()
+        col.use_property_decorate = False
+        col.use_property_split = False
+        scene_sets.metadata_update.draw(context, col, use_ops=True)
+        col.operator("superhive.batch_update_assets_from_scene", icon="FILE_REFRESH")
+    
 
 class SH_PT_LibrarySettings(Panel):
     bl_idname = "SH_PT_LibrarySettings"

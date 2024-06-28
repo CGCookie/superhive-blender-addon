@@ -600,6 +600,10 @@ class Asset:
             tag.name
             for tag in asset.metadata.sh_tags.tags
         ]
+        self.bpy_tags = [
+            tag.name
+            for tag in asset.metadata.tags
+        ]
         self.icon_path = None
 
     def update_asset(self, blender_exe: str) -> None:
