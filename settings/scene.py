@@ -311,6 +311,12 @@ class BatchMetadataUpdate(PropertyGroup):
         description="The tags to add to the asset",
         size=len(hive_mind.get_tags()),
     )
+    
+    reset_settings: BoolProperty(
+        name="Reset Settings",
+        description="Reset the settings after updating the assets",
+        default=True
+    )
 
     def process_text(self, metadata_item:str, text:str) -> str:
         item = self.metadata_items.get(metadata_item)

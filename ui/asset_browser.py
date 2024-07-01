@@ -122,7 +122,11 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         col.use_property_decorate = False
         col.use_property_split = False
         scene_sets.metadata_update.draw(context, col, use_ops=True)
-        col.operator("superhive.batch_update_assets_from_scene", icon="FILE_REFRESH")
+        
+        row = col.row(align=True)
+        row.operator("superhive.batch_update_assets_from_scene")
+        row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
+        
     
 
 class SH_PT_LibrarySettings(Panel):

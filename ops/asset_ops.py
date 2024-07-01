@@ -118,8 +118,6 @@ class SH_OT_BatchUpdateAssetsFromScene(Operator):
     bl_description = "Update the asset data of selected assets."
     bl_options = {"REGISTER", "UNDO"}
 
-    # metadata_update: PointerProperty(type=scene.BatchMetadataUpdate)
-
     @classmethod
     def poll(cls, context):
         cls.metadata_update: scene.BatchMetadataUpdate
@@ -144,7 +142,8 @@ class SH_OT_BatchUpdateAssetsFromScene(Operator):
 
         bpy.ops.asset.library_refresh()
         
-        scene_sets.metadata_update.reset()
+        if scene_sets.metadata_update.reset_settings:
+            scene_sets.metadata_update.reset()
 
         return {"FINISHED"}
 
