@@ -3,12 +3,13 @@ from pathlib import Path
 
 import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty,
-                       IntProperty, StringProperty)
+                       IntProperty, StringProperty, FloatProperty)
 from bpy.types import AddonPreferences, PropertyGroup, UILayout, UIList
 
 
 from .. import __package__ as base_package
 from .. import utils, hive_mind
+from ..settings import scene
 
 
 class SH_UL_BlenderVersions(UIList):
@@ -54,7 +55,7 @@ class SH_BlenderVersion(PropertyGroup):
         return utils.get_prefs()
 
 
-class SH_AddonPreferences(AddonPreferences):
+class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
     bl_idname = base_package
 
     display_extras: bpy.props.BoolProperty(
@@ -94,6 +95,11 @@ class SH_AddonPreferences(AddonPreferences):
     )
 
     active_blender_version_index: IntProperty()
+
+    non_blocking: BoolProperty(
+        name="Use Separate threads for tasks (Non-Blocking)",
+        default=True,
+    )
 
     @property
     def active_blender_version(self) -> SH_BlenderVersion:
@@ -135,8 +141,8 @@ class SH_AddonPreferences(AddonPreferences):
         return self.default_blender_version
 
     def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "display_extras")
+        layout = self.layout        
+        layout.label(text="Metadata Defaults:")
         layout.prop(self, "default_author_name")
         layout.prop(self, "default_license")
         layout.prop(self, "library_directory")
@@ -152,6 +158,42 @@ class SH_AddonPreferences(AddonPreferences):
         col.operator("superhive.add_blender_exes", icon="ADD", text="")
         col.operator("superhive.remove_blender_exes", icon="REMOVE", text="")
         col.operator("superhive.gather_blender_exes", icon="FILE_REFRESH", text="")
+        
+        layout.separator()
+        
+        row = layout.row()
+        row.label(text="Thumbnail Rendering Defaults:")
+        col = layout.column()
+        col.use_property_decorate = False
+        row = col.row()
+        row.use_property_split = True
+        row.prop(self, "non_blocking", text="Render in Background")
+        
+        max_width = 730
+        if context.region.width > max_width:
+            margin = (context.region.width - max_width) / 100
+            thumbnail_row = layout.row()
+            col_l = thumbnail_row.column()
+            col_l.ui_units_x = margin
+            col_l.separator()
+            col = thumbnail_row.column()
+            # col.ui_units_x = max_width
+            col_r = thumbnail_row.column()
+            col_r.ui_units_x = margin       
+            col_r.separator()
+        self.draw_thumbnail_props(col)
+        
+        layout.separator()
+        
+        if self.display_extras:
+            layout.label(text=f"Region Width: {context.region.width}")
+        row = layout.row()
+        row.alignment = "RIGHT"
+        row.prop(
+            self, "display_extras",
+            emboss=False, text="",
+            icon="UNLOCKED" if self.display_extras else "LOCKED"
+        )
 
 
 classes = (

@@ -4,11 +4,14 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from platform import system
-from subprocess import Popen
+from subprocess import Popen, run
 from typing import TYPE_CHECKING, Union
+import os
+import threading
+import functools
 
 import bpy
-from bpy.types import Area, AssetRepresentation, Context, UserAssetLibrary
+from bpy.types import Area, AssetRepresentation, Context, UserAssetLibrary, Window
 from bpy_extras import asset_utils
 
 from . import hive_mind
@@ -17,6 +20,7 @@ from . import hive_mind
 if TYPE_CHECKING:
     from .ui.prefs import SH_AddonPreferences
     from .settings import asset as asset_settings
+    from .ops import asset_ops
 
 
 ASSET_TYPES_TO_ID_TYPES = {
@@ -606,7 +610,7 @@ class Asset:
         ]
         self.icon_path = None
 
-    def update_asset(self, blender_exe: str) -> None:
+    def update_asset(self, blender_exe: str, debug: bool = False) -> None:
         """Open asset's blend file and update the asset's metadata."""
         python_file = Path(__file__).parent / "stand_alone_scripts" / "update_asset.py"
         proc: subprocess.CompletedProcess = subprocess.run(
@@ -631,19 +635,21 @@ class Asset:
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
         )
-        if proc.returncode:
-            print(f"    - Error: {proc.stderr.decode()}")
-        print("".center(100, "-"))
-        text = proc.stdout.decode()
-        text.splitlines()
-        new_text = "\n".join(
-            line
-            for line in text.splitlines()
-            if line.startswith("|")
-        )
-        print(new_text)
-        print("".center(100, "-"))
-        print()
+        if proc.returncode > 1:
+            print(f"    - Error {proc.returncode}: {proc.stderr.decode()}")
+        
+        if debug or proc.returncode > 1:
+            print("".center(100, "-"))
+            text = proc.stdout.decode()
+            text.splitlines()
+            new_text = "\n".join(
+                line
+                for line in text.splitlines()
+                if line.startswith("|")
+            )
+            print(new_text)
+            print("".center(100, "-"))
+            print()
 
     def reset_metadata(self, context: Context) -> None:
         """Reset the metadata of the asset."""
@@ -685,6 +691,39 @@ class Asset:
         for tag in self.orig_asset.metadata.tags:
             sh_tags.new_tag(tag.name, context)
         self.orig_asset.metadata.sh_is_dirty_tags = False
+
+    def rerender_thumbnail(self, path, directory, objects, shading, angle='X', add_plane=False):
+        prefs = get_prefs()
+        cmd = [bpy.app.binary_path]
+        #cmd.append("--background")
+        #cmd.append(path[0])
+        cmd.append("--factory-startup")
+        cmd.append("--python")
+        # cmd.append(os.path.join(os.path.dirname(
+        #     os.path.abspath(__file__)), "rerender_thumbnails.py"))
+        cmd.append(str(Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"))
+        cmd.append('--')
+        cmd.append(":--separator--:".join(path))
+        names=[]
+        types=[]
+        for o in objects:
+            names.append(":--separator2--:".join([a[0] for a in o]))
+            types.append(":--separator2--:".join([a[1] for a in o]))
+        cmd.append(":--separator--:".join(names))
+        cmd.append(":--separator--:".join(types))
+        cmd.append(shading)
+        cmd.append(directory)
+        cmd.append(angle)
+        cmd.append(str(add_plane))
+        cmd.append(str(prefs.world_strength))
+        cmd.append(bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE')
+        if prefs.non_blocking:
+            t1=threading.Thread(target=functools.partial(run,cmd))
+            t1.start()
+            return t1
+        else:
+            run(cmd)
+            return None
 
 
 class Assets:
@@ -922,3 +961,280 @@ def open_location(fpath: str, win_open=False):
 def get_prefs() -> 'SH_AddonPreferences':
     return bpy.context.preferences.addons[__package__].preferences
 
+
+def rerender_thumbnail(paths: list[str], directory: str, objects, shading: str, angle: str = 'X', add_plane: bool = False, world_name: str = "Studio Soft", world_strength: float = 1.0, padding: float = 0.0, rotate_world: bool = False, debug_scene: bool = False, op: 'asset_ops.SH_OT_BatchUpdateAssetsFromScene' = None) -> None:
+    """
+    Rerenders the thumbnail using the specified parameters.
+
+    Parameters:
+    - path (str): The path of the blend files.
+    - directory (str): The directory where the thumbnail will be saved.
+    - objects: The objects to be rendered in the thumbnail. One object per path
+    - shading (str): The shading mode to be used for rendering.
+    - angle (str, optional): The angle of the camera. Defaults to 'X'.
+    - add_plane (bool, optional): Whether to add a plane object to the scene. Defaults to False.
+    - world_name (str, optional): The name of the world to be used. Defaults to "Studio Soft".
+    - world_strength (float, optional): The strength of the world. Defaults to 1.0.
+    - padding (float, optional): The padding around the objects in the thumbnail. Defaults to 0.0.
+    - rotate_world (bool, optional): Whether to rotate the world. Defaults to False.
+    - debug_scene (bool, optional): Whether to enable debug mode for the scene. Defaults to False.
+
+    Returns:
+    - t1 (Thread): The thread object if non-blocking mode is enabled, None otherwise.
+    """
+    ptt = op is None or debug_scene
+    """Print to Terminal"""
+    
+    if ptt:
+        print("*"*115)
+        print("Thread Starting".center(100, "*"))
+        print("*"*115)
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
+    
+    names=[]
+    types=[]
+    for o in objects:
+        names.append(":--separator2--:".join([a[0] for a in o]))
+        types.append(":--separator2--:".join([a[1] for a in o]))
+    
+    # proc: subprocess.CompletedProcess = subprocess.run(
+    
+    # Make copies of the blend files
+    # thumbnail_blends: list[Path] = []
+    # for p,n,t in zip(paths, names, types):
+    #     pP = Path(p)
+    #     thumbnail_blend = pP.with_stem(f"{pP.stem}=+={n}=+={t}=+=_thumbnail_copy")
+    #     thumbnail_blends.append(thumbnail_blend)
+    #     thumbnail_blend.write_bytes(pP.read_bytes())
+    
+    # Setup Scene
+    if ptt:
+        print()
+        print("-"*70)
+        print("Setting Up Scenes:".center(70, "-"))
+        print("-"*70)
+    if op:
+        op.label = "Setting Up Scenes"
+        op.update = True
+    args = [
+        bpy.app.binary_path,
+        "-b",
+        "--factory-startup",
+        "-P",
+        str(python_file),
+        '--',
+        ":--separator--:".join(str(p) for p in paths),
+        ":--separator--:".join(names),
+        ":--separator--:".join(types),
+        shading,
+        directory,
+        angle,
+        str(add_plane),
+        str(world_strength),
+        bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE',
+        world_name,
+        str(padding),
+        str(rotate_world),
+        "0", # 0 for setup
+        str(debug_scene),
+    ]
+    if ptt:
+        print("     - Terminal Command:", " ".join(args))
+    # for p in thumbnail_blends:
+    e = None
+    try:
+        run(args, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"- Error: {e}")
+        print(f"- Output: {proc.stdout.decode()}")
+    if ptt and not e:
+        print(proc.stdout.decode())
+    
+    if ptt:
+        print()
+        print("-"*70)
+        print("Rendering Assets:".center(70, "-"))
+        print("-"*70)
+    if op:
+        op.setup_progress = 1.0
+        op.start_icon_render = True
+        op.update = True
+    # Render
+    thumbnail_blends: list[Path] = list(set(
+        item
+        for p in paths
+        for item in Path(p).parent.iterdir()
+        if item.stem.endswith("_thumbnail_copy") and "=+=" in item.stem
+    ))
+    if ptt:
+        print()
+        print(f"Rendering {len(thumbnail_blends)} Thumbnails:")
+        for tbp in thumbnail_blends:
+            print(f" - {tbp}")
+        print()
+    thumbnails_by_blend = {}
+    for i,tbp in enumerate(thumbnail_blends):
+        orig_stem = tbp.stem.split("=+=")[0]
+        orig_blend_path = tbp.with_stem(orig_stem)
+        thumbnail_path = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
+        thumbnail_path_for_terminal = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
+        args = [
+            bpy.app.binary_path,
+            "-b",
+            "--factory-startup",
+            str(tbp),
+            "-o",
+            str(thumbnail_path_for_terminal),
+            "-F",
+            "PNG",
+            "-f",
+            "1"
+        ]
+        if ptt:
+            print()
+            print(f"({i+1}/{len(thumbnail_blends)}) Rendering To: {thumbnail_path}")
+            print(" - From:", tbp)
+            print("   - exists", tbp.exists())
+            print("CMD:", " ".join(args))
+        try:
+            proc: subprocess.CompletedProcess = run(args, stdout=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"- Error: {e}")
+            print(f"- Output: {proc.stdout.decode()}")
+        thumbnails_by_blend[orig_blend_path] = thumbnail_path
+        if not debug_scene:
+            tbp.unlink(missing_ok=True)
+        if op:
+            op.render_progress = (i+1) / len(thumbnail_blends)
+            op.update = True
+    
+    if ptt:
+        print()
+        print("-"*70)
+        print("Applying Thumbnails:".center(70, "-"))
+        print("-"*70)
+    if op:
+        op.start_icon_apply = True
+        op.update = True
+    # Set thumbnail
+    args = [
+        bpy.app.binary_path,
+        "-b",
+        "--factory-startup",
+        # str(self.blend_path),
+        "-P",
+        str(python_file),
+        '--',
+        ":--separator--:".join(paths),
+        ":--separator--:".join(names),
+        ":--separator--:".join(types),
+        shading,
+        directory,
+        angle,
+        str(add_plane),
+        str(world_strength),
+        bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE',
+        world_name,
+        str(padding),
+        str(rotate_world),
+        "1", # 1 for applying thumbnail
+        str(debug_scene),
+    ]
+    if ptt:
+        print("     - Terminal Command:", " ".join(args))
+    e = None
+    try:
+        run(args, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"- Error: {e}")
+        print(f"- Output: {proc.stdout.decode()}")
+    if ptt and not e:
+        print(proc.stdout.decode())
+    
+    if ptt:
+        print("*"*115)
+        print("Thread Finished".center(100, "*"))
+        print("*"*115)
+    if op:
+        op.apply_progress = 1.0
+        op.update = True
+    # cmd = [bpy.app.binary_path]
+    # #cmd.append("--background")
+    # #cmd.append(path[0])
+    # cmd.append("--factory-startup")
+    # # cmd.append("--python")
+    # cmd.append("-P")
+    # # cmd.append(os.path.join(os.path.dirname(
+    # #     os.path.abspath(__file__)), "rerender_thumbnails.py"))
+    # cmd.append(str(Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"))
+    # cmd.append('--')
+    # cmd.append(":--separator--:".join(path))
+    # names=[]
+    # types=[]
+    # for o in objects:
+    #     names.append(":--separator2--:".join([a[0] for a in o]))
+    #     types.append(":--separator2--:".join([a[1] for a in o]))
+    # cmd.append(":--separator--:".join(names))
+    # cmd.append(":--separator--:".join(types))
+    # cmd.append(shading)
+    # cmd.append(directory)
+    # cmd.append(angle)
+    # cmd.append(str(add_plane))
+    # cmd.append(str(prefs.world_strength))
+    # cmd.append(bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE')
+    # if get_prefs().non_blocking:
+    #     t1=threading.Thread(
+    #         target=functools.partial(
+    #             run,
+    #             cmd,
+    #         )
+    #     )
+    #     t1.start()
+    #     return t1
+    # else:
+    #     proc: subprocess.CompletedProcess = run(
+    #         cmd,
+    #         stderr=subprocess.PIPE,
+    #         stdout=subprocess.PIPE,
+    #     )
+        
+    #     if proc.returncode:
+    #         print(f"    - Error: {proc.stderr.decode()}")
+    #     print("".center(100, "-"))
+    #     text = proc.stdout.decode()
+    #     text.splitlines()
+    #     new_text = "\n".join(
+    #         line
+    #         for line in text.splitlines()
+    #         if line.startswith("|")
+    #     )
+    #     print(new_text)
+    #     print("".center(100, "-"))
+    #     print()
+        
+    #     return None
+
+
+def resolve_angle(angle: str, flip_x: str, flip_y: str, flip_z: str):
+    if flip_x:
+        angle=angle.replace('X','-X')
+    if flip_y:
+        angle=angle.replace('Y','-Y')
+    if flip_z:
+        angle=angle.replace('Z','-Z')
+    return angle
+
+
+def mouse_in_window(window:Window, x, y) -> bool:
+    """
+    Check if the mouse coordinates (x, y) are within the boundaries of the given window.
+
+    Parameters:
+    window (Window): The window object to check against.
+    x (int): The x-coordinate of the mouse.
+    y (int): The y-coordinate of the mouse.
+
+    Returns:
+    bool: True if the mouse is within the window boundaries, False otherwise.
+    """
+    return window.x <= x <= window.x + window.width and window.y <= y <= window.y + window.height

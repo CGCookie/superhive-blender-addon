@@ -25,6 +25,7 @@ import sys
 # from pathlib import Path
 
 import bpy
+from pathlib import Path
 
 # from settings import asset
 # from bpy.types import Object
@@ -80,7 +81,12 @@ def update_asset():
     for tag in tags:
         asset_item.asset_data.tags.new(tag, skip_if_exists=True)
 
-    # TODO: Handle Icon
+    ip = Path(icon_path)
+    if ip.exists() and ip.is_file():
+        with bpy.context.temp_override(id=asset_item):
+            bpy.ops.ed.lib_id_load_custom_preview(
+                filepath=icon_path,
+            )
 
     bpy.ops.wm.save_mainfile(compress=True)
 

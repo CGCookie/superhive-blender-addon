@@ -174,7 +174,7 @@ class SH_OT_AddToLibrary(Operator):
                         getattr(data_to, data_type).append(asset_item)
 
                 if data := getattr(data_to, data_type):
-                    if self.copy_catalogs:
+                    if self.copy_catalogs: # TODO: This doesn't work as expected
                         asset_catfile = utils.CatalogsFile(
                             Path(asset.full_library_path).parent
                         )
@@ -375,7 +375,7 @@ class SH_OT_AddAsAssetToLibrary(Operator):
         except Exception as e:
             print(f"An error occurred while refreshing the asset library: {e}")
 
-        context.space_data.activate_asset_by_id(obj)
+        # context.space_data.activate_asset_by_id(obj)
 
         return {"FINISHED"}
 

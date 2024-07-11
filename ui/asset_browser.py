@@ -5,6 +5,7 @@ from bpy.types import AssetRepresentation, Context, Panel, UILayout
 from bpy_extras import asset_utils
 
 from .. import __package__ as base_package
+from .. import utils
 # from ..helpers import asset_helper
 from ..ops import polls
 
@@ -26,6 +27,8 @@ def draw_assetbrowser_header(self, context: Context):
             "superhive.create_hive_asset_library",
             text="", icon="ADD"
         )
+    
+    layout.label(text=context.scene.sh_progress_t)
 
 
 class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
@@ -62,15 +65,35 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             row.label(text="Please select asset(s)")
             return
         
-        if len(context.selected_assets) > 1:
+        scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        if scene_sets.side_panel_batch_asset_update_progress_bar.show:
+            scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
+        elif len(context.selected_assets) > 1:
             self.draw_multiple_assets(context, layout)
         else:
             self.draw_single_asset(context, layout)
 
     def draw_single_asset(self, context: Context, layout: UILayout):
-        prefs: 'sh_prefs.SH_AddonPreferences' = context.preferences.addons[base_package].preferences
+        prefs = utils.get_prefs()
         asset: AssetRepresentation = context.asset
+        active_file = context.active_file
 
+        row = layout.row()
+        # row.alignment = "CENTER"
+        row.label(text="Icon:", icon="IMAGE_DATA")
+        row = layout.row(align=True)
+        box = row.box()
+        box.template_icon(icon_value=active_file.preview_icon_id, scale=5.0)
+        row.separator()
+        col = row.column(align=True)
+        col.operator("superhive.change_asset_icon", icon="FILE_FOLDER", text="")
+        col.operator("superhive.rerender_thumbnail", icon="RESTRICT_RENDER_OFF", text="")
+
+        layout.separator()
+
+        row = layout.row()
+        # row.alignment = "CENTER"
+        row.label(text="Metadata:", icon="TEXT")
         def set_is_dirty_text(prop: str, text: str = None):
             if getattr(asset.metadata, f"sh_is_dirty_{prop}"):
                 return f"{text or prop.title()}*"
@@ -110,18 +133,22 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         if prefs.display_extras:
             layout.label(text="Extra information is displayed")
             layout.label(text=f"UUID: {asset.metadata.sh_uuid}")
+            layout.label(text=f"Type: {asset.id_type}")
 
         row = layout.row()
         row.active = asset.metadata.sh_is_dirty()
         row.operator("superhive.update_asset", icon="FILE_REFRESH")
 
     def draw_multiple_assets(self, context: Context, layout: UILayout):
-        layout.label(text="Multiple assets selected")
+        # layout.operator("superhive.rerender_thumbnail", icon="RESTRICT_RENDER_OFF")
         scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        
         col = layout.column()
         col.use_property_decorate = False
         col.use_property_split = False
         scene_sets.metadata_update.draw(context, col, use_ops=True)
+        
+        col.separator()
         
         row = col.row(align=True)
         row.operator("superhive.batch_update_assets_from_scene")

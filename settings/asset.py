@@ -212,7 +212,9 @@ def register():
         item = self.get("_name", None)
         if item is not None:
             return item
-        return bpy.context.asset.name
+        if bpy.context.asset:
+            return bpy.context.asset.name
+        return "Error: no active asset"
 
     def _set_active_asset_name(self, value: str):
         self["_name"] = value

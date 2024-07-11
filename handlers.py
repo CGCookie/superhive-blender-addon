@@ -10,9 +10,11 @@ def load_post(dummy):
     if len(scene_sets.metadata_update.metadata_items) != 4:
         scene_sets.metadata_update.reset()
 
+
 def register():
     bpy.app.handlers.load_post.append(load_post)
 
 
 def unregister():
-    bpy.app.handlers.load_post.remove(load_post)
+    if load_post in bpy.app.handlers.load_post:
+        bpy.app.handlers.load_post.remove(load_post)
