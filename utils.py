@@ -818,15 +818,44 @@ class AssetLibrary:
         return bpy.context.preferences.filepaths.asset_libraries.new(name=name, directory=path)
 
     @classmethod
-    def create_new_library(cls, name: str, path: str, context: Context = None, load_assets=False, load_catalogs=False) -> 'AssetLibrary':
+    def create_new_library(cls, name: str, path: str, context: Context = None, load_assets=False, load_catalogs=False, save_prefs=True) -> 'AssetLibrary':
         """Create a new `UserAssetLibrary` in Blender and then create a new `AssetLibrary` object from that library."""
         lib = cls.create_bpy_library(name, path)
+        
+        if save_prefs and not bpy.context.preferences.use_preferences_save:
+            cls.save_repository_prefs(name, path)
+        
         return cls(
             lib,
             context=context,
             load_assets=load_assets,
             load_catalogs=load_catalogs,
         )
+    
+    @classmethod
+    def save_repository_prefs(cls, name: str, path: str):
+        p = Path(__file__)
+        while p.parent.name != "Blender":
+            p = p.parent
+        prefs_blend = p / "config" / "userpref.blend"
+        
+        if not prefs_blend.exists():
+            return
+        
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "add_repository_to_userpref.py"
+        
+        args = [
+            bpy.app.binary_path,
+            "-b",
+            # str(prefs_blend),
+            "-P",
+            str(python_file),
+            name,
+            path
+        ]
+        print(" ".join(args))
+        
+        run(args)
 
 
 def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
