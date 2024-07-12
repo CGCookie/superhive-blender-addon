@@ -454,7 +454,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
         col.label(text="Please choose what to do for each asset:")
         self.ids_to_handle.draw(col, only_tagged=True)
 
-    def invoke(self, context, event):
+    def invoke(self, context: Context, event):
         self.ids_to_handle: IDsToHandle
         
         prefs = utils.get_prefs()
@@ -463,7 +463,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
         self.license = prefs.default_license
         self.copyright = prefs.default_copyright
         
-        self.ids = self.get_ids(context)
+        self.ids = context.selected_ids
         
         self.display_ids_to_handle = False
         
@@ -592,11 +592,12 @@ class AddAsAsset(scene.RenderThumbnailProps):
         id.asset_data.author = prefs.default_author_name
         id.asset_data.license = prefs.default_license
         
-        if icon_path and Path(icon_path).exists():
-            with context.temp_override(id=id):
-                bpy.ops.ed.lib_id_load_custom_preview(filepath=icon_path)
-        elif not Path(icon_path).exists():
-            print(f"Icon file does not exist: {icon_path}")
+        if icon_path:
+            if Path(icon_path).exists():
+                with context.temp_override(id=id):
+                    bpy.ops.ed.lib_id_load_custom_preview(filepath=icon_path)
+            else:
+                print(f"Icon file does not exist: {icon_path}")
 
         for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
             if value:
@@ -647,8 +648,6 @@ class AddAsAsset(scene.RenderThumbnailProps):
 class SH_OT_AddAsAssetToLibrary(Operator, AddAsAsset):
     bl_idname = "superhive.add_as_asset_to_library"
 
-    def get_ids(self, context: Context) -> list[ID]:
-        return [context.object]
 
 
 class SH_OT_AddToLibraryFromOutliner(Operator, AddAsAsset):
@@ -660,9 +659,6 @@ class SH_OT_AddToLibraryFromOutliner(Operator, AddAsAsset):
             cls.poll_message_set("No items selected")
             return False
         return True
-    
-    def get_ids(self, context: Context) -> list[ID]:
-        return context.selected_ids
     
 
 
