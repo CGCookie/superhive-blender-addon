@@ -192,9 +192,12 @@ class BatchUpdateAssets:
                 # if a.id_type=='OBJECT' or a.id_type=='COLLECTION' or a.id_type=='MATERIAL':
                 if a.id_type in {'OBJECT', 'COLLECTION', 'MATERIAL'}:
                     blend_data = blends.get(a.full_library_path)
-                    blends[a.full_library_path] = blend_data + [(a.name, a.id_type)] if blend_data else [(a.name, a.id_type)]
+                    blends[a.full_library_path] = (
+                        blend_data + [(a.name, a.id_type)]
+                        if blend_data
+                        else [(a.name, a.id_type)]
+                    )
             
-            self.threads=[]
             lib_path=[
                 a
                 for a in bpy.context.preferences.filepaths.asset_libraries

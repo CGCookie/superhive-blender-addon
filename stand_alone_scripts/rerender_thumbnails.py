@@ -673,7 +673,8 @@ def setup_scene_single_id(context: bpy.types.Context, object: bpy.types.Object, 
         min_z = min_bb.z
         ground_plane.location = (object.location.x, object.location.y, min_z)
     
-    global_bbox_center = object.matrix_world @ local_bbox_center
+    # global_bbox_center = object.matrix_world @ local_bbox_center
+    global_bbox_center = object.location + local_bbox_center
     track_object.location = global_bbox_center
 
     constraint = setup_camera_and_track(min_bb, max_bb, camera_object, track_object)
@@ -952,6 +953,7 @@ def create_preview(objects: list[bpy.types.ID]):
         bpy.ops.wm.quit_blender()
     return None
 
+
 def advance() -> None:
     global FILEPATHS, FILEPATH, ALL_NAMES, ALL_TYPES, NAMES, TYPES
     if FILEPATHS and ALL_NAMES and ALL_TYPES:
@@ -969,6 +971,7 @@ def advance() -> None:
     else:
         print("Finished All Previews")
         bpy.ops.wm.quit_blender()
+
 
 def setup_blend():
     global TYPES

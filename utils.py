@@ -4,7 +4,6 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from platform import system
-from subprocess import Popen, run
 from typing import TYPE_CHECKING, Union
 import os
 import threading
@@ -718,11 +717,11 @@ class Asset:
         cmd.append(str(prefs.world_strength))
         cmd.append(bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE')
         if prefs.non_blocking:
-            t1=threading.Thread(target=functools.partial(run,cmd))
+            t1=threading.Thread(target=functools.partial(subprocess.run,cmd))
             t1.start()
             return t1
         else:
-            run(cmd)
+            subprocess.run(cmd)
             return None
 
 
@@ -855,7 +854,7 @@ class AssetLibrary:
         ]
         print(" ".join(args))
         
-        run(args)
+        subprocess.run(args)
 
 
 def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
@@ -980,25 +979,25 @@ def open_location(fpath: str, win_open=False):
             from os import startfile
             startfile(fpath)
         else:
-            Popen(["explorer", "/select,", fpath])
+            subprocess.Popen(["explorer", "/select,", fpath])
     elif os == "Darwin":
-        Popen(["open", fpath])
+        subprocess.Popen(["open", fpath])
     else:
-        Popen(["xdg-open", fpath])
+        subprocess.Popen(["xdg-open", fpath])
 
 
 def get_prefs() -> 'SH_AddonPreferences':
     return bpy.context.preferences.addons[__package__].preferences
 
 
-def rerender_thumbnail(paths: list[str], directory: str, objects, shading: str, angle: str = 'X', add_plane: bool = False, world_name: str = "Studio Soft", world_strength: float = 1.0, padding: float = 0.0, rotate_world: bool = False, debug_scene: bool = False, op: 'asset_ops.SH_OT_BatchUpdateAssetsFromScene' = None) -> None:
+def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str, str]], shading: str, angle: str = 'X', add_plane: bool = False, world_name: str = "Studio Soft", world_strength: float = 1.0, padding: float = 0.0, rotate_world: bool = False, debug_scene: bool = False, op: 'asset_ops.SH_OT_BatchUpdateAssetsFromScene' = None) -> None:
     """
     Rerenders the thumbnail using the specified parameters.
 
     Parameters:
     - path (str): The path of the blend files.
     - directory (str): The directory where the thumbnail will be saved.
-    - objects: The objects to be rendered in the thumbnail. One object per path
+    - objects: A list of tuples containing the object name and type.
     - shading (str): The shading mode to be used for rendering.
     - angle (str, optional): The angle of the camera. Defaults to 'X'.
     - add_plane (bool, optional): Whether to add a plane object to the scene. Defaults to False.
@@ -1072,7 +1071,7 @@ def rerender_thumbnail(paths: list[str], directory: str, objects, shading: str, 
     # for p in thumbnail_blends:
     e = None
     try:
-        run(args, stdout=subprocess.PIPE, check=True)
+        proc = subprocess.run(args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         print(f"- Error: {e}")
         print(f"- Output: {proc.stdout.decode()}")
@@ -1088,6 +1087,8 @@ def rerender_thumbnail(paths: list[str], directory: str, objects, shading: str, 
         op.setup_progress = 1.0
         op.start_icon_render = True
         op.update = True
+    
+    
     # Render
     thumbnail_blends: list[Path] = list(set(
         item
@@ -1126,7 +1127,8 @@ def rerender_thumbnail(paths: list[str], directory: str, objects, shading: str, 
             print("   - exists", tbp.exists())
             print("CMD:", " ".join(args))
         try:
-            proc: subprocess.CompletedProcess = run(args, stdout=subprocess.PIPE, check=True)
+            proc: subprocess.CompletedProcess = subprocess.run(args, stdout=subprocess.PIPE, check=True)
+            proc.returncode
         except subprocess.CalledProcessError as e:
             print(f"- Error: {e}")
             print(f"- Output: {proc.stdout.decode()}")
@@ -1173,7 +1175,7 @@ def rerender_thumbnail(paths: list[str], directory: str, objects, shading: str, 
         print("     - Terminal Command:", " ".join(args))
     e = None
     try:
-        run(args, stdout=subprocess.PIPE, check=True)
+        subprocess.run(args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         print(f"- Error: {e}")
         print(f"- Output: {proc.stdout.decode()}")

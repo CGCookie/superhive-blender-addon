@@ -15,7 +15,7 @@ from .. import hive_mind, utils
 from ..icons import sh_icons
 
 
-class RenderThumbnailProps:    
+class RenderThumbnailProps:
     shading: EnumProperty(
         name="Thumbnail Shading",
         items=(

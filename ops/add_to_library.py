@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from threading import Thread
 
 import bpy
 from bpy.props import (BoolProperty, BoolVectorProperty, CollectionProperty,
@@ -9,6 +9,8 @@ from bpy.types import ID, AssetRepresentation, Context, Operator, PropertyGroup,
 from . import polls
 
 from .. import hive_mind, utils
+
+from ..settings import scene
 
 
 class SH_OT_AddToLibrary(Operator):
@@ -270,7 +272,6 @@ class IDToHandle(PropertyGroup):
             row.alignment = "RIGHT"
             row.label(text="File already exists")
         
-        
 
 class IDsToHandle(PropertyGroup):
     ids: CollectionProperty(type=IDToHandle)
@@ -293,7 +294,7 @@ class IDsToHandle(PropertyGroup):
                 ith.draw(layout)
 
 
-class AddAsAsset:
+class AddAsAsset(scene.RenderThumbnailProps):
     bl_label = "Add to Library"
     bl_description = "Mark as asset, set default data, and add to a library"
     bl_options = {"REGISTER", "UNDO"}
@@ -355,13 +356,28 @@ class AddAsAsset:
         description="The Superhive supported tags of the asset",
         size=len(hive_mind.TAGS_ENUM),
     )
-        
+    
     display_ids_to_handle: BoolProperty()
     """Show the IDs to Handle UI instead of the regular UI"""
     
     display_ids_to_rename: BoolProperty()
     
     ids_to_handle: PointerProperty(type=IDsToHandle)
+    
+    icon_source: EnumProperty(
+        name="Icon Source",
+        items=[
+            ("IGNORE", "Ignore", "Do not set an icon for the asset"),
+            ("RENDER", "Render", "Render out a thumbnail for the icon"),
+            ("FILE", "File", "Use a file as the icon"),
+        ],
+    )
+    
+    icon_file: StringProperty(
+        name="Icon File",
+        description="The file to use as the icon",
+        subtype="FILE_PATH",
+    )
     
     def draw(self, context: Context):
         layout: UILayout = self.layout
@@ -402,6 +418,17 @@ class AddAsAsset:
         grid = layout.grid_flow(columns=3)
         for i, tag in enumerate(hive_mind.TAGS_ENUM):
             grid.prop(self, "tags", index=i, text=tag[1])
+        
+        layout.separator(type="LINE")
+        
+        row = layout.row()
+        row.use_property_split = False
+        row.prop(self, "icon_source", expand=True)
+        
+        if self.icon_source == "FILE":
+            layout.prop(self, "icon_file")
+        elif self.icon_source == "RENDER":
+            self.draw_thumbnail_props(layout)
 
     def draw_ids_to_handle(self, layout:UILayout):
         layout.use_property_split = True
@@ -499,6 +526,12 @@ class AddAsAsset:
         
         return self.assets_to_library(context)
     
+    def modal(self, context, event):
+        if not self._thread.is_alive():
+            self.refresh_library(context)
+            return {"FINISHED"}
+        return {"RUNNING_MODAL"}
+    
     def check_ids_to_handle(self, context: Context):
         if self.ids_to_handle.ids:
             self.display_ids_to_handle = True
@@ -506,6 +539,8 @@ class AddAsAsset:
         return self.assets_to_library(context)
         
     def assets_to_library(self, context: Context):
+        lib_path = str(self.lib.path)
+        blend_files = {}
         for id in self.ids:
             id_name = id.name
             ith: IDToHandle = self.ids_to_handle.ids.get(id_name)
@@ -514,13 +549,38 @@ class AddAsAsset:
                     continue
                 elif ith.operation == "RENAME":
                     id_name = ith.new_name
-            self.id_to_asset(id, str(self.lib.path / f"{id_name}.blend"))
+            blend_path = str(self.lib.path / f"{id_name}.blend")
+            
+            if self.icon_source == "RENDER":
+                blend_data = blend_files.get(blend_path)
+                new_item = [(id_name, type(id).__name__.upper())]
+                blend_files[blend_path] = blend_data + new_item if blend_data else new_item
+                icon_path = None
+            elif self.icon_source == "FILE":
+                icon_path = self.icon_file
+            self.id_to_asset(context, id, blend_path, icon_path=icon_path)
+
+        if self.icon_source == "RENDER":
+            self._thread = Thread(
+                target=self.render_icon,
+                args=(
+                    list(blend_files.keys()),
+                    lib_path,
+                    list(blend_files.values())
+                )
+            )
+            
+            context.window_manager.modal_handler_add(self)
+            self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+            self._thread.start()
+            
+            return {"RUNNING_MODAL"}
 
         self.refresh_library(context)
 
         return {"FINISHED"}
-    
-    def id_to_asset(self, id: ID, path: str) -> None:
+        
+    def id_to_asset(self, context: Context, id: ID, path: str, icon_path: str = None) -> None:
         id.asset_mark()
         id.asset_data.description = self.description
         id.asset_data.author = self.author
@@ -531,14 +591,42 @@ class AddAsAsset:
         prefs = utils.get_prefs()
         id.asset_data.author = prefs.default_author_name
         id.asset_data.license = prefs.default_license
+        
+        if icon_path and Path(icon_path).exists():
+            with context.temp_override(id=id):
+                bpy.ops.ed.lib_id_load_custom_preview(filepath=icon_path)
+        elif not Path(icon_path).exists():
+            print(f"Icon file does not exist: {icon_path}")
 
         for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
             if value:
                 id.asset_data.tags.new(tag[1], skip_if_exists=True)
         
-        # TODO: Handle Icons
-        
         bpy.data.libraries.write(path, set([id]), compress=True)
+        
+    def render_icon(self, paths: list[str], lib_path: str, ids: list[tuple[str, str]]) -> None:
+        prefs = utils.get_prefs()
+        utils.rerender_thumbnail(
+            paths = paths,
+            directory = lib_path,
+            objects = ids,
+            shading = self.shading,
+            angle = utils.resolve_angle(
+                self.camera_angle,
+                self.flip_x,
+                self.flip_y,
+                self.flip_z
+            ),
+            add_plane = prefs.add_ground_plane and not self.flip_z,
+            world_name = self.scene_lighting,
+            world_strength = self.world_strength,
+            padding = 1 - self.padding,
+            rotate_world = self.rotate_world,
+            debug_scene = self.debug_scene,
+            # op=self,
+        )
+        
+        self.reset_thumbnail_settings()
     
     def refresh_library(self, context: Context):
         if polls.is_asset_browser(context):
