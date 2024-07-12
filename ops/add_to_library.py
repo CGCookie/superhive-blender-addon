@@ -2,13 +2,13 @@ from pathlib import Path
 from typing import Any, Literal
 
 import bpy
-from bpy.props import (BoolProperty, BoolVectorProperty, EnumProperty,
-                       StringProperty)
-from bpy.types import AssetRepresentation, Operator
+from bpy.props import (BoolProperty, BoolVectorProperty, CollectionProperty,
+                       EnumProperty, PointerProperty, StringProperty)
+from bpy.types import ID, AssetRepresentation, Context, Operator, PropertyGroup, UILayout
+
+from . import polls
 
 from .. import hive_mind, utils
-
-# from fuzzywuzzy import process, fuzz
 
 
 class SH_OT_AddToLibrary(Operator):
@@ -228,160 +228,72 @@ class SH_OT_AddToLibrary(Operator):
 # TODO: (other assets) and just removing the asset tag)
 
 
-class SH_OT_AddAsAssetToLibrary(Operator):
-    bl_idname: Any | Literal['superhive.add_to_library'] = "superhive.add_as_asset_to_library"
-    bl_label = "Add to Library"
-    bl_description = "Mark as asset, set default data, and add to a library"
-    bl_options = {"REGISTER", "UNDO"}
-
-    new_library_name: StringProperty(
-        name="New Library Name",
-        description="The name of the new library to create",
-        default="",
+class IDToHandle(PropertyGroup):
+    operation: EnumProperty(
+        name="Operation",
+        items=[
+            ("REPLACE", "Replace", "Overwrite the existing asset with the new one"),
+            ("SKIP", "Skip", "Do not add the asset to the library"),
+            ("RENAME", "Rename", "Rename the new asset to avoid conflicts"),
+        ]
+    )
+    
+    new_name: StringProperty(
+        name="New Name",
+        description="The new name of the asset to avoid conflicts",
     )
 
-    def _get_library_items(self, context):
-        asset_libs = context.preferences.filepaths.asset_libraries
-        items = [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
-        items.append(
-            ("NEW", "New", "Create a new library and add the asset(s) to it", "ADD", 333)
-        )
-        return items
-    library: EnumProperty(
-        items=_get_library_items,
-    )
+    lib_path: StringProperty()
 
-    name: StringProperty(
-        name="Name",
-        description="The name of the asset",
-    )
+    tag_for_renaming: BoolProperty()
 
-    description: StringProperty(
-        name="Description",
-        description="The description of the asset",
-    )
-
-    author: StringProperty(
-        name="Author",
-        description="The author of the asset",
-    )
-
-    license: EnumProperty(
-        name="License",
-        description="The license of the asset",
-        items=hive_mind.LICENSES_ENUM,
-    )
-
-    catalog: EnumProperty(
-        name="Catalog",
-        description="The Superhive supported catalog of the asset",
-        items=hive_mind.CATALOG_ENUM,
-    )
-
-    copyright: StringProperty(
-        name="Copyright",
-        description="The copyright of the asset",
-    )
-
-    tags: BoolVectorProperty(
-        name="Tags",
-        description="The Superhive supported tags of the asset",
-        size=len(hive_mind.TAGS_ENUM),
-    )
-
-    def draw(self, context):
-        layout = self.layout
-        layout.use_property_split = True
-
-        if self.library == "NEW":
+    def draw(self, layout: UILayout):
+        split = layout.split(factor=0.25, align=True)
+        row = split.row(align=True)
+        row.alignment = "RIGHT"
+        row.label(text=self.name)
+        
+        new_path = Path(self.lib_path) / f"{self.new_name}.blend"
+        
+        exists = new_path.exists()
+            
+        row = split.row(align=True)
+        row.alert = exists
+        is_rename = self.operation == "RENAME"
+        if is_rename:
+            row.prop(self, "new_name", text="")
+        
+        row.prop(self, "operation", text="", icon_only=is_rename)
+        if exists:
             row = layout.row()
-            row.alert = not self.new_library_name
-            row.activate_init = True
-            row.prop(self, "new_library_name")
+            row.alert = True
+            row.alignment = "RIGHT"
+            row.label(text="File already exists")
+        
+        
 
-            if self.new_library_name in context.preferences.filepaths.asset_libraries:
-                row = layout.row()
-                row.alert = True
-                row.alignment = "CENTER"
-                row.label(text=f"Library `{self.new_library_name}` already exists")
-
-        layout.prop(self, "description")
-        layout.prop(self, "author")
-        layout.prop(self, "license")
-        layout.prop(self, "catalog")
-        layout.prop(self, "copyright")
-
-        layout.label(text="Tags:")
-        grid = layout.grid_flow(columns=3, even_columns=True)
-        for i, tag in enumerate(hive_mind.TAGS_ENUM):
-            grid.prop(self, "tags", index=i, text=tag[1]) 
-
-    def invoke(self, context, event):
-        prefs = utils.get_prefs()
-        self.name = context.object.name
-        self.author = prefs.default_author_name
-        self.license = prefs.default_license
-        self.copyright = prefs.default_copyright
-
-        return context.window_manager.invoke_props_dialog(self)
-
-    def execute(self, context):
-        if self.library == "NEW":
-            if not self.new_library_name:
-                self.report({"ERROR"}, "Name not entered for new library")
-                return {"CANCELLED"}
-            if self.new_library_name in context.preferences.filepaths.asset_libraries:
-                self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
-                return {"CANCELLED"}
-
-            dir: Path = Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
-            dir.mkdir(parents=True, exist_ok=True)
-            lib = utils.AssetLibrary.create_new_library(
-                self.new_library_name, str(dir),
-                context=context, load_catalogs=True
-            )
-            self.is_new_library = True
-        else:
-            lib = utils.from_name(
-                self.library, context=context,
-                load_catalogs=True
-            )
-            self.is_new_library = False
-
-        lib.path.mkdir(parents=True, exist_ok=True)
-
-        obj = context.object
-        obj.asset_mark()
-        obj.asset_data.description = self.description
-        obj.asset_data.author = self.author
-        obj.asset_data.license = self.license
-        obj.asset_data.catalog_id = self.catalog
-        obj.asset_data.copyright = self.copyright
-
-        prefs = utils.get_prefs()
-        obj.asset_data.author = prefs.default_author_name
-        obj.asset_data.license = prefs.default_license
-
-        for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
-            if value:
-                obj.asset_data.tags.new(tag[1], skip_if_exists=True)
-
-        # TODO: Handle Icons
-
-        bpy.data.libraries.write(str(lib.path / f"{obj.name}.blend"), set([obj]), compress=True)
-
-        try:
-            bpy.ops.asset.library_refresh()
-        except Exception as e:
-            print(f"An error occurred while refreshing the asset library: {e}")
-
-        # context.space_data.activate_asset_by_id(obj)
-
-        return {"FINISHED"}
+class IDsToHandle(PropertyGroup):
+    ids: CollectionProperty(type=IDToHandle)
+        
+    def clear(self) -> None:
+        self.ids: bpy.types.CollectionProperty | list[IDToHandle] | dict[str, IDToHandle]
+        self.ids.clear()
+    
+    def new(self, id: ID, lib_path: Path) -> IDToHandle:
+        ith: IDToHandle = self.ids.add()
+        ith.name = id.name
+        ith.new_name = f"{id.name}_{len(tuple(lib_path.glob(f'{id.name}_*.blend'))) + 1}"
+        ith.lib_path = str(lib_path)
+        
+        return ith
+    
+    def draw(self, layout: UILayout, only_tagged=False):
+        for ith in self.ids:
+            if not only_tagged or ith.tag_for_renaming:
+                ith.draw(layout)
 
 
-class SH_OT_AddToLibraryFromOutliner(Operator):
-    bl_idname = "superhive.add_to_library_from_outliner"
+class AddAsAsset:
     bl_label = "Add to Library"
     bl_description = "Mark as asset, set default data, and add to a library"
     bl_options = {"REGISTER", "UNDO"}
@@ -394,7 +306,10 @@ class SH_OT_AddToLibraryFromOutliner(Operator):
 
     def _get_library_items(self, context):
         asset_libs = context.preferences.filepaths.asset_libraries
-        items = [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+        items = [
+            (lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library")
+            for lib in asset_libs
+        ]
         items.append(
             ("NEW", "New", "Create a new library and add the asset(s) to it", "ADD", 333)
         )
@@ -440,18 +355,26 @@ class SH_OT_AddToLibraryFromOutliner(Operator):
         description="The Superhive supported tags of the asset",
         size=len(hive_mind.TAGS_ENUM),
     )
-
-    @classmethod
-    def poll(cls, context):
-        if not context.selected_ids:
-            cls.poll_message_set("No items selected")
-            return False
-        return True
-
-    def draw(self, context):
-        layout = self.layout
+        
+    display_ids_to_handle: BoolProperty()
+    """Show the IDs to Handle UI instead of the regular UI"""
+    
+    display_ids_to_rename: BoolProperty()
+    
+    ids_to_handle: PointerProperty(type=IDsToHandle)
+    
+    def draw(self, context: Context):
+        layout: UILayout = self.layout
         layout.use_property_split = True
         
+        if self.display_ids_to_handle:
+            self.draw_ids_to_handle(layout)
+        elif self.display_ids_to_rename:
+            self.draw_ids_to_rename(layout)
+        else:
+            self.draw_regular(context, layout)
+    
+    def draw_regular(self, context: Context, layout:UILayout):
         is_multi = len(context.selected_ids) > 1
         
         lib_name = self.library if self.library != "NEW" else self.new_library_name
@@ -478,67 +401,186 @@ class SH_OT_AddToLibraryFromOutliner(Operator):
         layout.label(text="Tags:")
         grid = layout.grid_flow(columns=3)
         for i, tag in enumerate(hive_mind.TAGS_ENUM):
-            grid.prop(self, "tags", index=i, text=tag[1]) 
+            grid.prop(self, "tags", index=i, text=tag[1])
+
+    def draw_ids_to_handle(self, layout:UILayout):
+        layout.use_property_split = True
+        layout.label(text="Duplicate Asset Names")
+        
+        layout.separator(type="LINE")
+        
+        layout.label(text="Some assets have the same name as other assets in the chosen library.")
+        
+        col = layout.column(align=True)
+        col.label(text="Please choose what to do for each asset:")
+        self.ids_to_handle.draw(col)
+
+    def draw_ids_to_rename(self, layout:UILayout):
+        layout.use_property_split = True
+        layout.label(text="Duplicate Asset Names")
+        
+        layout.separator(type="LINE")
+        
+        layout.label(text="Some assets still have the same name as other assets in the chosen library.")
+        
+        col = layout.column(align=True)
+        col.label(text="Please choose what to do for each asset:")
+        self.ids_to_handle.draw(col, only_tagged=True)
 
     def invoke(self, context, event):
+        self.ids_to_handle: IDsToHandle
+        
         prefs = utils.get_prefs()
         self.name = context.object.name
         self.author = prefs.default_author_name
         self.license = prefs.default_license
         self.copyright = prefs.default_copyright
+        
+        self.ids = self.get_ids(context)
+        
+        self.display_ids_to_handle = False
+        
+        self.lib = None
 
         return context.window_manager.invoke_props_dialog(self, width=500)
+    
+    def get_ids(self, context: Context) -> list[ID]:...
+    
+    def execute(self, context: Context):
+        if self.lib == None:
+            if self.library == "NEW":
+                if not self.new_library_name:
+                    self.report({"ERROR"}, "Name not entered for new library")
+                    return {"CANCELLED"}
+                if self.new_library_name in context.preferences.filepaths.asset_libraries:
+                    self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
+                    return {"CANCELLED"}
 
-    def execute(self, context):
-        if self.library == "NEW":
-            if not self.new_library_name:
-                self.report({"ERROR"}, "Name not entered for new library")
-                return {"CANCELLED"}
-            if self.new_library_name in context.preferences.filepaths.asset_libraries:
-                self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
-                return {"CANCELLED"}
+                dir: Path = Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
+                dir.mkdir(parents=True, exist_ok=True)
+                self.lib = utils.AssetLibrary.create_new_library(
+                    self.new_library_name, str(dir),
+                    context=context, load_catalogs=True
+                )
+                self.is_new_library = True
+            else:
+                self.lib = utils.from_name(
+                    self.library, context=context,
+                    load_catalogs=True
+                )
+                self.is_new_library = False
 
-            dir: Path = Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
-            dir.mkdir(parents=True, exist_ok=True)
-            lib = utils.AssetLibrary.create_new_library(
-                self.new_library_name, str(dir),
-                context=context, load_catalogs=True
-            )
-            self.is_new_library = True
-        else:
-            lib = utils.from_name(
-                self.library, context=context,
-                load_catalogs=True
-            )
-            self.is_new_library = False
+            self.lib.path.mkdir(parents=True, exist_ok=True)
+        
+            self.ids_to_handle.clear()
+        
+            for id in self.ids:
+                if (self.lib.path / f"{id.name}.blend").exists():
+                    self.ids_to_handle.new(id, self.lib.path)
+            
+            if self.ids_to_handle.ids:
+                self.display_ids_to_handle = True
+                return context.window_manager.invoke_props_dialog(self, width=500)
+            return self.assets_to_library(context)
 
-        lib.path.mkdir(parents=True, exist_ok=True)
+        # Not First time through execute. Ensure ids_to_handle aren't set to duplicates again
+        check = False
+        for ith in self.ids_to_handle.ids:
+            ith.tag_for_renaming = False
+            if ith.operation == "RENAME":
+                if (self.lib.path / f"{ith.new_name}.blend").exists():
+                    ith.tag_for_renaming = True
+                    check = True
+        
+        if check:
+            self.display_ids_to_handle = False
+            self.display_ids_to_rename = True
+            return context.window_manager.invoke_props_dialog(self, width=500)
+        
+        return self.assets_to_library(context)
+    
+    def check_ids_to_handle(self, context: Context):
+        if self.ids_to_handle.ids:
+            self.display_ids_to_handle = True
+            return context.window_manager.invoke_popup(self, width=500)
+        return self.assets_to_library(context)
+        
+    def assets_to_library(self, context: Context):
+        for id in self.ids:
+            id_name = id.name
+            ith: IDToHandle = self.ids_to_handle.ids.get(id_name)
+            if ith:
+                if ith.operation == "SKIP":
+                    continue
+                elif ith.operation == "RENAME":
+                    id_name = ith.new_name
+            self.id_to_asset(id, str(self.lib.path / f"{id_name}.blend"))
 
-        for id in context.selected_ids:
-            id.asset_mark()
-            id.asset_data.description = self.description
-            id.asset_data.author = self.author
-            id.asset_data.license = self.license
-            id.asset_data.catalog_id = self.catalog
-            id.asset_data.copyright = self.copyright
-
-            prefs = utils.get_prefs()
-            id.asset_data.author = prefs.default_author_name
-            id.asset_data.license = prefs.default_license
-
-            for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
-                if value:
-                    id.asset_data.tags.new(tag[1], skip_if_exists=True)
-
-            # TODO: Handle Icons
-
-            bpy.data.libraries.write(str(lib.path / f"{id.name}.blend"), set([id]), compress=True)
+        self.refresh_library(context)
 
         return {"FINISHED"}
+    
+    def id_to_asset(self, id: ID, path: str) -> None:
+        id.asset_mark()
+        id.asset_data.description = self.description
+        id.asset_data.author = self.author
+        id.asset_data.license = self.license
+        id.asset_data.catalog_id = self.catalog
+        id.asset_data.copyright = self.copyright
+
+        prefs = utils.get_prefs()
+        id.asset_data.author = prefs.default_author_name
+        id.asset_data.license = prefs.default_license
+
+        for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
+            if value:
+                id.asset_data.tags.new(tag[1], skip_if_exists=True)
+        
+        # TODO: Handle Icons
+        
+        bpy.data.libraries.write(path, set([id]), compress=True)
+    
+    def refresh_library(self, context: Context):
+        if polls.is_asset_browser(context):
+            area = context.area
+        else:
+            area = next(
+                area for area in context.screen.areas if polls.asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+            )
+            if not area:
+                return
+        try:
+            with context.temp_override(area=area, space_data=area.spaces.active):
+                bpy.ops.asset.library_refresh()
+        except Exception as e:
+            print(f"An error occurred while refreshing the asset library: {e}")
+    
+
+class SH_OT_AddAsAssetToLibrary(Operator, AddAsAsset):
+    bl_idname = "superhive.add_as_asset_to_library"
+
+    def get_ids(self, context: Context) -> list[ID]:
+        return [context.object]
+
+
+class SH_OT_AddToLibraryFromOutliner(Operator, AddAsAsset):
+    bl_idname = "superhive.add_to_library_from_outliner"
+
+    @classmethod
+    def poll(cls, context):
+        if not context.selected_ids:
+            cls.poll_message_set("No items selected")
+            return False
+        return True
+    
+    def get_ids(self, context: Context) -> list[ID]:
+        return context.selected_ids
     
 
 
 classes = (
+    IDToHandle,
+    IDsToHandle,
     SH_OT_AddToLibrary,
     SH_OT_AddAsAssetToLibrary,
     SH_OT_AddToLibraryFromOutliner,
