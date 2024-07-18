@@ -1,16 +1,16 @@
+from functools import partial
 from pathlib import Path
 from threading import Thread
 
 import bpy
 from bpy.props import (BoolProperty, BoolVectorProperty, CollectionProperty,
                        EnumProperty, PointerProperty, StringProperty)
-from bpy.types import ID, AssetRepresentation, Context, Operator, PropertyGroup, UILayout
-
-from . import polls
+from bpy.types import (ID, AssetRepresentation, Context, Operator,
+                       PropertyGroup, UILayout, UserAssetLibrary)
 
 from .. import hive_mind, utils
-
 from ..settings import scene
+from . import polls
 
 
 class SH_OT_AddToLibrary(Operator):
@@ -235,10 +235,106 @@ class SH_OT_AddToLibrary(Operator):
             if self.pack_file:
                 utils.pack_files(dst)
 
-# TODO: Remove from library (needs to not just delete the blend file,
-# TODO: but check if other assets are in the blend and decide between
-# TODO: deleting (no other assets) or removing the asset from the blend
-# TODO: (other assets) and just removing the asset tag)
+
+class SH_OT_RemoveFromLibrary(Operator):
+    bl_idname = "superhive.remove_from_library"
+    bl_label = "Remove from Library"
+    bl_description = "Remove the selected asset(s) from their libraries"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return polls.is_asset_browser(context, cls=cls)
+
+    def invoke(self, context, event):
+        self.asset_data:dict[UserAssetLibrary, dict[Path, list[AssetRepresentation]]] = {}
+        
+        self.total_assets = len(context.selected_assets)
+        self.removed_assets = 0
+        self.updated = False
+        
+        for asset in context.selected_assets:
+            lib_path = Path(asset.full_library_path).parent
+            lib = next((
+                lib
+                for lib in bpy.context.preferences.filepaths.asset_libraries
+                if lib.path == str(lib_path)
+            ), None)
+            
+            asset_data_lib = self.asset_data.get(lib)
+            if not asset_data_lib:
+                asset_data_lib = self.asset_data[lib] = {}
+            
+            asset_data_lib_assets = asset_data_lib.get(Path(asset.full_library_path))
+            if not asset_data_lib_assets:
+                asset_data_lib_assets = asset_data_lib[Path(asset.full_library_path)] = []
+            
+            asset_data_lib_assets.append(asset)
+        
+        self._thread = Thread(target=self.remove_assets)
+        
+        context.window_manager.modal_handler_add(self)
+        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+        
+        sets: 'scene.SH_Scene' = context.scene.superhive
+        self.prog = sets.header_progress_bar
+        self.prog.start()
+        
+        self._thread.start()
+        
+        return {"RUNNING_MODAL"}
+    
+    def modal(self, context, event):
+        context.area.tag_redraw()
+        
+        if self.updated:
+            self.updated = False
+            self.prog.progress = round(self.removed_assets / self.total_assets, 2)
+        
+        if not self._thread.is_alive():
+            bpy.app.timers.register(self.follow_up, first_interval=1)
+            return self.finished(context)
+        
+        return {"RUNNING_MODAL"}
+    
+    def remove_assets(self):
+        for lib, dct in self.asset_data.items():
+            for blend_path, assets in dct.items():
+                utils.clean_blend_file(
+                    blend_path,
+                    ids_to_remove=[asset.name for asset in assets],
+                    types=[asset.id_type for asset in assets]
+                )
+                
+                with bpy.data.libraries.load(str(blend_path), assets_only=True) as (data_from, data_to):
+                    has_attrs = False
+                    for item in dir(data_from):
+                        if getattr(data_from, item):
+                            has_attrs = True
+                    
+                if not has_attrs:
+                    blend_path.unlink()
+                
+                self.removed_assets += len(assets)
+                self.updated = True
+
+        return {"FINISHED"}
+
+    def finished(self, context: Context):
+        self._thread.join()
+        
+        self.report({"INFO"}, f"Removed {self.removed_assets} of {self.total_assets} assets")
+        
+        bpy.ops.asset.library_refresh()
+        
+        context.area.tag_redraw()
+        
+        return {"FINISHED"}
+    
+    def follow_up(self):
+        self.prog.end()
+        for area in bpy.context.screen.areas:
+            area.tag_redraw()
 
 
 class IDToHandle(PropertyGroup):
@@ -768,6 +864,7 @@ classes = (
     SH_OT_AddToLibrary,
     SH_OT_AddAsAssetToLibrary,
     SH_OT_AddToLibraryFromOutliner,
+    SH_OT_RemoveFromLibrary,
 )
 
 
