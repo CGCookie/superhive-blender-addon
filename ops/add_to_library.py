@@ -824,6 +824,8 @@ class AddAsAsset(scene.RenderThumbnailProps):
                 icon_path = None
             elif self.icon_source == "FILE":
                 icon_path = self.icon_file
+            else:
+                icon_path = None
             self.id_to_asset(context, id, blend_path, icon_path=icon_path)
             self.metadata_progress = round((i+1) / len(self.ids), 2)
 
