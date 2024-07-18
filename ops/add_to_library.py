@@ -293,7 +293,6 @@ class IDsToHandle(PropertyGroup):
             if not only_tagged or ith.tag_for_renaming:
                 ith.draw(layout)
 
-
 class AddAsAsset(scene.RenderThumbnailProps):
     bl_label = "Add to Library"
     bl_description = "Mark as asset, set default data, and add to a library"
@@ -378,7 +377,18 @@ class AddAsAsset(scene.RenderThumbnailProps):
         description="The file to use as the icon",
         subtype="FILE_PATH",
     )
+
+    add_as_collection: BoolProperty(
+        name="Add as Collection",
+        description="Add the assets as a collection",
+        default=True,
+    )
     
+    collection_name: StringProperty(
+        name="Collection Name",
+        description="The name of the collection to add the assets to",
+    )
+
     def draw(self, context: Context):
         layout: UILayout = self.layout
         layout.use_property_split = True
@@ -390,11 +400,46 @@ class AddAsAsset(scene.RenderThumbnailProps):
         else:
             self.draw_regular(context, layout)
     
-    def draw_regular(self, context: Context, layout:UILayout):
-        is_multi = len(context.selected_ids) > 1
-        
+    def draw_regular(self, context: Context, layout:UILayout):        
         lib_name = self.library if self.library != "NEW" else self.new_library_name
-        layout.label(text=f"Adding {len(context.selected_ids)} item{'s' if is_multi else ''} to library '{lib_name}'")
+        
+        use_s_text = 's' if self.is_multi else ''
+        coll_text = 'as a collection ' if self.is_multi and self.add_as_collection else ''
+        layout.label(
+            text=f"Adding {len(self.ids)} item{use_s_text} {coll_text}to library '{lib_name}'"
+        )
+        
+        if self.is_multi:
+            layout.prop(self, "add_as_collection")
+            row = layout.row()
+            row.active = self.add_as_collection
+            row.prop(
+                self, "collection_name",
+                icon=(
+                    "COLLECTION_COLOR_01"
+                    if self.collection_name in bpy.data.collections
+                    else "COLLECTION_COLOR_04"
+                    if self.collection_name
+                    else "COLLECTION_COLOR_01"
+                    if self.add_as_collection
+                    else "OUTLINER_COLLECTION"
+                )
+            )
+            row = layout.row()
+            row.alignment = "RIGHT"
+            if self.add_as_collection:
+                if self.collection_name in bpy.data.collections:
+                    row.alert = True
+                    row.label(text="Collection name already exists")
+                elif self.collection_name:
+                    row.active = False
+                    row.label(text="Creating new collection")
+                else:
+                    row.alert = True
+                    row.label(text="Please enter a collection name")
+            else:
+                row.label(text="")
+            row.separator()
 
         if self.library == "NEW":
             row = layout.row()
@@ -464,6 +509,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
         self.copyright = prefs.default_copyright
         
         self.ids = context.selected_ids
+        self.is_multi = len(self.ids) > 1
         
         self.display_ids_to_handle = False
         
@@ -475,7 +521,15 @@ class AddAsAsset(scene.RenderThumbnailProps):
     
     def execute(self, context: Context):
         if self.lib == None:
-            if self.library == "NEW":
+            if self.is_multi and self.add_as_collection: # TODO: Use Popup Dialog to get correct collection name
+                if not self.collection_name:
+                    self.report({"ERROR"}, "Collection name not entered")
+                    return {"CANCELLED"}
+                elif self.collection_name in bpy.data.collections:
+                    self.report({"ERROR"}, f"Collection `{self.collection_name}` already exists")
+                    return {"CANCELLED"}
+            
+            if self.library == "NEW": # TODO: Use Popup Dialog to get unique Library name
                 if not self.new_library_name:
                     self.report({"ERROR"}, "Name not entered for new library")
                     return {"CANCELLED"}
@@ -498,6 +552,18 @@ class AddAsAsset(scene.RenderThumbnailProps):
                 self.is_new_library = False
 
             self.lib.path.mkdir(parents=True, exist_ok=True)
+
+            self.collection = None
+            self.collection_created = False
+            if self.is_multi and self.add_as_collection:
+                self.collection = bpy.data.collections.get(self.collection_name)
+                if not self.collection:
+                    self.collection = bpy.data.collections.new(self.collection_name)
+                    self.collection_created = True
+                for id in self.ids:
+                    if id.name not in self.collection.objects:
+                        self.collection.objects.link(id)
+                self.ids = [self.collection]
         
             self.ids_to_handle.clear()
         
@@ -528,8 +594,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
     
     def modal(self, context, event):
         if not self._thread.is_alive():
-            self.refresh_library(context)
-            return {"FINISHED"}
+            return self.finish(context)
         return {"RUNNING_MODAL"}
     
     def check_ids_to_handle(self, context: Context):
@@ -581,7 +646,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
         return {"FINISHED"}
         
     def id_to_asset(self, context: Context, id: ID, path: str, icon_path: str = None) -> None:
-        id.asset_mark()
+        already_asset = bool(id.asset_data)
+        if not already_asset:
+            id.asset_mark()
         id.asset_data.description = self.description
         id.asset_data.author = self.author
         id.asset_data.license = self.license
@@ -604,6 +671,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
                 id.asset_data.tags.new(tag[1], skip_if_exists=True)
         
         bpy.data.libraries.write(path, set([id]), compress=True)
+        
+        if not already_asset:
+            id.asset_clear()
         
     def render_icon(self, paths: list[str], lib_path: str, ids: list[tuple[str, str]]) -> None:
         prefs = utils.get_prefs()
@@ -628,7 +698,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
         )
         
         self.reset_thumbnail_settings()
-    
+        
     def refresh_library(self, context: Context):
         if polls.is_asset_browser(context):
             area = context.area
@@ -644,6 +714,12 @@ class AddAsAsset(scene.RenderThumbnailProps):
         except Exception as e:
             print(f"An error occurred while refreshing the asset library: {e}")
     
+    def finish(self, context: Context):
+        self.refresh_library(context)
+        if self.collection and self.collection_created:
+            bpy.data.collections.remove(self.collection)
+        return {"FINISHED"}
+        
 
 class SH_OT_AddAsAssetToLibrary(Operator, AddAsAsset):
     bl_idname = "superhive.add_as_asset_to_library"

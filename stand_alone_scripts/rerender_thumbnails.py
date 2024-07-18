@@ -130,6 +130,11 @@ def get_bounding_box_of_collection(col: Collection, objects_to_ignore: set[Objec
     for ob in col.all_objects:
         if ob in objects_to_ignore:
             continue
+        
+        ob.update_tag()
+        ob.data.update_tag()
+        ob.update_from_editmode()
+        
         corners.extend([
             (ob.matrix_world @ Vector(b))
             for b in ob.bound_box
@@ -351,7 +356,8 @@ def setup_camera_and_track(min_bb: Vector, max_bb: Vector, camera_object: Object
     
     # Calculate distance from camera to object
     # 0.44262946093977795 = 25.5 degrees in radians = 80mm lens
-    dist = box_diag_vec.magnitude / (2 * math.tan((0.44262946093977795 * CAMERA_OFFSET) / 2))
+    dist = box_diag_vec.magnitude / (2 * math.tan((0.44262946093977795 * max(0.0001, CAMERA_OFFSET)) / 2))
+        
     if "X" in CAMERA_ANGLE and "Y" in CAMERA_ANGLE:
         x = y = z = math.sqrt(dist**2/3)
     else:
@@ -494,6 +500,7 @@ def setup_scene_collection(context: Context, col: bpy.types.Collection, shading=
     
     if col not in get_collections_from_scene(scene):
         scene.collection.children.link(col)
+        context.view_layer.update()
     
     selected_objects: list[Object] = set(col.all_objects)
     
@@ -502,22 +509,20 @@ def setup_scene_collection(context: Context, col: bpy.types.Collection, shading=
     
     # bottom_left, top_right = get_bounding_box_of_collection(col, objects_to_ignore=set((ground_plane,)))
     min_bb, max_bb = get_bounding_box_of_collection(col)
-    local_bbox_center = (min_bb + max_bb) / 2
+    track_object.location = local_bbox_center = (min_bb + max_bb) / 2
     
     if add_plane and ground_plane:
         min_z = min_bb.z
         ground_plane.location = (local_bbox_center.x, local_bbox_center.y, min_z)
-    
-    global_bbox_center = local_bbox_center
-    track_object.location = global_bbox_center
-    
+        
     constraint = setup_camera_and_track(min_bb, max_bb, camera_object, track_object)
             
     # Must come after extra camera location stuff
     with context.temp_override(object=camera_object):
         bpy.ops.constraint.apply(constraint=constraint.name)
     
-    bpy.data.objects.remove(track_object)
+    if not DEBUG_SCENE:
+        bpy.data.objects.remove(track_object)
     
     scene.camera = camera_object
     
