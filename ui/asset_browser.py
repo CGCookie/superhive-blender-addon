@@ -59,15 +59,15 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         layout: UILayout = self.layout
         layout.use_property_split = True
 
-        if not context.asset:
+        scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        
+        if scene_sets.side_panel_batch_asset_update_progress_bar.show:
+            scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
+        elif not context.asset:
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text="Please select asset(s)")
             return
-        
-        scene_sets: 'scene.SH_Scene' = context.scene.superhive
-        if scene_sets.side_panel_batch_asset_update_progress_bar.show:
-            scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
         elif len(context.selected_assets) > 1:
             self.draw_multiple_assets(context, layout)
         else:

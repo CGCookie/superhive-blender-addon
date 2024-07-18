@@ -1,3 +1,4 @@
+import enum
 from functools import partial
 from pathlib import Path
 from threading import Thread
@@ -502,6 +503,22 @@ class AddAsAsset(scene.RenderThumbnailProps):
         default=False,
     )
 
+    update = False
+    label = ""
+    progress = 0.0
+    
+    metadata_progress = 0.0
+    setup_progress = 0.0
+    render_progress = 0.0
+    apply_progress = 0.0
+    
+    start_metadata = False
+    
+    start_icon = False
+    start_icon_setup = False
+    start_icon_render = False
+    start_icon_apply = False
+    
     def draw(self, context: Context):
         layout: UILayout = self.layout
         layout.use_property_split = True
@@ -709,9 +726,45 @@ class AddAsAsset(scene.RenderThumbnailProps):
         
         return self.assets_to_library(context)
     
-    def modal(self, context, event):
+    def modal(self, context: Context, event):
+        for area in context.screen.areas:
+            area.tag_redraw()
+        # if self.area:
+        #     self.area.tag_redraw()
+        # else:
+        #     context.area.tag_redraw()
+        
+        if self.update:
+            self.update = False
+            
+            if self.start_metadata:
+                self.start_metadata = False
+                self.prog.metadata_bar.start()
+            elif self.start_icon or self.start_icon_setup:
+                self.start_icon = False
+                self.start_icon_setup = False                
+                self.prog.metadata_bar.end()
+                self.prog.icon_rendering.setup_bar.start()
+                self.active_bar = self.prog.icon_rendering.setup_bar
+            elif self.start_icon_render:
+                self.start_icon_render = False
+                self.prog.icon_rendering.setup_bar.end()
+                self.prog.icon_rendering.render_bar.start()
+                self.active_bar = self.prog.icon_rendering.render_bar
+            elif self.start_icon_apply:
+                self.start_icon_apply = False
+                self.prog.icon_rendering.render_bar.end()
+                self.prog.icon_rendering.apply_bar.start()
+                self.active_bar = self.prog.icon_rendering.apply_bar
+
+            self.prog.metadata_bar.progress = self.metadata_progress
+            self.prog.icon_rendering.setup_bar.progress = self.setup_progress
+            self.prog.icon_rendering.render_bar.progress = self.render_progress
+            self.prog.icon_rendering.apply_bar.progress = self.apply_progress
+        
         if not self._thread.is_alive():
             return self.finish(context)
+        
         return {"RUNNING_MODAL"}
     
     def check_ids_to_handle(self, context: Context):
@@ -721,9 +774,40 @@ class AddAsAsset(scene.RenderThumbnailProps):
         return self.assets_to_library(context)
         
     def assets_to_library(self, context: Context):
+        self.scene_sets: scene.SH_Scene = context.scene.superhive
+            
+        self.area = next((
+            area
+            for area in context.screen.areas
+            if polls.asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+        ), None)
+
+        if self.area and not self.area.spaces.active.show_region_tool_props:
+            self.area.spaces.active.show_region_tool_props = True
+        
+        self.prog = self.scene_sets.side_panel_batch_asset_update_progress_bar
+        self.prog.start()
+        self.prog.draw_icon_rendering = self.icon_source == "RENDER"
+        
+        self.active_bar = self.prog.metadata_bar
+        
+        self.start_metadata = True
+        
+        self._thread = Thread(
+            target=self.assets_to_library_thread,
+            args=(context,)
+        )
+            
+        context.window_manager.modal_handler_add(self)
+        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+        self._thread.start()
+        
+        return {"RUNNING_MODAL"}
+    
+    def assets_to_library_thread(self, context: Context):
         lib_path = str(self.lib.path)
         blend_files = {}
-        for id in self.ids:
+        for i,id in enumerate(self.ids):
             id_name = id.name
             ith: IDToHandle = self.ids_to_handle.ids.get(id_name)
             if ith:
@@ -741,24 +825,14 @@ class AddAsAsset(scene.RenderThumbnailProps):
             elif self.icon_source == "FILE":
                 icon_path = self.icon_file
             self.id_to_asset(context, id, blend_path, icon_path=icon_path)
+            self.metadata_progress = round((i+1) / len(self.ids), 2)
 
         if self.icon_source == "RENDER":
-            self._thread = Thread(
-                target=self.render_icon,
-                args=(
-                    list(blend_files.keys()),
-                    lib_path,
-                    list(blend_files.values())
-                )
+            self.render_icon(
+                list(blend_files.keys()),
+                lib_path,
+                list(blend_files.values())
             )
-            
-            context.window_manager.modal_handler_add(self)
-            self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
-            self._thread.start()
-            
-            return {"RUNNING_MODAL"}
-
-        self.refresh_library(context)
 
         return {"FINISHED"}
         
@@ -814,7 +888,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
             padding = 1 - self.padding,
             rotate_world = self.rotate_world,
             debug_scene = self.debug_scene,
-            # op=self,
+            op=self,
         )
         
         self.reset_thumbnail_settings()
@@ -836,9 +910,15 @@ class AddAsAsset(scene.RenderThumbnailProps):
     
     def finish(self, context: Context):
         self.refresh_library(context)
+        bpy.app.timers.register(self.follow_up, first_interval=1)
         if self.collection and self.collection_created:
             bpy.data.collections.remove(self.collection)
         return {"FINISHED"}
+
+    def follow_up(self):
+        self.prog.end()
+        for area in bpy.context.screen.areas:
+            area.tag_redraw()
         
 
 class SH_OT_AddAsAssetToLibrary(Operator, AddAsAsset):
