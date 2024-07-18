@@ -1,25 +1,25 @@
 # Utilities for interacting with the blender_assets.cats.txt file
+import functools
+import os
 import subprocess
+import threading
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from platform import system
 from typing import TYPE_CHECKING, Union
-import os
-import threading
-import functools
 
 import bpy
-from bpy.types import Area, AssetRepresentation, Context, UserAssetLibrary, Window
+from bpy.types import (ID, Area, AssetRepresentation, Context,
+                       UserAssetLibrary, Window)
 from bpy_extras import asset_utils
 
 from . import hive_mind
 
-
 if TYPE_CHECKING:
-    from .ui.prefs import SH_AddonPreferences
-    from .settings import asset as asset_settings
     from .ops import asset_ops
+    from .settings import asset as asset_settings
+    from .ui.prefs import SH_AddonPreferences
 
 
 ASSET_TYPES_TO_ID_TYPES = {
@@ -901,6 +901,10 @@ def create_new(name: str, directory: Path, context: Context = None, load_assets=
     )
 
 
+def id_to_asset_id_type(id:ID) -> str:
+    return type(id).__name__.upper()
+
+
 @contextmanager
 def display_all_assets_in_library(context: Context) -> None:
     """Makes all possible assets visible in the UI for the duration of the context manager. Assets are all selected so running `context.selected_assets` will return all assets."""
@@ -1271,15 +1275,7 @@ def mouse_in_window(window:Window, x, y) -> bool:
     return window.x <= x <= window.x + window.width and window.y <= y <= window.y + window.height
 
 
-def pack_files(blend_file: Path):
-    p = Path(__file__)
-    while p.parent.name != "Blender":
-        p = p.parent
-    prefs_blend = p / "config" / "userpref.blend"
-    
-    if not prefs_blend.exists():
-        return
-    
+def pack_files(blend_file: Path):    
     python_file = Path(__file__).parent / "stand_alone_scripts" / "pack_files.py"
     
     args = [
@@ -1288,6 +1284,25 @@ def pack_files(blend_file: Path):
         str(blend_file),
         "-P",
         str(python_file)
+    ]
+    print(" ".join(args))
+    
+    subprocess.run(args)
+
+
+def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remove: list[ID | AssetRepresentation] = None, types: list[str] = None):    
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "clear_blend_file.py"
+        
+    args = [
+        bpy.app.binary_path,
+        "-b",
+        "--factory-startup",
+        str(blend_file),
+        "-P",
+        str(python_file),
+        ":--separator--:".join(ids_to_keep) if ids_to_keep else "None",
+        ":--separator--:".join(ids_to_remove) if ids_to_remove else "None",
+        ":--separator--:".join(types),
     ]
     print(" ".join(args))
     

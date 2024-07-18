@@ -133,7 +133,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         if prefs.display_extras:
             layout.label(text="Extra information is displayed")
             layout.label(text=f"UUID: {asset.metadata.sh_uuid}")
-            layout.label(text=f"Type: {asset.id_type}")
+            layout.label(text=f"Type (id_type): {asset.id_type}")
 
         row = layout.row()
         row.active = asset.metadata.sh_is_dirty()

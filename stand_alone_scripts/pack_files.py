@@ -4,9 +4,9 @@ CLI Script to update the asset data of the current blend file:
 Argument Order:
      0. blender executable
      1. background arg
-     2. run python script arg
-     3. script to run
-     4. blend file to open: str
+     2. blend file to open: str
+     3. run python script arg
+     4. script to run
 """
 
 import bpy

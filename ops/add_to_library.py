@@ -81,19 +81,6 @@ class SH_OT_AddToLibrary(Operator):
         layout.prop(self, "pack_file")
         layout.prop(self, "keep_blend_files_as_is")
         layout.prop(self, "copy_catalogs")
-        if self.keep_blend_files_as_is:
-            col = layout.column(align=True)
-            text = (
-                "Warning: This will keep the blend files as is.",
-                "This may cause issues with the library",
-                "if the blend files contain objects you",
-                "do not want in this library.",
-            )
-            for line in text:
-                row = col.row(align=True)
-                row.alert = True
-                row.alignment = "CENTER"
-                row.label(text=line)
         layout.prop(self, "delete_after")
         if self.delete_after:
             col = layout.column(align=True)
@@ -226,14 +213,27 @@ class SH_OT_AddToLibrary(Operator):
             The directory of the library to add the assets to
         """
         # Get unique blend files
-        blend_files = {asset.full_library_path for asset in assets}
+        blend_files: dict[str, list[AssetRepresentation]] = {}
+        for asset in assets:
+            if asset.full_library_path not in blend_files:
+                blend_files[asset.full_library_path] = [asset]
+            else:
+                blend_files[asset.full_library_path].append(asset)
 
-        for blend_file in blend_files:
+        for blend_file, assets_in_file in blend_files.items():
             src = Path(blend_file)
             dst = dir / src.name
             # print(f"  - Copying blend file | {src} -> {dst}")
             dst.write_bytes(src.read_bytes())
-            utils.pack_files(dst)
+            
+            utils.clean_blend_file(
+                str(dst),
+                ids_to_keep=[asset.name for asset in assets_in_file],
+                types=[asset.id_type for asset in assets_in_file]
+            )
+            
+            if self.pack_file:
+                utils.pack_files(dst)
 
 # TODO: Remove from library (needs to not just delete the blend file,
 # TODO: but check if other assets are in the blend and decide between
