@@ -56,6 +56,12 @@ class SH_OT_AddToLibrary(Operator):
         default=True,
     )
 
+    pack_file: BoolProperty(
+        name="Pack File",
+        description="Pack all files into the asset's blend file",
+        default=False,
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
@@ -72,6 +78,7 @@ class SH_OT_AddToLibrary(Operator):
                 row.alignment = "CENTER"
                 row.label(text=f"Library `{self.new_library_name}` already exists")
 
+        layout.prop(self, "pack_file")
         layout.prop(self, "keep_blend_files_as_is")
         layout.prop(self, "copy_catalogs")
         if self.keep_blend_files_as_is:
@@ -195,9 +202,12 @@ class SH_OT_AddToLibrary(Operator):
                             cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
                             if cat:
                                 catalogs.append(cat)
+                    dst_path = lib.path / f"{asset.name}.blend"
                     bpy_data.libraries.write(
-                        str(lib.path / f"{asset.name}.blend"), set(data), compress=True
+                        str(dst_path), set(data), compress=True
                     )
+                    if self.pack_file:
+                        utils.pack_files(dst_path)
 
         with lib.open_catalogs_file() as catfile:
             catfile: utils.CatalogsFile
@@ -223,6 +233,7 @@ class SH_OT_AddToLibrary(Operator):
             dst = dir / src.name
             # print(f"  - Copying blend file | {src} -> {dst}")
             dst.write_bytes(src.read_bytes())
+            utils.pack_files(dst)
 
 # TODO: Remove from library (needs to not just delete the blend file,
 # TODO: but check if other assets are in the blend and decide between
@@ -389,6 +400,12 @@ class AddAsAsset(scene.RenderThumbnailProps):
         description="The name of the collection to add the assets to",
     )
 
+    pack_files: BoolProperty(
+        name="Pack Files",
+        description="Pack all files into the asset's blend file",
+        default=False,
+    )
+
     def draw(self, context: Context):
         layout: UILayout = self.layout
         layout.use_property_split = True
@@ -458,6 +475,10 @@ class AddAsAsset(scene.RenderThumbnailProps):
         layout.prop(self, "license")
         layout.prop(self, "catalog")
         layout.prop(self, "copyright")
+        
+        layout.separator()
+        
+        layout.prop(self, "pack_files")
 
         layout.label(text="Tags:")
         grid = layout.grid_flow(columns=3)
@@ -669,8 +690,11 @@ class AddAsAsset(scene.RenderThumbnailProps):
         for tag, value in zip(hive_mind.TAGS_ENUM, self.tags):
             if value:
                 id.asset_data.tags.new(tag[1], skip_if_exists=True)
+                
+        bpy.data.libraries.write(path, set([id]), compress=True, path_remap="ABSOLUTE")
         
-        bpy.data.libraries.write(path, set([id]), compress=True)
+        if self.pack_files:
+            utils.pack_files(path)
         
         if not already_asset:
             id.asset_clear()

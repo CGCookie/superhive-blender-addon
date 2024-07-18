@@ -1269,3 +1269,26 @@ def mouse_in_window(window:Window, x, y) -> bool:
     bool: True if the mouse is within the window boundaries, False otherwise.
     """
     return window.x <= x <= window.x + window.width and window.y <= y <= window.y + window.height
+
+
+def pack_files(blend_file: Path):
+    p = Path(__file__)
+    while p.parent.name != "Blender":
+        p = p.parent
+    prefs_blend = p / "config" / "userpref.blend"
+    
+    if not prefs_blend.exists():
+        return
+    
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "pack_files.py"
+    
+    args = [
+        bpy.app.binary_path,
+        "-b",
+        str(blend_file),
+        "-P",
+        str(python_file)
+    ]
+    print(" ".join(args))
+    
+    subprocess.run(args)
