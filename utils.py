@@ -303,6 +303,16 @@ class Catalog:
             catalogs.extend(catalog.get_catalogs())
         return catalogs
 
+    def has_child(self, id:str | set[str], recursive=True):
+        for child in self.children.values():
+            if isinstance(id, set):
+                if child.id in id:
+                    return True
+            else:
+                if child.id == id:
+                    return True
+            if recursive and child.has_child(id, recursive):
+                return True
 
 class CatalogsFile:
     def __init__(self, dir: Path, is_new=False) -> None:
@@ -571,6 +581,17 @@ class CatalogsFile:
             catalogs.extend(catalog.get_catalogs())
         return catalogs
 
+    def has_child(self, id:str | set[str], recursive=True):
+        for child in self.catalogs.values():
+            if isinstance(id, set):
+                if child.id in id:
+                    return True
+            else:
+                if child.id == id:
+                    return True
+            if recursive and child.has_child(id, recursive):
+                return True
+    
 
 # Context manager for opening and then saving the catalogs file
 @contextmanager

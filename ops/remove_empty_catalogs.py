@@ -30,12 +30,15 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
             asset.metadata.catalog_id
             for asset in lib.get_possible_assets()
         }
+        
+        if not catalog_ids:
+            print("No catalogs used in library")
 
         with lib.open_catalogs_file() as cat_file:
             cat_file: utils.CatalogsFile
 
             for cat in cat_file.get_catalogs():
-                if cat.id not in catalog_ids:
+                if cat.id not in catalog_ids and not cat.has_child(catalog_ids):
                     cat.remove_self()
 
         bpy.ops.asset.library_refresh()
