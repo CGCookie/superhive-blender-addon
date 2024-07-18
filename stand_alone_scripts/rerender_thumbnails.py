@@ -404,6 +404,7 @@ def add_ground_plane(scene: Scene) -> Object:
     subsurf_mod.subdivision_type = 'SIMPLE'
     
     scene.collection.objects.link(ground_plane)
+    context.view_layer.update()
     
     return ground_plane
 
@@ -517,11 +518,11 @@ def setup_scene_collection(context: Context, col: bpy.types.Collection, shading=
         
     constraint = setup_camera_and_track(min_bb, max_bb, camera_object, track_object)
             
-    # Must come after extra camera location stuff
-    with context.temp_override(object=camera_object):
-        bpy.ops.constraint.apply(constraint=constraint.name)
-    
     if not DEBUG_SCENE:
+        # Must come after extra camera location stuff
+        with context.temp_override(object=camera_object):
+            bpy.ops.constraint.apply(constraint=constraint.name)
+    
         bpy.data.objects.remove(track_object)
     
     scene.camera = camera_object
@@ -654,6 +655,7 @@ def setup_scene_single_id(context: bpy.types.Context, object: bpy.types.Object, 
     
     if object not in scene.objects[:]:
         scene.collection.objects.link(object)
+        context.view_layer.update()
     
     # // Put in function to share with single_id // #
     view_area, camera_object, track_object, ground_plane = setup_scene(scene, add_plane=add_plane)
@@ -678,17 +680,17 @@ def setup_scene_single_id(context: bpy.types.Context, object: bpy.types.Object, 
         min_z = min_bb.z
         ground_plane.location = (object.location.x, object.location.y, min_z)
     
-    # global_bbox_center = object.matrix_world @ local_bbox_center
-    global_bbox_center = object.location + local_bbox_center
+    global_bbox_center = object.matrix_world @ local_bbox_center
     track_object.location = global_bbox_center
 
-    constraint = setup_camera_and_track(min_bb, max_bb, camera_object, track_object)
+    constraint = setup_camera_and_track(min_bb @ object.matrix_world, max_bb @ object.matrix_world, camera_object, track_object)
             
-    # Must come after extra camera location stuff
-    with context.temp_override(object=camera_object):
-        bpy.ops.constraint.apply(constraint=constraint.name)
+    if not DEBUG_SCENE:
+        # Must come after extra camera location stuff
+        with context.temp_override(object=camera_object):
+            bpy.ops.constraint.apply(constraint=constraint.name)
     
-    bpy.data.objects.remove(track_object)
+        bpy.data.objects.remove(track_object)
     
     scene.camera = camera_object
 
