@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
-id = "superhive_creator_extension" # Unique identifier for the extension.
-name = "Superhive Creator Extension"
-version = "1.0.0"
+id = "bkeeper" # Unique identifier for the extension.
+name = "Bkeeper"
+version = "0.0.1"
 tagline = "Aid in the creation and uploading of asset libraries"
 maintainer = "Zach Eastin, Richard Trainer"
 # Supported types: "add-on", "theme"
@@ -63,7 +63,7 @@ wheels = [
 # clipboard = "Copy and paste bone transforms"
 [permissions]
 network = "Need to gather data from the Superhive API and upload assets"
-files = "Import/export files for upload"
+files = "Import/export files for library creation and upload"
 
 # Optional: build setting.
 # https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build
