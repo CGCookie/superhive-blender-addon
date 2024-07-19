@@ -820,6 +820,7 @@ class AssetLibrary:
         self.catalogs = CatalogsFile(self.path, is_new=is_new)
 
     def get_possible_assets(self) -> list[AssetRepresentation]:
+        """Get all assets available"""
         C = self.get_context()
         with display_all_assets_in_library(C):
             return C.selected_assets[:] if C.selected_assets else []
@@ -1314,7 +1315,7 @@ def pack_files(blend_file: Path):
     subprocess.run(args)
 
 
-def move_blend_file(src: Path, dst: Path):
+def move_blend_file(src: Path, dst: Path, pack: bool = False):
     """Save the blend file to the new location with remapped filepaths and compression."""
     python_file = Path(__file__).parent / "stand_alone_scripts" / "move_blend_file.py"
         
@@ -1326,10 +1327,13 @@ def move_blend_file(src: Path, dst: Path):
         "-P",
         str(python_file),
         str(dst),
+        str(pack),
     ]
-    print(" ".join(args))
     
-    subprocess.run(args)
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode > 1:
+        print(f"Error: {proc.stderr.decode()}")
+        print(f"Output: {proc.stdout.decode()}")
 
 
 def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remove: list[ID | AssetRepresentation] = None, types: list[str] = None):
@@ -1346,9 +1350,53 @@ def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remo
         ":--separator--:".join(ids_to_remove) if ids_to_remove else "None",
         ":--separator--:".join(types),
     ]
-    print(" ".join(args))
     
-    subprocess.run(args)
+    proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode > 1:
+        print(f"Error: {proc.stderr.decode()}")
+        print(f"Output: {proc.stdout.decode()}")
+
+
+def export_helper(blend_file: Path, destination_dir: Path):
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "export_helper.py"
+        
+    args = [
+        bpy.app.binary_path,
+        "-b",
+        "--factory-startup",
+        str(blend_file),
+        "-P",
+        str(python_file),
+        str(destination_dir),
+    ]
+    
+    proc = subprocess.Popen(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True)
+    # proc = subprocess.Popen(args)
+    
+    while True:
+        line = proc.stdout.readline()
+        if not line and proc.poll() is not None:
+            break
+        elif line and line[0] == "|":
+            if line == "|":
+                print()
+                continue
+            
+            line_split = line.split("+=+")
+            if len(line_split) == 2:
+                text,end = line_split
+                if end == "r\n":
+                    end = "\r"
+            else:
+                text = line_split[0]
+                end = "\n"
+            print(text, end=end)
+    
+    if proc.returncode > 1:
+        print()
+        print(f"Error: {proc.stderr.decode()}")
+        print(f"Output: {proc.stdout.decode()}")
+    
 
 
 def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_library=True):
@@ -1358,8 +1406,9 @@ def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_
         if asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active):
             if tag_redraw:
                 area.tag_redraw()
-            try:
-                with C.temp_override(area=area):
-                    bpy.ops.asset.library_refresh()
-            except Exception as e:
-                print(f"Error while refreshing all asset browser areas: {e}")
+            if update_library:
+                try:
+                    with C.temp_override(area=area):
+                        bpy.ops.asset.library_refresh()
+                except Exception as e:
+                    print(f"Error while refreshing all asset browser areas: {e}")
