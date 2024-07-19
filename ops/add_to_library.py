@@ -126,18 +126,58 @@ class SH_OT_AddToLibrary(Operator):
         lib.path.mkdir(parents=True, exist_ok=True)
 
         assets = context.selected_assets
+        
+        self.total_assets = len(context.selected_assets)
+        self.added_assets = 0
+        self.updated = False
 
         if self.keep_blend_files_as_is:
-            self.add_to_library_keep(assets, lib.path)
+            self._thread = Thread(target=self.add_to_library_keep, args=(assets, lib.path))
+            # self.add_to_library_keep(assets, lib.path)
         else:
-            self.add_to_library_split(assets, lib)
+            self._thread = Thread(target=self.add_to_library_split, args=(assets, lib))
+            # self.add_to_library_split(assets, lib)
+        
+        context.window_manager.modal_handler_add(self)
+        self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
+        
+        sets: 'scene.SH_Scene' = context.scene.superhive
+        self.prog = sets.header_progress_bar
+        self.prog.start()
+        
+        self._thread.start()
+        
+        return {"RUNNING_MODAL"}
+    
+    def modal(self, context, event):
+        context.area.tag_redraw()
+        
+        if self.updated:
+            self.updated = False
+            self.prog.progress = round(self.added_assets / self.total_assets, 2)
+        
+        if not self._thread.is_alive():
+            bpy.app.timers.register(self.follow_up, first_interval=1)
+            return self.finished(context)
+        
+        return {"RUNNING_MODAL"}
 
-        try:
-            bpy.ops.asset.library_refresh()
-        except Exception as e:
-            print(f"An error occurred while refreshing the asset library: {e}")
+    def finished(self, context: Context):
+        self._thread.join()
+        
+        self.report({"INFO"}, f"Added {self.added_assets} of {self.total_assets} assets")
+        
+        # try:
+        utils.update_asset_browser_areas(context)
+        # except Exception as e:
+        #     print(f"An error occurred while refreshing the asset library: {e}")
 
         return {"FINISHED"}
+
+    def follow_up(self):
+        self.prog.end()
+        for area in bpy.context.screen.areas:
+            area.tag_redraw()
 
     def add_to_library_split(self, assets: list[AssetRepresentation], lib: utils.AssetLibrary):
         """Add the selected assets to the library by splitting them into separate blend files.
@@ -184,7 +224,7 @@ class SH_OT_AddToLibrary(Operator):
                             catalogs.append(cat)
                         else:
                             asset_catfile = utils.CatalogsFile(
-                                Path(asset.full_library_path).parent.parent,
+                                Path(asset.full_library_path).parent,
                                 is_new=self.is_new_library
                             )
                             cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
@@ -196,6 +236,9 @@ class SH_OT_AddToLibrary(Operator):
                     )
                     if self.pack_file:
                         utils.pack_files(dst_path)
+                    
+                    self.added_assets += 1
+                    self.updated = True
 
         with lib.open_catalogs_file() as catfile:
             catfile: utils.CatalogsFile
@@ -234,6 +277,9 @@ class SH_OT_AddToLibrary(Operator):
             
             if self.pack_file:
                 utils.pack_files(dst)
+            
+            self.added_assets += 1
+            self.updated = True
 
 
 class SH_OT_RemoveFromLibrary(Operator):
@@ -325,9 +371,7 @@ class SH_OT_RemoveFromLibrary(Operator):
         
         self.report({"INFO"}, f"Removed {self.removed_assets} of {self.total_assets} assets")
         
-        bpy.ops.asset.library_refresh()
-        
-        context.area.tag_redraw()
+        utils.update_asset_browser_areas(context)
         
         return {"FINISHED"}
     

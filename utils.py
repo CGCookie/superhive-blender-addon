@@ -1349,3 +1349,17 @@ def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remo
     print(" ".join(args))
     
     subprocess.run(args)
+
+
+def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_library=True):
+    C = context or bpy.context
+    
+    for area in C.screen.areas:
+        if asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active):
+            if tag_redraw:
+                area.tag_redraw()
+            try:
+                with C.temp_override(area=area):
+                    bpy.ops.asset.library_refresh()
+            except Exception as e:
+                print(f"Error while refreshing all asset browser areas: {e}")
