@@ -57,4 +57,6 @@ if __name__ == "__main__":
                 data_type = getattr(bpy.data, id_type.lower() + "s")
             data_type.remove(data_type[id])
     
+    bpy.ops.outliner.orphans_purge(do_recursive=True)
+    
     bpy.ops.wm.save_mainfile(compress=True, relative_remap=True)
