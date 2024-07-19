@@ -9,20 +9,20 @@ Argument Order:
      4. run python script arg
      5. script to run
      6. destination file path: str
+     7. pack files: bool
 """
 
 import bpy
 import sys
 from pathlib import Path
 
-print(f"{sys.argv=}")
-
 DST = sys.argv[6]
-
-print(f"{DST=}")
+PACK = sys.argv[7] == "True"
 
 
 if __name__ == "__main__":
     p = Path(DST)
     p.parent.mkdir(parents=True, exist_ok=True)
+    if PACK:
+        bpy.ops.file.pack_all()
     bpy.ops.wm.save_mainfile(filepath=DST, compress=True, relative_remap=True)
