@@ -1,5 +1,5 @@
 """
-CLI Script to update the asset data of the current blend file:
+CLI Script to remove objects/assets from a blend file:
 
 Argument Order:
      0. blender executable
@@ -57,4 +57,4 @@ if __name__ == "__main__":
                 data_type = getattr(bpy.data, id_type.lower() + "s")
             data_type.remove(data_type[id])
     
-    bpy.ops.wm.save_mainfile()
+    bpy.ops.wm.save_mainfile(compress=True, relative_remap=True)
