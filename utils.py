@@ -95,7 +95,7 @@ class Catalog:
         """
         self.data = data
         """The parent object"""
-        self.id = id or str(uuid.uuid4())
+        self.id: str = id or str(uuid.uuid4())
         """The unique identifier for the catalog"""
         self.path = path
         """The path to the catalog's greatest parent catalog"""
@@ -166,7 +166,10 @@ class Catalog:
         data = self
         path = []
         while not isinstance(data, CatalogsFile):
-            path.append(data.name)
+            if "/" in data.name:
+                path.append(data.name.split("/")[-1])
+            else:
+                path.append(data.name)
             data = data.data
         self.path = "/".join(reversed(path))
         self.simple_name = "-".join(reversed(path))
