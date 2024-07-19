@@ -224,8 +224,7 @@ class SH_OT_AddToLibrary(Operator):
         for blend_file, assets_in_file in blend_files.items():
             src = Path(blend_file)
             dst = dir / src.name
-            # print(f"  - Copying blend file | {src} -> {dst}")
-            dst.write_bytes(src.read_bytes())
+            utils.move_blend_file(src, dst)
             
             utils.clean_blend_file(
                 str(dst),

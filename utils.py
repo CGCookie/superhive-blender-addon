@@ -1314,7 +1314,25 @@ def pack_files(blend_file: Path):
     subprocess.run(args)
 
 
-def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remove: list[ID | AssetRepresentation] = None, types: list[str] = None):    
+def move_blend_file(src: Path, dst: Path):
+    """Save the blend file to the new location with remapped filepaths and compression."""
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "move_blend_file.py"
+        
+    args = [
+        bpy.app.binary_path,
+        "-b",
+        "--factory-startup",
+        str(src),
+        "-P",
+        str(python_file),
+        str(dst),
+    ]
+    print(" ".join(args))
+    
+    subprocess.run(args)
+
+
+def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remove: list[ID | AssetRepresentation] = None, types: list[str] = None):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "clear_blend_file.py"
         
     args = [
