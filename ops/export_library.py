@@ -1,14 +1,16 @@
-from typing import TYPE_CHECKING
-import zipfile
-from importlib.util import find_spec
-from pathlib import Path
+import tempfile
 import time
+import zipfile
+from concurrent.futures import ThreadPoolExecutor
+from importlib.util import find_spec
+from itertools import chain
+from pathlib import Path
+from threading import Thread
+from typing import TYPE_CHECKING
 
 import bpy
-from bpy.types import Operator, UserAssetLibrary, Context
-from bpy.props import EnumProperty, IntProperty
-from threading import Thread
-from concurrent.futures import ThreadPoolExecutor
+from bpy.props import BoolProperty, EnumProperty, IntProperty
+from bpy.types import AssetRepresentation, Context, Operator, UserAssetLibrary
 
 from .. import utils
 from . import polls
@@ -110,7 +112,7 @@ class ZipFileParallel(zipfile.ZipFile):
                 dest._compressor = EmptyCompressor()  # use an empty compressor
 
 
-class SH_OT_ExportLibrary(Operator):
+class _SH_OT_ExportLibrary(Operator):
     bl_idname = "superhive.export_library"
     bl_label = "Export Active Library"
     bl_description = "Export the active library to a .zip file"
@@ -221,7 +223,7 @@ class SH_OT_ExportLibrary(Operator):
 
         if self.updated:
             self.updated = False
-            self.prog.progress = round(self.files_written / self.total_files * 100, 2)
+            self.prog.progress = round(self.files_written / self.total_files, 2)
         self.prog.update_formated_time()
 
         if (event.type == "ESC" and event.mouse_region_x > 0 and event.mouse_region_y > 0) or self.prog.cancel:
@@ -276,6 +278,220 @@ class SH_OT_ExportLibrary(Operator):
         self.updated = True
         print(f"{(self.files_written/self.total_files)*100:.2f}%")
 
+
+class SH_OT_ExportLibrary(Operator):
+    bl_idname = "superhive.export_library"
+    bl_label = "Export Active Library"
+    bl_description = "Export the active library to a .zip file"
+    bl_options = {"REGISTER", "UNDO"}
+
+    # TODO: This should zip to a temporary location and then upload to the server
+
+    total_files = 1
+    files_written = 0
+    updated = False
+    
+    movingfiles_main_prog = 0
+    movingfiles_sub_prog = 0
+    movingfiles_sub_show = False
+    movingfiles_file_prog = 0
+    file_label = ""
+    sub_label = ""
+    zipping_bar_prog = 0
+    
+    is_zipping = False
+
+    compression_type: EnumProperty(
+        name="Type",
+        description="The type of compression to use when zipping the pack",
+        items=comp_enum,
+        default="ZIP_BZIP2"
+    )
+    deflated_compression_level: IntProperty(
+        name="Level",
+        description="A value of 1 (Best Speed) is fastest and produces the least compression, while a value of 9 (Best Compression) is slowest and produces the most. 0 is no compression. The default value is 6 which is a good compromise between speed and compression.",
+        min=0,
+        max=9,
+        default=6
+    )
+    bzip_compression_level: IntProperty(
+        name="Level",
+        description="The level of compression to use when using the bzip2 compression type. 1 produces the least compression, and 9 (default) produces the most compression",
+        min=1,
+        max=9,
+        default=9
+    )
+
+    selected_only: BoolProperty(
+        name="Selected Only",
+        description="Only export selected assets",
+    )
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context) -> bool:
+        if not polls.is_asset_browser(context, cls=cls):
+            return False
+
+        # scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        # if scene_sets.library_mode != "SUPERHIVE":
+        #     cls.poll_message_set("Library mode must be 'SUPERHIVE'")
+        #     return False
+
+        if not context.space_data.params.asset_library_reference != "ALL":
+            cls.poll_message_set("Active library must not be 'ALL'")
+            return False
+
+        return True
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+
+        layout.prop(self, "selected_only")
+
+        layout.separator()
+
+        text = [("Hover over settings and menu items for more information")]
+        col = layout.column(align=True)
+        for line in text:
+            row = col.row(align=True)
+            row.active = False
+            row.alignment = "CENTER"
+            row.label(text=line)
+        layout.label(text="Compression:")
+        layout.prop(self, "compression_type")
+        if self.compression_type == "ZIP_DEFLATED":
+            layout.prop(self, "deflated_compression_level")
+        elif self.compression_type == "ZIP_BZIP2":
+            layout.prop(self, "bzip_compression_level")
+    
+    def invoke(self, context, event):
+        self.z_to_close = []
+        context.window_manager.invoke_props_dialog(self)
+        return {"RUNNING_MODAL"}
+    
+    def execute(self, context):
+        print()
+        print()
+        print()
+        if self.selected_only:
+            self.assets: list[AssetRepresentation] = context.selected_assets[:]
+            # Get lib after to ensure that the selected assets are correct
+            self.lib = utils.from_active(context, area=context.area, load_assets=True)
+        else:
+            self.lib = utils.from_active(context, area=context.area, load_assets=True)
+            self.assets: list[AssetRepresentation] = self.lib.get_possible_assets()
+            
+        self.zip_path = self.lib.path / f"{self.lib.name}.zip"
+        
+        scn_sets: 'scene.SH_Scene' = context.scene.superhive
+        self.prog = scn_sets.export_library
+        context.window_manager.modal_handler_add(self)
+        self._timer = context.window_manager.event_timer_add(0.01, window=context.window)
+        
+        self._th = Thread(target=self.handle_files)
+        
+        self._th.start()
+        self.prog.start()
+        
+        return {"RUNNING_MODAL"}
+    
+    def handle_files(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            tempdir = Path(tempdir)
+            print("Moving files to tempdir...")
+            print("Progress:   0.00%", end="\r")
+            self.movingfiles_main_prog = 0
+            self.updated=True
+            self.prog.movingfiles_bar.main.update_start_time()
+            self.prog.movingfiles_bar.show_sub = True
+            for i,asset in enumerate(self.assets):
+                p = Path(asset.full_library_path)
+                
+                self.file_label = p.name
+                self.prog.movingfiles_bar.file.update_start_time()
+                self.movingfiles_file_prog = 0
+                self.updated=True
+                
+                utils.export_helper(p, tempdir, op=self)
+                
+                self.movingfiles_main_prog = i/len(self.assets)
+                self.updated = True
+                
+                prog = f"{self.movingfiles_main_prog*100:.2f}"
+                print(f"Progress: {prog.rjust(6)}%", end="\r")
+            self.movingfiles_main_prog = 1
+            self.updated = True
+            print("Progress: 100.00%")
+            print()
+                
+            
+            files_to_write = list(f for f in tempdir.rglob("*") if f.is_file())
+            
+            self.is_zipping = True
+            # zip_path = tempdir / "export.zip"
+            print("Writing to:", self.zip_path)
+            print("Progress:   0.00%", end="\r")
+            self.prog.zipping_bar.update_start_time()
+            with zipfile.ZipFile(self.zip_path, "w") as zipf:
+                for i,file in enumerate(files_to_write):
+                    zipf.write(file, file.relative_to(tempdir))
+                    
+                    self.zipping_bar_prog = i/len(files_to_write)
+                    self.updated = True
+                    
+                    prog = f"{self.zipping_bar_prog*100:.2f}"
+                    print(f"Progress: {prog.rjust(6)}%", end="\r")
+                self.zipping_bar_prog = 1
+                self.updated = True
+                print("Progress: 100.00%")
+
+    def modal(self, context, event):
+        context.area.tag_redraw()
+        
+        if self.is_zipping:
+            self.prog.zipping_bar.update_formated_time()
+        else:
+            self.prog.movingfiles_bar.update_formated_time()
+        
+        if self.updated:
+            self.updated = False
+            self.prog.movingfiles_bar.main.progress = self.movingfiles_main_prog
+            self.prog.movingfiles_bar.file.progress = self.movingfiles_file_prog
+            self.prog.movingfiles_bar.file_label = self.file_label
+            self.prog.zipping_bar.progress = self.zipping_bar_prog
+            # self.prog.upload_bar.progress = self.upload_bar_prog
+            
+            if self.movingfiles_sub_show:
+                self.prog.movingfiles_bar.show_sub = True
+                self.prog.movingfiles_bar.sub_label = self.sub_label
+                self.prog.movingfiles_bar.sub.progress = self.movingfiles_sub_prog
+            else:
+                self.prog.movingfiles_bar.show_sub = False
+        
+        if not self._th.is_alive():
+            self.finished(context)
+            return {"FINISHED"}
+        
+        return {"RUNNING_MODAL"}
+
+    def finished(self, context: Context) -> None:
+        self._th.join()
+        context.window_manager.event_timer_remove(self._timer)
+        try:
+            utils.open_location(str(self.zip_path))
+        except Exception as e:
+            print("Unable to open export folder:", e)
+        bpy.app.timers.register(self.delayed_close, first_interval=1)
+        print()
+        print()
+        print()
+    
+    def delayed_close(self):
+        self.prog.end()
+        for area in bpy.context.screen.areas:
+            area.tag_redraw()
+    
 
 classes = (
     SH_OT_ExportLibrary,

@@ -859,12 +859,105 @@ class MultiProgressBarUpdate_Assets(PropertyGroup):
             split = layout.split(factor=0.25)
             split.separator()
             self.icon_rendering.draw(split.column())
+
+
+class MovingFilesProgressBar(PropertyGroup):
+    main: PointerProperty(type=ProgressBar)
+    file: PointerProperty(type=ProgressBar)
+    sub: PointerProperty(type=ProgressBar)
+    
+    sub_label: StringProperty()
+    file_label: StringProperty()
+    
+    show_sub: BoolProperty()
+    
+    def reset(self) -> None:
+        self.main: ProgressBar
+        self.file: ProgressBar
+        self.sub: ProgressBar
+        self.main.reset()
+        self.file.reset()
+        self.sub.reset()
+    
+    def update_formated_time(self) -> None:
+        self.main.update_formated_time()
+        self.file.update_formated_time()
+        if self.show_sub:
+            self.sub.update_formated_time()
+    
+    def draw(self, layout: UILayout, draw_time=False) -> None:
+        split = layout.split(factor=0.05)
+        split.separator()
+        self.main.draw(split, draw_time=True)
+        
+        split = layout.split(factor=0.1)
+        split.separator()
+        r = split.row()
+        r.label(text=self.file_label)
+        split = layout.split(factor=0.15)
+        split.separator()
+        self.file.draw(split, draw_time=True)
+        
+        if self.show_sub:
+            row = layout.row()
+            row.label(text=self.sub_label)
+            self.sub.draw(row, draw_time=True)
+
+class MultiProgressBarExportLibrary(PropertyGroup):
+    show: BoolProperty()
+    movingfiles_bar: PointerProperty(type=MovingFilesProgressBar)
+    zipping_bar: PointerProperty(type=ProgressBar)
+    upload_bar: PointerProperty(type=ProgressBar)
+        
+    cancel: BoolProperty()
+    
+    def start(self) -> None:
+        self.reset()
+        self.show = True
+        
+    def end(self) -> None:
+        self.show = False
+        self.reset()
+    
+    def reset(self) -> None:
+        self.movingfiles_bar.reset()
+        self.zipping_bar.reset()
+        self.upload_bar.reset()
+    
+    def draw(self, layout: UILayout) -> None:
+        self.movingfiles_bar: MovingFilesProgressBar
+        self.zipping_bar: ProgressBar
+        self.upload_bar: ProgressBar
+        
+        layout.label(text="Exporting Library:")
+        split = layout.split(factor=0.05)
+        split.separator()
+        col = split.column()
+        
+        r = col.row()
+        r.alignment = "LEFT"
+        r.label(text="Gathering Files:")
+        
+        self.movingfiles_bar.draw(col, draw_time=True)
+        
+        row = col.row()
+        row.label(text="Zipping Files:")
+        
+        self.zipping_bar.draw(col.column(), draw_time=True)
+        
+        # row = layout.row()
+        # row.label(text="Uploading:")
+        # split = layout.split(factor=0.25)
+        # split.separator()
+        # self.upload_bar.draw(split.column())
         
 
 
 class SH_Scene(PropertyGroup):
     header_progress_bar: PointerProperty(type=ProgressBar)
     side_panel_batch_asset_update_progress_bar: PointerProperty(type=MultiProgressBarUpdate_Assets)
+    
+    export_library: PointerProperty(type=MultiProgressBarExportLibrary)
 
     library_mode: EnumProperty(
         items=(
@@ -886,6 +979,7 @@ class SH_Scene(PropertyGroup):
         self.metadata_update: BatchMetadataUpdate
         self.header_progress_bar: ProgressBar
         self.side_panel_batch_asset_update_progress_bar: MultiProgressBarUpdate_Assets
+        self.export_library: MultiProgressBarExportLibrary
 
 
 classes = (
@@ -898,6 +992,8 @@ classes = (
     ProgressUpdate_Asset,
     IconRenderingProgressBars,
     MultiProgressBarUpdate_Assets,
+    MovingFilesProgressBar,
+    MultiProgressBarExportLibrary,
     SH_Scene,
 )
 

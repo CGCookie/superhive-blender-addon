@@ -17,7 +17,7 @@ from bpy_extras import asset_utils
 from . import hive_mind
 
 if TYPE_CHECKING:
-    from .ops import asset_ops
+    from .ops import asset_ops, export_library
     from .settings import asset as asset_settings
     from .ui.prefs import SH_AddonPreferences
 
@@ -1357,7 +1357,7 @@ def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remo
         print(f"Output: {proc.stdout.decode()}")
 
 
-def export_helper(blend_file: Path, destination_dir: Path):
+def export_helper(blend_file: Path, destination_dir: Path, op: 'export_library.SH_OT_ExportLibrary' = None):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "export_helper.py"
         
     args = [
@@ -1373,24 +1373,45 @@ def export_helper(blend_file: Path, destination_dir: Path):
     proc = subprocess.Popen(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True)
     # proc = subprocess.Popen(args)
     
-    while True:
-        line = proc.stdout.readline()
-        if not line and proc.poll() is not None:
-            break
-        elif line and line[0] == "|":
-            if line == "|":
-                print()
-                continue
-            
-            line_split = line.split("+=+")
-            if len(line_split) == 2:
-                text,end = line_split
-                if end == "r\n":
-                    end = "\r"
-            else:
-                text = line_split[0]
-                end = "\n"
-            print(text, end=end)
+    if op:
+        while True:
+            line = proc.stdout.readline()
+            if not line and proc.poll() is not None:
+                break
+            if line.startswith("="):
+                prop, value = line[1:].split("=")
+                value = value.replace("\n", "")
+                match prop:
+                    case "prog":
+                        op.movingfiles_file_prog = float(value)
+                    case "sub_show":
+                        op.movingfiles_sub_show = value == "True"
+                    case "sub_label":
+                        op.sub_label = value
+                    case "sub_prog":
+                        op.movingfiles_sub_prog = float(value)
+                    case _:
+                        print("Unhandled Property:", prop, ", value:", value)
+                op.updated = True
+    else:
+        while True:
+            line = proc.stdout.readline()
+            if not line and proc.poll() is not None:
+                break
+            elif line and line[0] == "|":
+                if line == "|":
+                    print()
+                    continue
+                
+                line_split = line.split("+=+")
+                if len(line_split) == 2:
+                    text,end = line_split
+                    if end == "r\n":
+                        end = "\r"
+                else:
+                    text = line_split[0]
+                    end = "\n"
+                print(text, end=end)
     
     if proc.returncode > 1:
         print()

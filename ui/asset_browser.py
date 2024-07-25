@@ -153,8 +153,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         row = col.row(align=True)
         row.operator("superhive.batch_update_assets_from_scene")
         row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
-        
-    
+
 
 class SH_PT_LibrarySettings(Panel):
     bl_idname = "SH_PT_LibrarySettings"
@@ -171,6 +170,11 @@ class SH_PT_LibrarySettings(Panel):
 
     def draw(self, context):
         layout: UILayout = self.layout
+
+        scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        if scene_sets.export_library.show:
+            scene_sets.export_library.draw(layout)
+            return
 
         layout.operator("superhive.add_categories_to_library")
         layout.operator("superhive.remove_empty_catalogs")
