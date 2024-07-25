@@ -9,7 +9,7 @@ from threading import Thread
 from typing import TYPE_CHECKING
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, IntProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty
 from bpy.types import AssetRepresentation, Context, Operator, UserAssetLibrary
 
 from .. import utils
@@ -326,6 +326,16 @@ class SH_OT_ExportLibrary(Operator):
         name="Selected Only",
         description="Only export selected assets",
     )
+    
+    target_zipfile_size: FloatProperty(
+        name="Target Size (GBs)",
+        description="The target max size each zip file should be cut off at and a new file started in Gigabytes. Would advise going under as each asset and its files will not be split up among zip files",
+        default=4.5,
+        min=0,
+    )
+
+    _target_file_size = 1_000_000_000
+    zip_num = 1
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
@@ -364,6 +374,8 @@ class SH_OT_ExportLibrary(Operator):
             layout.prop(self, "deflated_compression_level")
         elif self.compression_type == "ZIP_BZIP2":
             layout.prop(self, "bzip_compression_level")
+        
+        layout.prop(self, "target_zipfile_size")
     
     def invoke(self, context, event):
         self.z_to_close = []
@@ -383,6 +395,8 @@ class SH_OT_ExportLibrary(Operator):
             self.assets: list[AssetRepresentation] = self.lib.get_possible_assets()
             
         self.zip_path = self.lib.path / f"{self.lib.name}.zip"
+        
+        self._target_file_size = self.target_zipfile_size * 1_000_000_000
         
         scn_sets: 'scene.SH_Scene' = context.scene.superhive
         self.prog = scn_sets.export_library
@@ -426,25 +440,43 @@ class SH_OT_ExportLibrary(Operator):
             print()
                 
             
-            files_to_write = list(f for f in tempdir.rglob("*") if f.is_file())
+            files_to_write: list[tuple[Path, list[Path]]] = list((d, [f for f in d.rglob("*") if f.is_file()]) for d in tempdir.iterdir() )
+            """A list of tuples containing the directory and a list of files in that directory"""
             
+            total_files = sum(len(files) for _, files in files_to_write)
             self.is_zipping = True
             # zip_path = tempdir / "export.zip"
             print("Writing to:", self.zip_path)
             print("Progress:   0.00%", end="\r")
             self.prog.zipping_bar.update_start_time()
-            with zipfile.ZipFile(self.zip_path, "w") as zipf:
-                for i,file in enumerate(files_to_write):
-                    zipf.write(file, file.relative_to(tempdir))
-                    
-                    self.zipping_bar_prog = i/len(files_to_write)
-                    self.updated = True
-                    
-                    prog = f"{self.zipping_bar_prog*100:.2f}"
-                    print(f"Progress: {prog.rjust(6)}%", end="\r")
-                self.zipping_bar_prog = 1
-                self.updated = True
-                print("Progress: 100.00%")
+            is_multi = False
+            files_zipped = 0
+            while files_to_write:
+                if is_multi:
+                    self.zip_path.rename(self.zip_path.with_stem(f"{self.zip_path.stem}_{self.zip_num}"))
+                    self.zip_num += 1
+                with zipfile.ZipFile(self.zip_path, "w") as zipf:
+                    for _ in range(len(files_to_write)):
+                        _d, files = files_to_write.pop(0)
+                        for file in files:
+                            zipf.write(file, file.relative_to(tempdir))
+                            files_zipped += 1
+                            
+                            self.zipping_bar_prog = files_zipped/total_files
+                            self.updated = True
+                            
+                            prog = f"{self.zipping_bar_prog*100:.2f}"
+                            print(f"Progress: {prog.rjust(6)}%", end="\r")
+                            
+                        if zipf.fp.tell() > self._target_file_size:
+                            is_multi = True
+                            break
+                        
+            if is_multi:
+                self.zip_path = self.zip_path.rename(self.zip_path.with_stem(f"{self.zip_path.stem}_{self.zip_num}"))
+            self.zipping_bar_prog = 1
+            self.updated = True
+            print("Progress: 100.00%")
 
     def modal(self, context, event):
         context.area.tag_redraw()
