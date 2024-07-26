@@ -71,5 +71,8 @@ paths_exclude_pattern = [
   "**.zip",
 ]
 
+# Validate Command
+# --command extension validate
+
 # Build Command
 # --command extension build --output-dir [path_to_parent_directory]/builds
