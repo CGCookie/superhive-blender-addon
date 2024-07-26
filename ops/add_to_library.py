@@ -48,7 +48,7 @@ class SH_OT_AddToLibrary(Operator):
     keep_blend_files_as_is: BoolProperty(
         name="Keep Blend Files As Is",
         description="Normally we need to split up the assets into separate blend files to add them to the library. This option will keep the blend files as is.",
-        default=False,
+        default=True,
     )
 
     copy_catalogs: BoolProperty(
@@ -637,9 +637,12 @@ class AddAsAsset(scene.RenderThumbnailProps):
         layout.prop(self, "pack_files")
 
         layout.label(text="Tags:")
-        grid = layout.grid_flow(columns=3)
+        grid = layout.grid_flow(columns=3, even_columns=True, even_rows=True)
+        grid.use_property_split = False
         for i, tag in enumerate(hive_mind.TAGS_ENUM):
-            grid.prop(self, "tags", index=i, text=tag[1])
+            r = grid.split(factor=0.25)
+            r.separator()
+            r.prop(self, "tags", index=i, text=tag[1])
         
         layout.separator(type="LINE")
         
