@@ -477,18 +477,6 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         description="Render thumbnails for the assets when updating",
     )
     
-    show_metadata_settings: BoolProperty(
-        name="Show Metadata Settings",
-        description="Show the settings for changing the asset Metadata",
-        default=False
-    )
-    
-    show_thumbnail_settings: BoolProperty(
-        name="Show Thumbnail Settings",
-        description="Show the settings for rendering the thumbnails",
-        default=False
-    )
-    
     reset_settings: BoolProperty(
         name="Reset Settings",
         description="Reset the settings after updating the assets",
@@ -501,56 +489,27 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
 
     def draw(self, context: Context, layout: UILayout, use_ops:bool=False):
         box = layout.box()
-        row = box.row()
-        row.scale_y = 1.5
-        split = row.split(factor=0.2)
-        row_l = split.row(align=True)
-        row_l.alignment = "LEFT"
-        row_l.scale_y = 0.75
-        c = row_l.column(align=True)
-        c.separator(factor=0.6)
-        r = c.row(align=True)
-        r.prop(
-            self, "show_thumbnail_settings",
-            icon="DOWNARROW_HLT" if self.show_thumbnail_settings else "RIGHTARROW",
-            text="",
-            emboss=False
-        )
-        r.prop(
-            self, "render_thumbnails",
-            text="",
-            # icon="CHECKBOX_HLT" if self.render_thumbnails else "CHECKBOX_DEHLT",
-            # emboss=False,
-        )
+        header, body = box.panel("asset_update_render_thumbnail")
+        header.scale_y = 1.25
+        r = header.row()
+        r.alignment = "CENTER"
+        r.label(text="Render Thumbnails", icon="FILE_IMAGE")
         
-        split = split.split(factor=0.75)
-        row_m = split.row(align=True)
-        row_m.prop(
-            self, "show_thumbnail_settings",
-            text="Render Thumbnails",
-            emboss=False
-        )
-        row_r = split.row(align=True)
-        row_r.separator()
-        
-        if self.show_thumbnail_settings:
-            col = box.column()
+        if body:
+            col = body.column()
             col.enabled = self.render_thumbnails
             self.draw_thumbnail_props(col)
         
         layout.separator()
         
         box = layout.box()
-        row = box.row()
-        row.scale_y = 1.5
-        row.prop(
-            self, "show_metadata_settings",
-            icon="DOWNARROW_HLT" if self.show_metadata_settings else "RIGHTARROW",
-            text="Metadata",
-            emboss=False
-        )
+        header, body = box.panel("asset_update_metadata")
+        header.scale_y = 1.25
+        r = header.row()
+        r.alignment = "CENTER"
+        r.label(text="Metadata", icon="TEXT")
         
-        if self.show_metadata_settings:
+        if body:
             self.draw_metadata_settings(context, box, use_ops)
 
     def draw_metadata_settings(self, context: Context, layout: UILayout, use_ops: bool):
