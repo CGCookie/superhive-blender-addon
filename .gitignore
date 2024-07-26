@@ -2,3 +2,4 @@ __pycache__
 .vscode/
 __ignore__/
 **.blend*
+wheels/download_wheels.py
