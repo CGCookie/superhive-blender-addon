@@ -12,8 +12,8 @@ website = "https://github.com/CGCookie/superhive-blender-addon"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
-tags = ["Asset Browser", "Development", "Pipeline"]
-# tags = ["Development", "Pipeline"]
+# tags = ["Asset Browser", "Development", "Pipeline"]
+tags = ["Development", "Pipeline"]
 
 blender_version_min = "4.2.0"
 # Optional: maximum supported Blender version
