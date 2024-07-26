@@ -67,8 +67,16 @@ files = "Import/export files for library creation and upload"
 
 # Optional: build setting.
 # https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build
-# [build]
-# paths_exclude_pattern = [
-#   "/.git/",
-#   "__pycache__/",
-# ]
+[build]
+paths_exclude_pattern = [
+  "/.git/",
+  "/.github/",
+  "/.vscode/",
+  "/__ignore__/",
+  "__pycache__/",
+  "**.blend*",
+  "**.zip",
+]
+
+# Build Command
+# --command extension build --output-dir [path_to_parent_directory]/builds
