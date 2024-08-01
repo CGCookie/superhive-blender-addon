@@ -72,7 +72,7 @@ paths_exclude_pattern = [
 ]
 
 # Validate Command
-# --command extension validate
+# --factory-startup --command extension validate
 
 # Build Command
-# --command extension build --output-dir [path_to_parent_directory]/builds
+# --factory-startup --command extension build --output-dir [path_to_parent_directory]/builds
