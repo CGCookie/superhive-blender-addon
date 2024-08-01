@@ -38,7 +38,10 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return context.scene.superhive.library_mode == "SUPERHIVE"
+        return (
+            polls.is_asset_browser(context)
+            and context.scene.superhive.library_mode == "SUPERHIVE"
+        )
 
     def draw_header(self, context: Context) -> None:
         layout = self.layout
