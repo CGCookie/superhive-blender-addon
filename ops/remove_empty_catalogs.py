@@ -7,7 +7,7 @@ from . import polls
 
 
 class SH_OT_RemoveEmptyCatalogs(Operator):
-    bl_idname = "superhive.remove_empty_catalogs"
+    bl_idname = "bkeeper.remove_empty_catalogs"
     bl_label = "Remove Empty Catalogs"
     bl_description = "Remove all empty catalogs from the active library"
     bl_options = {'REGISTER', 'UNDO'}

@@ -6,7 +6,7 @@ from . import polls
 
 
 class SH_OT_ConvertAssetsToHive(Operator):
-    bl_idname = "superhive.convert_assets_to_hive"
+    bl_idname = "bkeeper.convert_assets_to_hive"
     bl_label = "Convert To Hive"
     bl_description = "Convert the selected assets to hive assets"
     bl_options = {'REGISTER', 'UNDO'}

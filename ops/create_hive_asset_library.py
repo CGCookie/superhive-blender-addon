@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class SH_OT_CreateHiveAssetLibrary(Operator):
-    bl_idname = "superhive.create_hive_asset_library"
+    bl_idname = "bkeeper.create_hive_asset_library"
     bl_label = "Create Hive Asset Library"
     bl_description = "Create a new asset library for the Superhive system"
     bl_options = {'REGISTER', 'UNDO'}

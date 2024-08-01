@@ -113,7 +113,7 @@ class ZipFileParallel(zipfile.ZipFile):
 
 
 class _SH_OT_ExportLibrary(Operator):
-    bl_idname = "superhive.export_library"
+    bl_idname = "bkeeper.export_library"
     bl_label = "Export Active Library"
     bl_description = "Export the active library to a .zip file"
     bl_options = {"REGISTER", "UNDO"}
@@ -280,7 +280,7 @@ class _SH_OT_ExportLibrary(Operator):
 
 
 class SH_OT_ExportLibrary(Operator):
-    bl_idname = "superhive.export_library"
+    bl_idname = "bkeeper.export_library"
     bl_label = "Export Active Library"
     bl_description = "Export the active library to a .zip file"
     bl_options = {"REGISTER", "UNDO"}

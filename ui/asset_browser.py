@@ -24,7 +24,7 @@ def draw_assetbrowser_header(self, context: Context):
     if polls.is_asset_browser(context):
         layout.prop(context.scene.superhive, "library_mode", text="")
         layout.operator(
-            "superhive.create_hive_asset_library",
+            "bkeeper.create_hive_asset_library",
             text="", icon="ADD"
         )
     
@@ -53,7 +53,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
             row = layout.row()
             row.alignment = "RIGHT"
-            row.operator("superhive.reset_asset_metadata", icon="FILE_REFRESH", text="")
+            row.operator("bkeeper.reset_asset_metadata", icon="FILE_REFRESH", text="")
 
     def draw(self, context):
         layout: UILayout = self.layout
@@ -86,8 +86,8 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         box.template_icon(icon_value=active_file.preview_icon_id, scale=5.0)
         row.separator()
         col = row.column(align=True)
-        col.operator("superhive.change_asset_icon", icon="FILE_FOLDER", text="")
-        col.operator("superhive.rerender_thumbnail", icon="RESTRICT_RENDER_OFF", text="")
+        col.operator("bkeeper.change_asset_icon", icon="FILE_FOLDER", text="")
+        col.operator("bkeeper.rerender_thumbnail", icon="RESTRICT_RENDER_OFF", text="")
 
         layout.separator()
 
@@ -103,7 +103,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             row = layout.row(align=True)
             row.prop(asset.metadata, prop, text=set_is_dirty_text(orig_prop))
             if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
-                op = row.operator("superhive.reset_asset_metadata_property", icon="FORWARD", text="")
+                op = row.operator("bkeeper.reset_asset_metadata_property", icon="FORWARD", text="")
                 op.property = prop
                 op.original_value = orig_value
 
@@ -126,9 +126,9 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             item_dyntip_propname="desc",
         )
         col = row.column(align=True)
-        col.operator("superhive.add_tags", icon="ADD", text="")
-        col.operator("superhive.remove_tag", icon="REMOVE", text="")
-        col.operator("superhive.reset_tag", icon="FILE_REFRESH", text="")
+        col.operator("bkeeper.add_tags", icon="ADD", text="")
+        col.operator("bkeeper.remove_tag", icon="REMOVE", text="")
+        col.operator("bkeeper.reset_tag", icon="FILE_REFRESH", text="")
 
         if prefs.display_extras:
             layout.label(text="Extra information is displayed")
@@ -137,10 +137,10 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         row = layout.row()
         row.active = asset.metadata.sh_is_dirty()
-        row.operator("superhive.update_asset", icon="FILE_REFRESH")
+        row.operator("bkeeper.update_asset", icon="FILE_REFRESH")
 
     def draw_multiple_assets(self, context: Context, layout: UILayout):
-        # layout.operator("superhive.rerender_thumbnail", icon="RESTRICT_RENDER_OFF")
+        # layout.operator("bkeeper.rerender_thumbnail", icon="RESTRICT_RENDER_OFF")
         scene_sets: 'scene.SH_Scene' = context.scene.superhive
         
         col = layout.column()
@@ -151,7 +151,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         col.separator()
         
         row = col.row(align=True)
-        row.operator("superhive.batch_update_assets_from_scene")
+        row.operator("bkeeper.batch_update_assets_from_scene")
         row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
 
 
@@ -176,9 +176,9 @@ class SH_PT_LibrarySettings(Panel):
             scene_sets.export_library.draw(layout)
             return
 
-        layout.operator("superhive.add_categories_to_library")
-        layout.operator("superhive.remove_empty_catalogs")
-        layout.operator("superhive.export_library", text="Export to Superhive")
+        layout.operator("bkeeper.add_categories_to_library")
+        layout.operator("bkeeper.remove_empty_catalogs")
+        layout.operator("bkeeper.export_library", text="Export to Superhive")
 
 
 classes = (

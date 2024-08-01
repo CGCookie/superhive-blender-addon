@@ -7,9 +7,9 @@ def asset_browser_context_menu(self, context):
     layout.separator()
     layout.label(text="Superhive")
     layout.operator_context = 'INVOKE_DEFAULT'
-    layout.operator_menu_enum("superhive.add_to_library", "library", text="Add to Library")
-    layout.operator("superhive.remove_from_library", icon="X")
-    layout.operator("superhive.batch_update_assets", text="Change Metadata")
+    layout.operator_menu_enum("bkeeper.add_to_library", "library", text="Add to Library")
+    layout.operator("bkeeper.remove_from_library", icon="X")
+    layout.operator("bkeeper.batch_update_assets", text="Change Metadata")
 
 
 def register():

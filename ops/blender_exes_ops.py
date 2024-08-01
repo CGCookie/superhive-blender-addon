@@ -9,7 +9,7 @@ from .. import utils
 
 
 class SH_OT_GatherBlenderExes(Operator):
-    bl_idname = "superhive.gather_blender_exes"
+    bl_idname = "bkeeper.gather_blender_exes"
     bl_label = "Gather Blender Executables"
     bl_description = "Gather Blender executables from expected places"
     bl_options = {"REGISTER", "UNDO"}
@@ -62,7 +62,7 @@ class SH_OT_GatherBlenderExes(Operator):
 
 
 class SH_OT_AddBlenderExes(Operator):
-    bl_idname = "superhive.add_blender_exes"
+    bl_idname = "bkeeper.add_blender_exes"
     bl_label = "Add Blender Executables"
     bl_description = "Add Blender executable"
     bl_options = {"REGISTER", "UNDO"}
@@ -118,7 +118,7 @@ class SH_OT_AddBlenderExes(Operator):
 
 
 class SH_OT_RemoveBlenderExes(Operator):
-    bl_idname = "superhive.remove_blender_exes"
+    bl_idname = "bkeeper.remove_blender_exes"
     bl_label = "Remove Blender Executables"
     bl_description = "Remove the active Blender executable"
     bl_options = {"REGISTER", "UNDO"}

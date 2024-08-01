@@ -15,7 +15,7 @@ from . import polls
 
 
 class SH_OT_AddToLibrary(Operator):
-    bl_idname = "superhive.add_to_library"
+    bl_idname = "bkeeper.add_to_library"
     bl_label = "Add to Library"
     bl_description = "Add the selected asset(s) to a library"
     bl_options = {"REGISTER", "UNDO"}
@@ -283,7 +283,7 @@ class SH_OT_AddToLibrary(Operator):
 
 
 class SH_OT_RemoveFromLibrary(Operator):
-    bl_idname = "superhive.remove_from_library"
+    bl_idname = "bkeeper.remove_from_library"
     bl_label = "Remove from Library"
     bl_description = "Remove the selected asset(s) from their libraries"
     bl_options = {"REGISTER", "UNDO"}
@@ -970,12 +970,12 @@ class AddAsAsset(scene.RenderThumbnailProps):
         
 
 class SH_OT_AddAsAssetToLibrary(Operator, AddAsAsset):
-    bl_idname = "superhive.add_as_asset_to_library"
+    bl_idname = "bkeeper.add_as_asset_to_library"
 
 
 
 class SH_OT_AddToLibraryFromOutliner(Operator, AddAsAsset):
-    bl_idname = "superhive.add_to_library_from_outliner"
+    bl_idname = "bkeeper.add_to_library_from_outliner"
 
     @classmethod
     def poll(cls, context):

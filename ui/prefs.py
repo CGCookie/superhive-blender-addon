@@ -155,9 +155,9 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             self, "active_blender_version_index"
         )
         col = row.column(align=True)
-        col.operator("superhive.add_blender_exes", icon="ADD", text="")
-        col.operator("superhive.remove_blender_exes", icon="REMOVE", text="")
-        col.operator("superhive.gather_blender_exes", icon="FILE_REFRESH", text="")
+        col.operator("bkeeper.add_blender_exes", icon="ADD", text="")
+        col.operator("bkeeper.remove_blender_exes", icon="REMOVE", text="")
+        col.operator("bkeeper.gather_blender_exes", icon="FILE_REFRESH", text="")
         
         layout.separator()
         

@@ -20,7 +20,7 @@ from . import polls
 
 
 class SH_OT_UpdateAsset(Operator):
-    bl_idname = "superhive.update_asset"
+    bl_idname = "bkeeper.update_asset"
     bl_label = "Update Asset"
     bl_description = "Update the asset data of selected assets. Updates all assets if none are selected."
     bl_options = {"REGISTER", "UNDO"}
@@ -246,7 +246,7 @@ class BatchUpdateAssets:
 
 
 class SH_OT_BatchUpdateAssets(Operator, BatchUpdateAssets):
-    bl_idname = "superhive.batch_update_assets"
+    bl_idname = "bkeeper.batch_update_assets"
     bl_label = "Batch Update Assets"
     bl_description = "Update the asset data of selected assets."
     bl_options = {"REGISTER", "UNDO"}
@@ -284,7 +284,7 @@ class SH_OT_BatchUpdateAssets(Operator, BatchUpdateAssets):
 
 
 class SH_OT_BatchUpdateAssetsFromScene(Operator, BatchUpdateAssets):
-    bl_idname = "superhive.batch_update_assets_from_scene"
+    bl_idname = "bkeeper.batch_update_assets_from_scene"
     bl_label = "Batch Update Assets"
     bl_description = "Update the asset data of selected assets."
     bl_options = {"REGISTER", "UNDO"}
@@ -306,7 +306,7 @@ class SH_OT_BatchUpdateAssetsFromScene(Operator, BatchUpdateAssets):
 
 
 class SH_OT_AddUpdateAction(Operator):
-    bl_idname = "superhive.add_update_action"
+    bl_idname = "bkeeper.add_update_action"
     bl_label = "Add Update Action"
     bl_description = "Add a new action to the batch update list."
     bl_options = {"REGISTER", "UNDO"}
@@ -325,7 +325,7 @@ class SH_OT_AddUpdateAction(Operator):
 
 
 class SH_OT_RemoveUpdateAction(Operator):
-    bl_idname = "superhive.remove_update_action"
+    bl_idname = "bkeeper.remove_update_action"
     bl_label = "Remove Update Action"
     bl_description = "Remove an action."
     bl_options = {"REGISTER", "UNDO"}
@@ -344,7 +344,7 @@ class SH_OT_RemoveUpdateAction(Operator):
 
 
 class SH_OT_RerenderThumbnail(Operator, scene.RenderThumbnailProps):
-    bl_idname = "superhive.rerender_thumbnail"
+    bl_idname = "bkeeper.rerender_thumbnail"
     bl_label = "Re-Render Thumbnail"
     bl_description = "Render the thumbnail of the selected assets."
     bl_options = {'REGISTER', 'UNDO'}
@@ -455,7 +455,7 @@ class SH_OT_RerenderThumbnail(Operator, scene.RenderThumbnailProps):
 
 
 class SH_OT_ChangeAssetIcon(Operator):
-    bl_idname = "superhive.change_asset_icon"
+    bl_idname = "bkeeper.change_asset_icon"
     bl_label = "Change Icon"
     bl_description = "Change the icon of the active asset."
     bl_options = {"REGISTER", "UNDO"}
@@ -492,7 +492,7 @@ class SH_OT_ChangeAssetIcon(Operator):
 
 
 class SH_OT_ResetAssetMetadataProperty(Operator):
-    bl_idname = "superhive.reset_asset_metadata_property"
+    bl_idname = "bkeeper.reset_asset_metadata_property"
     bl_label = "Reset"
     bl_description = "Reset the metadata property of the active asset."
     bl_options = {"REGISTER", "UNDO"}
@@ -517,7 +517,7 @@ class SH_OT_ResetAssetMetadataProperty(Operator):
 
 
 class SH_OT_ResetAssetMetadata(Operator):
-    bl_idname = "superhive.reset_asset_metadata"
+    bl_idname = "bkeeper.reset_asset_metadata"
     bl_label = "Reset Asset Metadata"
     bl_description = "Reset the asset metadata of selected assets. Resets all assets if none are selected."
     bl_options = {"REGISTER", "UNDO"}
@@ -531,7 +531,7 @@ class SH_OT_ResetAssetMetadata(Operator):
 
 
 class SH_OT_AddTags(Operator):
-    bl_idname = "superhive.add_tags"
+    bl_idname = "bkeeper.add_tags"
     bl_label = "Add"
     bl_description = "Add new tags to the active asset."
     bl_options = {"REGISTER", "UNDO"}
@@ -573,7 +573,7 @@ class SH_OT_AddTags(Operator):
 
 
 class SH_OT_RemoveTag(Operator):
-    bl_idname = "superhive.remove_tag"
+    bl_idname = "bkeeper.remove_tag"
     bl_label = "Remove"
     bl_description = "Remove the active tag from the active asset."
     bl_options = {"REGISTER", "UNDO"}
@@ -589,7 +589,7 @@ class SH_OT_RemoveTag(Operator):
 
 
 class SH_OT_ResetTags(Operator):
-    bl_idname = "superhive.reset_tag"
+    bl_idname = "bkeeper.reset_tag"
     bl_label = "Reset"
     bl_description = "Reset the tags to the original tags."
     bl_options = {"REGISTER", "UNDO"}

@@ -260,10 +260,10 @@ class BatchUpdateAction(PropertyGroup):
         row = col_r.row(align=True)
         row.scale_x = 1.2
         if use_ops:
-            op = row.operator("superhive.remove_update_action", text="", icon="REMOVE")
+            op = row.operator("bkeeper.remove_update_action", text="", icon="REMOVE")
             op.metadata_item = self.metadata_item
             op.action_index = index
-            op = row.operator("superhive.add_update_action", text="", icon="ADD")
+            op = row.operator("bkeeper.add_update_action", text="", icon="ADD")
             op.metadata_item = self.metadata_item
             op.action_index = index
         else:

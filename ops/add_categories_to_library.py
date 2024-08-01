@@ -6,7 +6,7 @@ from . import polls
 
 
 class SH_OT_AddCategoriesToLibrary(Operator):
-    bl_idname = "superhive.add_categories_to_library"
+    bl_idname = "bkeeper.add_categories_to_library"
     bl_label = "Add Categories to Library"
     bl_description = "Add Superhive's categories to the asset library. Hold Alt to remove existing categories."
     bl_options = {"REGISTER", "UNDO"}
