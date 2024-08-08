@@ -12,9 +12,10 @@ Argument Order:
      7. pack files: bool
 """
 
-import bpy
 import sys
 from pathlib import Path
+
+import bpy
 
 DST = sys.argv[6]
 PACK = sys.argv[7] == "True"

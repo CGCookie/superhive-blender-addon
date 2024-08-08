@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import bpy
 from bpy.types import Operator, UserAssetLibrary
 
@@ -10,7 +11,7 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
     bl_idname = "bkeeper.remove_empty_catalogs"
     bl_label = "Remove Empty Catalogs"
     bl_description = "Remove all empty catalogs from the active library"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
@@ -26,11 +27,8 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
         lib = utils.from_active(context, load_assets=True, load_catalogs=True)
 
         # Gather catalogs used by assets
-        catalog_ids = {
-            asset.metadata.catalog_id
-            for asset in lib.get_possible_assets()
-        }
-        
+        catalog_ids = {asset.metadata.catalog_id for asset in lib.get_possible_assets()}
+
         if not catalog_ids:
             print("No catalogs used in library")
 
@@ -43,27 +41,26 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
 
         bpy.ops.asset.library_refresh()
 
-        return {'FINISHED'}
-    
+        return {"FINISHED"}
+
     def _execute(self, context):
         lib_name: str = context.space_data.params.asset_library_reference
-        lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(lib_name)
+        lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(
+            lib_name
+        )
 
-        file = Path(lib.path)/"blender_assets.cats.txt"
+        file = Path(lib.path) / "blender_assets.cats.txt"
         if not file.exists():
-            self.report({'ERROR'}, f"No catalogs exist in library '{lib_name}'")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, f"No catalogs exist in library '{lib_name}'")
+            return {"CANCELLED"}
 
         selected_assets_orig = context.selected_assets
 
         context.space_data.deselect_all()
-        bpy.ops.file.select_all(action='SELECT')
+        bpy.ops.file.select_all(action="SELECT")
 
         # Gather catalogs used by assets
-        catalog_ids = {
-            asset.metadata.catalog_id
-            for asset in context.selected_assets
-        }
+        catalog_ids = {asset.metadata.catalog_id for asset in context.selected_assets}
 
         with utils.open_catalogs_file(lib.path) as cat_file:
             cat_file: utils.CatalogsFile
@@ -78,12 +75,10 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
         for asset in selected_assets_orig:
             context.space_data.activate_asset_by_id(asset)
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
-classes = (
-    SH_OT_RemoveEmptyCatalogs,
-)
+classes = (SH_OT_RemoveEmptyCatalogs,)
 
 
 def register():

@@ -6,8 +6,10 @@ def object_context_menu(self, context):
     layout: UILayout = self.layout
     layout.separator()
     layout.label(text="Superhive")
-    layout.operator_context = 'INVOKE_DEFAULT'
-    layout.operator_menu_enum("bkeeper.add_as_asset_to_library", "library", text="Add to Library")
+    layout.operator_context = "INVOKE_DEFAULT"
+    layout.operator_menu_enum(
+        "bkeeper.add_as_asset_to_library", "library", text="Add to Library"
+    )
 
 
 def register():

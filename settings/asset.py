@@ -1,11 +1,22 @@
-import re
 import uuid
 
 import bpy
-from bpy.props import (BoolProperty, CollectionProperty, EnumProperty,
-                       IntProperty, PointerProperty, StringProperty)
-from bpy.types import (AssetMetaData, AssetRepresentation, AssetTag, Context,
-                       PropertyGroup, UILayout, UIList)
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
+from bpy.types import (
+    AssetMetaData,
+    AssetRepresentation,
+    Context,
+    PropertyGroup,
+    UILayout,
+    UIList,
+)
 
 from .. import hive_mind
 
@@ -16,7 +27,18 @@ def _has_context_asset(C: Context = None) -> bool:
 
 
 class SH_UL_TagList(UIList):
-    def draw_item(self, context, layout: UILayout, data, item: 'SH_AssetTag', icon, active_data, active_propname, index, flt_flag):
+    def draw_item(
+        self,
+        context,
+        layout: UILayout,
+        data,
+        item: "SH_AssetTag",
+        icon,
+        active_data,
+        active_propname,
+        index,
+        flt_flag,
+    ):
         layout.label(text=item.name)
 
 
@@ -50,7 +72,9 @@ class SH_AssetTags(PropertyGroup):
             for orig_tag in asset.metadata.tags
         )
 
-    def set_is_dirty(self, context: Context, value: bool, context_check: bool = None) -> None:
+    def set_is_dirty(
+        self, context: Context, value: bool, context_check: bool = None
+    ) -> None:
         if context_check is None and not _has_context_asset(C=context):
             return False  # No asset to check
         asset = context.asset
@@ -63,10 +87,12 @@ class SH_AssetTags(PropertyGroup):
         self.set_is_dirty(
             context,
             self.check_is_dirty(context, context_check=True),
-            context_check=True
+            context_check=True,
         )
 
-    def new_tag(self, name: str, context: Context, id: str = None, desc: str = None) -> SH_AssetTag:
+    def new_tag(
+        self, name: str, context: Context, id: str = None, desc: str = None
+    ) -> SH_AssetTag:
         """
         Create a new asset tag.
 
@@ -91,10 +117,10 @@ class SH_AssetTags(PropertyGroup):
         tag.name = name
         tag.id = id or str(uuid.uuid4())
         tag.desc = desc or ""
-        
+
         if context:
             self.update_is_dirty(context)
-        
+
         return tag
 
     def remove_tag(self, tag: SH_AssetTag | int, context: Context) -> None:
@@ -160,17 +186,19 @@ class SH_AssetTags(PropertyGroup):
 
 
 def is_dirty(self: AssetRepresentation) -> bool:
-    return any([
-        self.sh_is_dirty_name,
-        self.sh_is_dirty_description,
-        self.sh_is_dirty_catalog,
-        self.sh_is_dirty_author,
-        self.sh_is_dirty_license,
-        self.sh_is_dirty_copyright,
-        self.sh_is_dirty_tags,
-        self.sh_is_dirty_created_blender_version,
-        # self.sh_is_dirty_icon,
-    ])
+    return any(
+        [
+            self.sh_is_dirty_name,
+            self.sh_is_dirty_description,
+            self.sh_is_dirty_catalog,
+            self.sh_is_dirty_author,
+            self.sh_is_dirty_license,
+            self.sh_is_dirty_copyright,
+            self.sh_is_dirty_tags,
+            self.sh_is_dirty_created_blender_version,
+            # self.sh_is_dirty_icon,
+        ]
+    )
 
 
 classes = (
@@ -190,12 +218,14 @@ def register():
             if item is not None:
                 return item
             return getattr(self, prop)
+
         return get
 
     def _set_asset_data(prop: str) -> dict:
         def set(self, value):
             self[f"_{prop}"] = value
             setattr(self, f"sh_is_dirty_{prop}", value != getattr(self, prop))
+
         return set
 
     # TODO: add in stuff to revert to original (current) values
@@ -208,7 +238,7 @@ def register():
         default="",
     )
 
-    def _get_active_asset_name(self: 'AssetMetaData'):
+    def _get_active_asset_name(self: "AssetMetaData"):
         item = self.get("_name", None)
         if item is not None:
             return item
@@ -255,21 +285,20 @@ def register():
 
     def _set_asset_catalog(self: AssetMetaData, value) -> dict:
         self["_catalog"] = value
-        item = next((
-            val
-            for val in hive_mind.CATALOG_DICT.values()
-            if val["id_int"] == value
-        ), None)
+        item = next(
+            (val for val in hive_mind.CATALOG_DICT.values() if val["id_int"] == value),
+            None,
+        )
 
         if "-" in self.catalog_simple_name:
             set_cat_name = self.catalog_simple_name.split("-")[-1]
         else:
             set_cat_name = self.catalog_simple_name
 
-        self.sh_is_dirty_catalog = not any((
-            item["id"] == self.catalog_id,
-            item["name"] == set_cat_name
-        ))
+        self.sh_is_dirty_catalog = not any(
+            (item["id"] == self.catalog_id, item["name"] == set_cat_name)
+        )
+
     AssetMetaData.sh_is_dirty_catalog = BoolProperty()
     AssetMetaData.sh_catalog = EnumProperty(
         name="Catalog",
@@ -301,16 +330,14 @@ def register():
 
     def _set_asset_license(self: AssetMetaData, value) -> dict:
         self["_license"] = value
-        item = next((
-            val
-            for val in hive_mind.LICENSES_DICT.values()
-            if val["id_int"] == value
-        ), None)
+        item = next(
+            (val for val in hive_mind.LICENSES_DICT.values() if val["id_int"] == value),
+            None,
+        )
 
-        self.sh_is_dirty_license = not any((
-            item["id"] == self.license,
-            item["name"] == self.license
-        ))
+        self.sh_is_dirty_license = not any(
+            (item["id"] == self.license, item["name"] == self.license)
+        )
 
     AssetMetaData.sh_is_dirty_license = BoolProperty()
     AssetMetaData.sh_license = EnumProperty(
@@ -331,7 +358,7 @@ def register():
     AssetMetaData.sh_created_blender_version = StringProperty(
         name="Created Blender Version",
         description="Blender version the asset was created in",
-        default=bpy.app.version_string
+        default=bpy.app.version_string,
     )
     AssetMetaData.sh_is_dirty_tags = BoolProperty()
     AssetMetaData.sh_tags = PointerProperty(

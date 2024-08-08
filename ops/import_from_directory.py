@@ -7,8 +7,6 @@ from bpy.props import (
     BoolVectorProperty,
     CollectionProperty,
     EnumProperty,
-    FloatProperty,
-    IntProperty,
     PointerProperty,
     StringProperty,
 )

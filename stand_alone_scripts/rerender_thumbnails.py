@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Generator
 
 import bpy
-from mathutils import Vector
 from bpy.types import (
     Area,
     Collection,
@@ -20,6 +19,7 @@ from bpy.types import (
     ShaderNodeMapping,
     World,
 )
+from mathutils import Vector
 
 ASSET_TYPES_TO_ID_TYPES = {
     "ACTION": "actions",

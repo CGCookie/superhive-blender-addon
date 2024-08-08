@@ -1,9 +1,10 @@
-import bpy
-from bpy.types import Operator
-from bpy.props import StringProperty
-import platform
 import os
+import platform
 from pathlib import Path
+
+import bpy
+from bpy.props import StringProperty
+from bpy.types import Operator
 
 from .. import utils
 
@@ -33,27 +34,27 @@ class SH_OT_GatherBlenderExes(Operator):
 
         if system == "Windows":
             possible_paths = [
-                os.path.expandvars(r'%PROGRAMFILES%\Blender Foundation\Blender'),
-                os.path.expandvars(r'%PROGRAMFILES(X86)%\Blender Foundation\Blender'),
-                os.path.expandvars(r'%LOCALAPPDATA%\Blender Foundation\Blender'),
-                os.path.expanduser(r"~\Documents\Blender_Versions"), # TODO: Remove
+                os.path.expandvars(r"%PROGRAMFILES%\Blender Foundation\Blender"),
+                os.path.expandvars(r"%PROGRAMFILES(X86)%\Blender Foundation\Blender"),
+                os.path.expandvars(r"%LOCALAPPDATA%\Blender Foundation\Blender"),
+                os.path.expanduser(r"~\Documents\Blender_Versions"),  # TODO: Remove
             ]
-            executable_name = 'blender.exe'
+            executable_name = "blender.exe"
 
         elif system == "Darwin":  # macOS
             possible_paths = [
-                '/Applications/Blender.app/Contents/MacOS/',
-                os.path.expanduser('~/Applications/Blender.app/Contents/MacOS/'),
+                "/Applications/Blender.app/Contents/MacOS/",
+                os.path.expanduser("~/Applications/Blender.app/Contents/MacOS/"),
             ]
-            executable_name = 'Blender'
+            executable_name = "Blender"
 
         elif system == "Linux":
             possible_paths = [
-                '/usr/bin/',
-                '/usr/local/bin/',
-                os.path.expanduser('~/bin/'),
+                "/usr/bin/",
+                "/usr/local/bin/",
+                os.path.expanduser("~/bin/"),
             ]
-            executable_name = 'blender'
+            executable_name = "blender"
 
         else:
             raise Exception(f"Unsupported operating system: {system}")
@@ -98,20 +99,18 @@ class SH_OT_AddBlenderExes(Operator):
             self.report({"ERROR"}, f"Invalid Blender executable: {p.name}")
             return {"CANCELLED"}
 
-        prefs.add_blender_version(
-            self.name, self.path
-        )
+        prefs.add_blender_version(self.name, self.path)
 
         return {"FINISHED"}
 
     def check_executable(self, path: Path) -> bool:
         system = platform.system()
 
-        if system == "Windows" and path.name == 'blender.exe':
+        if system == "Windows" and path.name == "blender.exe":
             return True
-        if system == "Darwin" and path.name == 'Blender':
+        if system == "Darwin" and path.name == "Blender":
             return True
-        if system == "Linux" and path.name == 'blender':
+        if system == "Linux" and path.name == "blender":
             return True
 
         return False
@@ -126,9 +125,7 @@ class SH_OT_RemoveBlenderExes(Operator):
     def execute(self, context):
         prefs = utils.get_prefs()
 
-        prefs.remove_blender_version(
-            prefs.active_blender_version_index
-        )
+        prefs.remove_blender_version(prefs.active_blender_version_index)
 
         return {"FINISHED"}
 

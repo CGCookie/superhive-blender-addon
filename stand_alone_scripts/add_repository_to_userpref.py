@@ -10,13 +10,16 @@ Argument Order:
      5. library path: str
 """
 
-import bpy
 import sys
+
+import bpy
 
 LIB_NAME, LIB_PATH = sys.argv[4:]
 
 print(f"{LIB_NAME=}, {LIB_PATH=}")
 
 if __name__ == "__main__":
-    bpy.context.preferences.filepaths.asset_libraries.new(name=LIB_NAME, directory=LIB_PATH)
+    bpy.context.preferences.filepaths.asset_libraries.new(
+        name=LIB_NAME, directory=LIB_PATH
+    )
     bpy.ops.wm.save_userpref()

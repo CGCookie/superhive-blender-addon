@@ -4,14 +4,11 @@ import bpy
 from bpy.types import AssetRepresentation, Context, Panel, UILayout
 from bpy_extras import asset_utils
 
-from .. import __package__ as base_package
 from .. import utils
-
-from ..ops import polls, import_from_directory
+from ..ops import polls
 
 if TYPE_CHECKING:
     from ..settings import scene
-    from . import prefs as sh_prefs
 
 
 def draw_assetbrowser_header(self, context: Context):

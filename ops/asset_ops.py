@@ -1,28 +1,21 @@
-# from typing import TYPE_CHECKING
-import enum
 import os
 from functools import partial
 from threading import Thread
 
 import bpy
 from bpy.props import (
-    BoolProperty,
     BoolVectorProperty,
     CollectionProperty,
-    EnumProperty,
-    FloatProperty,
     IntProperty,
     PointerProperty,
     StringProperty,
 )
-from bpy.types import AssetRepresentation, Context, Operator, Event
+from bpy.types import AssetRepresentation, Context, Event, Operator
 
 from .. import hive_mind, utils
 from ..settings import asset as asset_settings
 from ..settings import scene
 from . import polls
-
-# if TYPE_CHECKING:
 
 
 class SH_OT_UpdateAsset(Operator):

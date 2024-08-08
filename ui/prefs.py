@@ -2,18 +2,33 @@ import os
 from pathlib import Path
 
 import bpy
-from bpy.props import (BoolProperty, CollectionProperty, EnumProperty,
-                       IntProperty, StringProperty, FloatProperty)
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    IntProperty,
+    StringProperty,
+)
 from bpy.types import AddonPreferences, PropertyGroup, UILayout, UIList
 
-
 from .. import __package__ as base_package
-from .. import utils, hive_mind
+from .. import hive_mind, utils
 from ..settings import scene
 
 
 class SH_UL_BlenderVersions(UIList):
-    def draw_item(self, context, layout: 'UILayout', data, item: 'SH_BlenderVersion', icon, active_data, active_propname, index, flt_flag):
+    def draw_item(
+        self,
+        context,
+        layout: "UILayout",
+        data,
+        item: "SH_BlenderVersion",
+        icon,
+        active_data,
+        active_propname,
+        index,
+        flt_flag,
+    ):
         icn = "RADIOBUT_ON" if item.is_default else "RADIOBUT_OFF"
         layout.prop(item, "is_default", icon=icn, text="", emboss=False, toggle=True)
 
@@ -43,6 +58,7 @@ class SH_BlenderVersion(PropertyGroup):
             for bv in utils.get_prefs().blender_versions:
                 if bv != self:
                     bv.is_default = False
+
     is_default: BoolProperty(
         name="Default",
         description="Whether this Blender version is the default",
@@ -51,7 +67,7 @@ class SH_BlenderVersion(PropertyGroup):
     )
 
     @property
-    def data(self) -> 'SH_AddonPreferences':
+    def data(self) -> "SH_AddonPreferences":
         return utils.get_prefs()
 
 
@@ -67,14 +83,14 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
     default_author_name: StringProperty(
         name="Author Name",
         description="The name to put by default in the author field",
-        default="Company Name" # TODO: Delete this default
+        default="Company Name",  # TODO: Delete this default
     )
 
     default_license: EnumProperty(
         name="Default License",
         description="The default license to use for new assets",
         items=hive_mind.get_licenses,
-        default=2, # TODO: Don't hardcode this
+        default=2,  # TODO: Don't hardcode this
     )
 
     default_copyright: StringProperty(
@@ -107,11 +123,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
 
     @property
     def default_blender_version(self) -> SH_BlenderVersion:
-        return next((
-            bv
-            for bv in self.blender_versions
-            if bv.is_default
-        ), None)
+        return next((bv for bv in self.blender_versions if bv.is_default), None)
 
     def add_blender_version(self, name: str, path: str):
         bv: SH_BlenderVersion = self.blender_versions.add()
@@ -141,7 +153,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         return self.default_blender_version
 
     def draw(self, context):
-        layout = self.layout        
+        layout = self.layout
         layout.label(text="Metadata Defaults:")
         layout.prop(self, "default_author_name")
         layout.prop(self, "default_license")
@@ -151,16 +163,18 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         row.template_list(
             "SH_UL_BlenderVersions",
             "",
-            self, "blender_versions",
-            self, "active_blender_version_index"
+            self,
+            "blender_versions",
+            self,
+            "active_blender_version_index",
         )
         col = row.column(align=True)
         col.operator("bkeeper.add_blender_exes", icon="ADD", text="")
         col.operator("bkeeper.remove_blender_exes", icon="REMOVE", text="")
         col.operator("bkeeper.gather_blender_exes", icon="FILE_REFRESH", text="")
-        
+
         layout.separator()
-        
+
         row = layout.row()
         row.label(text="Thumbnail Rendering Defaults:")
         col = layout.column()
@@ -168,7 +182,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         row = col.row()
         row.use_property_split = True
         row.prop(self, "non_blocking", text="Render in Background")
-        
+
         max_width = 730
         if context.region.width > max_width:
             margin = (context.region.width - max_width) / 100
@@ -179,20 +193,22 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             col = thumbnail_row.column()
             # col.ui_units_x = max_width
             col_r = thumbnail_row.column()
-            col_r.ui_units_x = margin       
+            col_r.ui_units_x = margin
             col_r.separator()
         self.draw_thumbnail_props(col)
-        
+
         layout.separator()
-        
+
         if self.display_extras:
             layout.label(text=f"Region Width: {context.region.width}")
         row = layout.row()
         row.alignment = "RIGHT"
         row.prop(
-            self, "display_extras",
-            emboss=False, text="",
-            icon="UNLOCKED" if self.display_extras else "LOCKED"
+            self,
+            "display_extras",
+            emboss=False,
+            text="",
+            icon="UNLOCKED" if self.display_extras else "LOCKED",
         )
 
 

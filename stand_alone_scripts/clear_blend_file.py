@@ -13,8 +13,9 @@ Argument Order:
      8. types (this is a list of strings that represent the types of the IDs to keep or remove)
 """
 
-import bpy
 import sys
+
+import bpy
 
 print(f"{sys.argv=}")
 

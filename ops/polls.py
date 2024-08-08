@@ -1,4 +1,3 @@
-# import bpy
 from bpy.types import Context, Operator
 from bpy_extras import asset_utils
 

@@ -63,9 +63,7 @@ class SH_OT_AddCategoriesToLibrary(Operator):
         return {"FINISHED"}
 
 
-classes = (
-    SH_OT_AddCategoriesToLibrary,
-)
+classes = (SH_OT_AddCategoriesToLibrary,)
 
 
 def register():

@@ -20,18 +20,24 @@ Argument Order:
 
 """
 
-# import json
 import sys
-# from pathlib import Path
-
-import bpy
 from pathlib import Path
 
-# from settings import asset
-# from bpy.types import Object
+import bpy
 
 blend_file = bpy.data.filepath
-orig_asset_name, new_asset_name, bpy_data_type, author, description, license, copyright, catalog_id, tags, icon_path = sys.argv[6:]
+(
+    orig_asset_name,
+    new_asset_name,
+    bpy_data_type,
+    author,
+    description,
+    license,
+    copyright,
+    catalog_id,
+    tags,
+    icon_path,
+) = sys.argv[6:]
 
 tags = tags.split(",") if tags else []
 
@@ -62,7 +68,9 @@ def update_asset():
 
     # Check if asset item exists
     if not asset_item:
-        print(f"|     - Asset '{orig_asset_name}' not found as type '{bpy_data_type}' in file '{blend_file}'")
+        print(
+            f"|     - Asset '{orig_asset_name}' not found as type '{bpy_data_type}' in file '{blend_file}'"
+        )
         return
 
     asset_item.asset_clear()

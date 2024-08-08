@@ -3,7 +3,6 @@ import time
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from importlib.util import find_spec
-from itertools import chain
 from pathlib import Path
 from threading import Thread
 from typing import TYPE_CHECKING
