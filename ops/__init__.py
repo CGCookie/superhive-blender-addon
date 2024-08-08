@@ -1,7 +1,14 @@
-from . import (add_categories_to_library, add_to_library, asset_ops,
-               blender_exes_ops, convert_asset_to_hive,
-               create_hive_asset_library, export_library,
-               remove_empty_catalogs)
+from . import (
+    add_categories_to_library,
+    add_to_library,
+    asset_ops,
+    blender_exes_ops,
+    convert_asset_to_hive,
+    create_hive_asset_library,
+    export_library,
+    import_from_directory,
+    remove_empty_catalogs,
+)
 
 
 def _call_globals(attr_name):

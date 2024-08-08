@@ -6,8 +6,9 @@ from bpy_extras import asset_utils
 
 from .. import __package__ as base_package
 from .. import utils
+
 # from ..helpers import asset_helper
-from ..ops import polls
+from ..ops import polls, import_from_directory
 
 if TYPE_CHECKING:
     from ..settings import scene
@@ -17,17 +18,14 @@ if TYPE_CHECKING:
 def draw_assetbrowser_header(self, context: Context):
     layout: UILayout = self.layout
 
-    scene_sets: 'scene.SH_Scene' = context.scene.superhive
+    scene_sets: "scene.SH_Scene" = context.scene.superhive
     if scene_sets.header_progress_bar.show:
         scene_sets.header_progress_bar.draw(layout)
 
     if polls.is_asset_browser(context):
         layout.prop(context.scene.superhive, "library_mode", text="")
-        layout.operator(
-            "bkeeper.create_hive_asset_library",
-            text="", icon="ADD"
-        )
-    
+        layout.operator("bkeeper.create_hive_asset_library", text="", icon="ADD")
+
     layout.label(text=context.scene.sh_progress_t)
 
 
@@ -62,8 +60,8 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         layout: UILayout = self.layout
         layout.use_property_split = True
 
-        scene_sets: 'scene.SH_Scene' = context.scene.superhive
-        
+        scene_sets: "scene.SH_Scene" = context.scene.superhive
+
         if scene_sets.side_panel_batch_asset_update_progress_bar.show:
             scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
         elif not context.asset:
@@ -97,27 +95,40 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         row = layout.row()
         # row.alignment = "CENTER"
         row.label(text="Metadata:", icon="TEXT")
+
         def set_is_dirty_text(prop: str, text: str = None):
             if getattr(asset.metadata, f"sh_is_dirty_{prop}"):
                 return f"{text or prop.title()}*"
             return None
 
-        def display_metadata(layout: UILayout, data, prop: str, orig_prop: str, orig_value: str):
+        def display_metadata(
+            layout: UILayout, data, prop: str, orig_prop: str, orig_value: str
+        ):
             row = layout.row(align=True)
             row.prop(asset.metadata, prop, text=set_is_dirty_text(orig_prop))
             if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
-                op = row.operator("bkeeper.reset_asset_metadata_property", icon="FORWARD", text="")
+                op = row.operator(
+                    "bkeeper.reset_asset_metadata_property", icon="FORWARD", text=""
+                )
                 op.property = prop
                 op.original_value = orig_value
 
         display_metadata(layout, asset, "sh_name", "name", asset.name)
-        display_metadata(layout, asset, "sh_description", "description", asset.metadata.description)
+        display_metadata(
+            layout, asset, "sh_description", "description", asset.metadata.description
+        )
         display_metadata(layout, asset, "sh_author", "author", asset.metadata.author)
         display_metadata(layout, asset, "sh_license", "license", asset.metadata.license)
-        display_metadata(layout, asset, "sh_catalog", "catalog", asset.metadata.catalog_id)
-        display_metadata(layout, asset, "sh_copyright", "copyright", asset.metadata.copyright)
+        display_metadata(
+            layout, asset, "sh_catalog", "catalog", asset.metadata.catalog_id
+        )
+        display_metadata(
+            layout, asset, "sh_copyright", "copyright", asset.metadata.copyright
+        )
 
-        layout.label(text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG")
+        layout.label(
+            text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG"
+        )
         row = layout.row()
         row.template_list(
             "SH_UL_TagList",
@@ -144,18 +155,20 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
     def draw_multiple_assets(self, context: Context, layout: UILayout):
         # layout.operator("bkeeper.rerender_thumbnail", icon="RESTRICT_RENDER_OFF")
-        scene_sets: 'scene.SH_Scene' = context.scene.superhive
-        
+        scene_sets: "scene.SH_Scene" = context.scene.superhive
+
         col = layout.column()
         col.use_property_decorate = False
         col.use_property_split = False
         scene_sets.metadata_update.draw(context, col, use_ops=True)
-        
+
         col.separator()
-        
+
         row = col.row(align=True)
         row.operator("bkeeper.batch_update_assets_from_scene")
-        row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
+        row.prop(
+            scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH"
+        )
 
 
 class SH_PT_LibrarySettings(Panel):
@@ -165,16 +178,19 @@ class SH_PT_LibrarySettings(Panel):
     bl_region_type = "TOOLS"
     # bl_category = "Superhive"
     bl_order = 1000
-    bl_options = {'HIDE_HEADER'}
+    bl_options = {"HIDE_HEADER"}
 
     @classmethod
     def poll(cls, context):
-        return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "SUPERHIVE"
+        return (
+            polls.is_asset_browser(context)
+            and context.scene.superhive.library_mode == "SUPERHIVE"
+        )
 
     def draw(self, context):
         layout: UILayout = self.layout
 
-        scene_sets: 'scene.SH_Scene' = context.scene.superhive
+        scene_sets: "scene.SH_Scene" = context.scene.superhive
         if scene_sets.export_library.show:
             scene_sets.export_library.draw(layout)
             return
@@ -182,6 +198,7 @@ class SH_PT_LibrarySettings(Panel):
         layout.operator("bkeeper.add_categories_to_library")
         layout.operator("bkeeper.remove_empty_catalogs")
         layout.operator("bkeeper.export_library", text="Export to Superhive")
+        layout.operator("bkeeper.import_from_directory")
 
 
 classes = (

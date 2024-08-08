@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 import bpy
-from mathutils import Vector, Matrix
+from mathutils import Vector
 from bpy.types import (
     Area,
     Collection,
@@ -1010,8 +1010,10 @@ def apply_thumbnail():
             data = getattr(bpy.data, data_type)
             item = data.get(id_name)
             if hasattr(item, "asset_generate_preview"):
+                print("  - Generating Preview")
                 item.asset_generate_preview()
             elif hasattr(item, "data") and hasattr(item.data, "asset_generate_preview"):
+                print("  - Generating Preview")
                 item.data.asset_generate_preview()
             continue
 
@@ -1054,6 +1056,8 @@ def apply_thumbnail():
             thumbnail_path.unlink(missing_ok=True)
     # bpy.ops.wm.save_as_mainfile(filepath=FILEPATH)
     bpy.ops.wm.save_as_mainfile()
+    p = Path(bpy.data.filepath)
+    p.with_stem(p.stem + "_1").unlink(missing_ok=True)
     advance()
 
 
@@ -1076,6 +1080,8 @@ def create_preview(objects: list[bpy.types.ID]):
 
     print("Saving File: Has Camera:", bpy.context.scene.camera)
     bpy.ops.wm.save_mainfile()
+    p = Path(bpy.data.filepath)
+    p.with_stem(p.stem + "_1").unlink(missing_ok=True)
 
     bk = FILEPATH + "1"
     if os.path.exists(bk):
@@ -1102,7 +1108,11 @@ def advance() -> None:
     if FILEPATHS and ALL_NAMES and ALL_TYPES:
         FILEPATH = FILEPATHS.pop(0)
         NAMES = ALL_NAMES.pop(0).split(":--separator--:")
+        if len(NAMES) == 1 and ":--separator2--:" in NAMES[0]:
+            NAMES = NAMES[0].split(":--separator2--:")
         TYPES = ALL_TYPES.pop(0).split(":--separator--:")
+        if len(TYPES) == 1 and ":--separator2--:" in TYPES[0]:
+            TYPES = TYPES[0].split(":--separator2--:")
         print()
         print(f"Next File: {FILEPATH}, Names: {NAMES}, Types: {TYPES}".center(100, "-"))
         print()
@@ -1139,6 +1149,7 @@ def setup_blend():
                     )
                     print("Saving as:", new_path)
                     bpy.ops.wm.save_as_mainfile(filepath=str(new_path), copy=True)
+                    new_path.with_stem(new_path.stem + "_1").unlink(missing_ok=True)
             elif id_type == "MATERIAL":
                 mat = bpy.data.materials.get(id_name)
                 objects.append(mat)
@@ -1163,6 +1174,7 @@ def setup_blend():
                         )
                         print("Saving as:", new_path)
                         bpy.ops.wm.save_as_mainfile(filepath=str(new_path), copy=True)
+                        new_path.with_stem(new_path.stem + "_1").unlink(missing_ok=True)
                     else:
                         print(f"Object type '{ob.type}' not renderable")
                         if hasattr(ob, "asset_generate_preview"):

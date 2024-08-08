@@ -10,14 +10,13 @@ from platform import system
 from typing import TYPE_CHECKING, Union
 
 import bpy
-from bpy.types import (ID, Area, AssetRepresentation, Context,
-                       UserAssetLibrary, Window)
+from bpy.types import ID, Area, AssetRepresentation, Context, UserAssetLibrary, Window
 from bpy_extras import asset_utils
 
 from . import hive_mind
 
 if TYPE_CHECKING:
-    from .ops import asset_ops, export_library
+    from .ops import asset_ops, export_library, import_from_directory
     from .settings import asset as asset_settings
     from .ui.prefs import SH_AddonPreferences
 
@@ -298,7 +297,7 @@ class Catalog:
             catalog.data = self
             catalog.ensure_correct_child_parenting()
 
-    def get_catalogs(self) -> list['Catalog']:
+    def get_catalogs(self) -> list["Catalog"]:
         """Return a list of all catalogs in the file as a 1-Dimensional list."""
         catalogs = []
         for catalog in self.children.values():
@@ -306,7 +305,7 @@ class Catalog:
             catalogs.extend(catalog.get_catalogs())
         return catalogs
 
-    def has_child(self, id:str | set[str], recursive=True):
+    def has_child(self, id: str | set[str], recursive=True):
         for child in self.children.values():
             if isinstance(id, set):
                 if child.id in id:
@@ -316,6 +315,16 @@ class Catalog:
                     return True
             if recursive and child.has_child(id, recursive):
                 return True
+
+    def get_catalog_by_name(self, id: str, recursive=True) -> "Catalog":
+        for child in self.children.values():
+            if child.name == id:
+                return child
+            if recursive:
+                cat = child.get_catalog_by_name(id, recursive)
+                if cat:
+                    return cat
+
 
 class CatalogsFile:
     def __init__(self, dir: Path, is_new=False) -> None:
@@ -378,7 +387,7 @@ class CatalogsFile:
     def load_catalogs(self):
         """Load `catalogs` from file"""
         self.catalogs.clear()
-        
+
         unassigned_catalogs: dict[str, Catalog] = {}
         with open(self.path) as file:
             for line in file:
@@ -584,7 +593,7 @@ class CatalogsFile:
             catalogs.extend(catalog.get_catalogs())
         return catalogs
 
-    def has_child(self, id:str | set[str], recursive=True):
+    def has_child(self, id: str | set[str], recursive=True):
         for child in self.catalogs.values():
             if isinstance(id, set):
                 if child.id in id:
@@ -594,7 +603,16 @@ class CatalogsFile:
                     return True
             if recursive and child.has_child(id, recursive):
                 return True
-    
+
+    def get_catalog_by_name(self, id: str, recursive=True) -> Catalog:
+        for child in self.catalogs.values():
+            if child.name == id:
+                return child
+            if recursive:
+                cat = child.get_catalog_by_name(id, recursive)
+                if cat:
+                    return cat
+
 
 # Context manager for opening and then saving the catalogs file
 @contextmanager
@@ -623,14 +641,8 @@ class Asset:
         self.catalog_simple_name = asset.metadata.catalog_simple_name
         """The original `catalog_simple_name` of the asset. Not a new one"""
         self.catalog_id = asset.metadata.sh_catalog
-        self.tags = [
-            tag.name
-            for tag in asset.metadata.sh_tags.tags
-        ]
-        self.bpy_tags = [
-            tag.name
-            for tag in asset.metadata.tags
-        ]
+        self.tags = [tag.name for tag in asset.metadata.sh_tags.tags]
+        self.bpy_tags = [tag.name for tag in asset.metadata.tags]
         self.icon_path = None
 
     def update_asset(self, blender_exe: str, debug: bool = False) -> None:
@@ -660,15 +672,13 @@ class Asset:
         )
         if proc.returncode > 1:
             print(f"    - Error {proc.returncode}: {proc.stderr.decode()}")
-        
+
         if debug or proc.returncode > 1:
             print("".center(100, "-"))
             text = proc.stdout.decode()
             text.splitlines()
             new_text = "\n".join(
-                line
-                for line in text.splitlines()
-                if line.startswith("|")
+                line for line in text.splitlines() if line.startswith("|")
             )
             print(new_text)
             print("".center(100, "-"))
@@ -709,7 +719,7 @@ class Asset:
             self.orig_asset.metadata.sh_catalog = "UNRECOGNIZED"
         self.orig_asset.metadata.sh_is_dirty_catalog = False
 
-        sh_tags: 'asset_settings.SH_AssetTags' = self.orig_asset.metadata.sh_tags
+        sh_tags: "asset_settings.SH_AssetTags" = self.orig_asset.metadata.sh_tags
         sh_tags.clear(context)
         for tag in self.orig_asset.metadata.tags:
             sh_tags.new_tag(tag.name, context)
@@ -791,19 +801,29 @@ class Assets:
 
 
 class AssetLibrary:
-    def __init__(self, library: UserAssetLibrary, context: Context = None, load_assets=False, load_catalogs=False) -> None:
+    def __init__(
+        self,
+        library: UserAssetLibrary,
+        context: Context = None,
+        load_assets=False,
+        load_catalogs=False,
+    ) -> None:
         if not library:
             raise ValueError("No library provided.")
 
         self.context: Context = context
         self.area: Area = None
         if context:
-            self.area = next((
-                area
-                for window in context.window_manager.windows
-                for area in window.screen.areas
-                if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
-            ), None)
+            self.area = next(
+                (
+                    area
+                    for window in context.window_manager.windows
+                    for area in window.screen.areas
+                    if area.type == "FILE_BROWSER"
+                    and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+                ),
+                None,
+            )
 
         self.library: UserAssetLibrary = library
         self.name = library.name
@@ -822,7 +842,9 @@ class AssetLibrary:
 
     def get_context(self) -> Context:
         if not self.context:
-            raise ValueError("Context not set. Please set `context` before calling this method.")
+            raise ValueError(
+                "Context not set. Please set `context` before calling this method."
+            )
         return self.context
 
     def load_catalogs(self):
@@ -849,35 +871,49 @@ class AssetLibrary:
     @classmethod
     def create_bpy_library(cls, name: str, path: str) -> UserAssetLibrary:
         """Create a new UserAssetLibrary in Blender."""
-        return bpy.context.preferences.filepaths.asset_libraries.new(name=name, directory=path)
+        return bpy.context.preferences.filepaths.asset_libraries.new(
+            name=name, directory=path
+        )
 
     @classmethod
-    def create_new_library(cls, name: str, path: str, context: Context = None, load_assets=False, load_catalogs=False, save_prefs=True) -> 'AssetLibrary':
+    def create_new_library(
+        cls,
+        name: str,
+        path: str,
+        context: Context = None,
+        load_assets=False,
+        load_catalogs=False,
+        save_prefs=True,
+    ) -> "AssetLibrary":
         """Create a new `UserAssetLibrary` in Blender and then create a new `AssetLibrary` object from that library."""
         lib = cls.create_bpy_library(name, path)
-        
+
         if save_prefs and not bpy.context.preferences.use_preferences_save:
             cls.save_repository_prefs(name, path)
-        
+
         return cls(
             lib,
             context=context,
             load_assets=load_assets,
             load_catalogs=load_catalogs,
         )
-    
+
     @classmethod
     def save_repository_prefs(cls, name: str, path: str):
         p = Path(__file__)
         while p.parent.name != "Blender":
             p = p.parent
         prefs_blend = p / "config" / "userpref.blend"
-        
+
         if not prefs_blend.exists():
             return
-        
-        python_file = Path(__file__).parent / "stand_alone_scripts" / "add_repository_to_userpref.py"
-        
+
+        python_file = (
+            Path(__file__).parent
+            / "stand_alone_scripts"
+            / "add_repository_to_userpref.py"
+        )
+
         args = [
             bpy.app.binary_path,
             "-b",
@@ -885,21 +921,27 @@ class AssetLibrary:
             "-P",
             str(python_file),
             name,
-            path
+            path,
         ]
         print(" ".join(args))
-        
+
         subprocess.run(args)
 
 
-def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
+def get_active_bpy_library_from_context(
+    context: Context, area: Area = None
+) -> UserAssetLibrary:
     if not area:
-        area = next((
-            area
-            for window in context.window_manager.windows
-            for area in window.screen.areas
-            if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
-        ), None)
+        area = next(
+            (
+                area
+                for window in context.window_manager.windows
+                for area in window.screen.areas
+                if area.type == "FILE_BROWSER"
+                and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+            ),
+            None,
+        )
 
     if not area:
         raise ValueError("No areas set to an Asset Browser found.")
@@ -908,7 +950,9 @@ def get_active_bpy_library_from_context(context: Context, area: Area = None) -> 
     return context.preferences.filepaths.asset_libraries.get(lib_name)
 
 
-def from_name(name: str, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
+def from_name(
+    name: str, context: Context = None, load_assets=False, load_catalogs=False
+) -> AssetLibrary:
     """Gets a library by name and returns an AssetLibrary object."""
     lib = bpy.context.preferences.filepaths.asset_libraries.get(name)
     if not lib:
@@ -918,25 +962,36 @@ def from_name(name: str, context: Context = None, load_assets=False, load_catalo
     )
 
 
-def from_active(context: Context, area: Area = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
+def from_active(
+    context: Context, area: Area = None, load_assets=False, load_catalogs=False
+) -> AssetLibrary:
     """Gets the active library from the UI context and returns an AssetLibrary object."""
     return AssetLibrary(
         get_active_bpy_library_from_context(context, area=area),
-        context=context, load_assets=load_assets, load_catalogs=load_catalogs
-    )
-
-
-def create_new(name: str, directory: Path, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
-    """Creates a new UserAssetLibrary from a passed directory and returns an AssetLibrary object."""
-    return AssetLibrary.create_new_library(
-        name, directory,
         context=context,
         load_assets=load_assets,
-        load_catalogs=load_catalogs
+        load_catalogs=load_catalogs,
     )
 
 
-def id_to_asset_id_type(id:ID) -> str:
+def create_new(
+    name: str,
+    directory: Path,
+    context: Context = None,
+    load_assets=False,
+    load_catalogs=False,
+) -> AssetLibrary:
+    """Creates a new UserAssetLibrary from a passed directory and returns an AssetLibrary object."""
+    return AssetLibrary.create_new_library(
+        name,
+        directory,
+        context=context,
+        load_assets=load_assets,
+        load_catalogs=load_catalogs,
+    )
+
+
+def id_to_asset_id_type(id: ID) -> str:
     return type(id).__name__.upper()
 
 
@@ -958,7 +1013,7 @@ def display_all_assets_in_library(context: Context) -> None:
     orig_selected_assets = context.selected_assets or []
 
     context.space_data.deselect_all()
-    bpy.ops.file.select_all(action='SELECT')
+    bpy.ops.file.select_all(action="SELECT")
 
     yield
 
@@ -1016,6 +1071,7 @@ def open_location(fpath: str, win_open=False):
     if os == "Windows":
         if win_open:
             from os import startfile
+
             startfile(fpath)
         else:
             subprocess.Popen(["explorer", "/select,", fpath])
@@ -1025,11 +1081,24 @@ def open_location(fpath: str, win_open=False):
         subprocess.Popen(["xdg-open", fpath])
 
 
-def get_prefs() -> 'SH_AddonPreferences':
+def get_prefs() -> "SH_AddonPreferences":
     return bpy.context.preferences.addons[__package__].preferences
 
 
-def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str, str]], shading: str, angle: str = 'X', add_plane: bool = False, world_name: str = "Studio Soft", world_strength: float = 1.0, padding: float = 0.0, rotate_world: bool = False, debug_scene: bool = False, op: 'asset_ops.SH_OT_BatchUpdateAssetsFromScene' = None) -> None:
+def rerender_thumbnail(
+    paths: list[str],
+    directory: str,
+    objects: list[tuple[str, str]],
+    shading: str,
+    angle: str = "X",
+    add_plane: bool = False,
+    world_name: str = "Studio Soft",
+    world_strength: float = 1.0,
+    padding: float = 0.0,
+    rotate_world: bool = False,
+    debug_scene: bool = False,
+    op: "asset_ops.SH_OT_BatchUpdateAssetsFromScene" = None,
+) -> None:
     """
     Rerenders the thumbnail using the specified parameters.
 
@@ -1051,21 +1120,23 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
     """
     ptt = op is None or debug_scene
     """Print to Terminal"""
-    
+
     if ptt:
-        print("*"*115)
+        print("*" * 115)
         print("Thread Starting".center(100, "*"))
-        print("*"*115)
-    python_file = Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
-    
-    names=[]
-    types=[]
+        print("*" * 115)
+    python_file = (
+        Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
+    )
+
+    names = []
+    types = []
     for o in objects:
         names.append(":--separator2--:".join([a[0] for a in o]))
         types.append(":--separator2--:".join([a[1] for a in o]))
-    
+
     # proc: subprocess.CompletedProcess = subprocess.run(
-    
+
     # Make copies of the blend files
     # thumbnail_blends: list[Path] = []
     # for p,n,t in zip(paths, names, types):
@@ -1073,13 +1144,13 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
     #     thumbnail_blend = pP.with_stem(f"{pP.stem}=+={n}=+={t}=+=_thumbnail_copy")
     #     thumbnail_blends.append(thumbnail_blend)
     #     thumbnail_blend.write_bytes(pP.read_bytes())
-    
+
     # Setup Scene
     if ptt:
         print()
-        print("-"*70)
+        print("-" * 70)
         print("Setting Up Scenes:".center(70, "-"))
-        print("-"*70)
+        print("-" * 70)
     if op:
         op.label = "Setting Up Scenes"
         op.update = True
@@ -1089,7 +1160,7 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
         "--factory-startup",
         "-P",
         str(python_file),
-        '--',
+        "--",
         ":--separator--:".join(str(p) for p in paths),
         ":--separator--:".join(names),
         ":--separator--:".join(types),
@@ -1098,11 +1169,15 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
         angle,
         str(add_plane),
         str(world_strength),
-        bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE',
+        (
+            bpy.context.preferences.addons["cycles"].preferences.compute_device_type
+            if "cycles" in bpy.context.preferences.addons.keys()
+            else "NONE"
+        ),
         world_name,
         str(padding),
         str(rotate_world),
-        "0", # 0 for setup
+        "0",  # 0 for setup
         str(debug_scene),
     ]
     if ptt:
@@ -1116,25 +1191,26 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
         print(f"- Output: {proc.stdout.decode()}")
     if ptt and not e:
         print(proc.stdout.decode())
-    
+
     if ptt:
         print()
-        print("-"*70)
+        print("-" * 70)
         print("Rendering Assets:".center(70, "-"))
-        print("-"*70)
+        print("-" * 70)
     if op:
         op.setup_progress = 1.0
         op.start_icon_render = True
         op.update = True
-    
-    
+
     # Render
-    thumbnail_blends: list[Path] = list(set(
-        item
-        for p in paths
-        for item in Path(p).parent.iterdir()
-        if item.stem.endswith("_thumbnail_copy") and "=+=" in item.stem
-    ))
+    thumbnail_blends: list[Path] = list(
+        set(
+            item
+            for p in paths
+            for item in Path(p).parent.iterdir()
+            if item.stem.endswith("_thumbnail_copy") and "=+=" in item.stem
+        )
+    )
     if ptt:
         print()
         print(f"Rendering {len(thumbnail_blends)} Thumbnails:")
@@ -1142,11 +1218,17 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
             print(f" - {tbp}")
         print()
     thumbnails_by_blend = {}
-    for i,tbp in enumerate(thumbnail_blends):
+    for i, tbp in enumerate(thumbnail_blends):
         orig_stem = tbp.stem.split("=+=")[0]
         orig_blend_path = tbp.with_stem(orig_stem)
-        thumbnail_path = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
-        thumbnail_path_for_terminal = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
+        thumbnail_path = (
+            orig_blend_path.parent
+            / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
+        )
+        thumbnail_path_for_terminal = (
+            orig_blend_path.parent
+            / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
+        )
         args = [
             bpy.app.binary_path,
             "-b",
@@ -1157,7 +1239,7 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
             "-F",
             "PNG",
             "-f",
-            "1"
+            "1",
         ]
         if ptt:
             print()
@@ -1166,7 +1248,9 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
             print("   - exists", tbp.exists())
             print("CMD:", " ".join(args))
         try:
-            proc: subprocess.CompletedProcess = subprocess.run(args, stdout=subprocess.PIPE, check=True)
+            proc: subprocess.CompletedProcess = subprocess.run(
+                args, stdout=subprocess.PIPE, check=True
+            )
             proc.returncode
         except subprocess.CalledProcessError as e:
             print(f"- Error: {e}")
@@ -1175,14 +1259,14 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
         if not debug_scene:
             tbp.unlink(missing_ok=True)
         if op:
-            op.render_progress = (i+1) / len(thumbnail_blends)
+            op.render_progress = (i + 1) / len(thumbnail_blends)
             op.update = True
-    
+
     if ptt:
         print()
-        print("-"*70)
+        print("-" * 70)
         print("Applying Thumbnails:".center(70, "-"))
-        print("-"*70)
+        print("-" * 70)
     if op:
         op.start_icon_apply = True
         op.update = True
@@ -1194,7 +1278,7 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
         # str(self.blend_path),
         "-P",
         str(python_file),
-        '--',
+        "--",
         ":--separator--:".join(paths),
         ":--separator--:".join(names),
         ":--separator--:".join(types),
@@ -1203,28 +1287,33 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
         angle,
         str(add_plane),
         str(world_strength),
-        bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE',
+        (
+            bpy.context.preferences.addons["cycles"].preferences.compute_device_type
+            if "cycles" in bpy.context.preferences.addons.keys()
+            else "NONE"
+        ),
         world_name,
         str(padding),
         str(rotate_world),
-        "1", # 1 for applying thumbnail
+        "1",  # 1 for applying thumbnail
         str(debug_scene),
     ]
     if ptt:
         print("     - Terminal Command:", " ".join(args))
     e = None
     try:
-        subprocess.run(args, stdout=subprocess.PIPE, check=True)
+        proc = subprocess.run(args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         print(f"- Error: {e}")
         print(f"- Output: {proc.stdout.decode()}")
     if ptt and not e:
         print(proc.stdout.decode())
-    
+    print(proc.stdout.decode())
+
     if ptt:
-        print("*"*115)
+        print("*" * 115)
         print("Thread Finished".center(100, "*"))
-        print("*"*115)
+        print("*" * 115)
     if op:
         op.apply_progress = 1.0
         op.update = True
@@ -1267,7 +1356,7 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
     #         stderr=subprocess.PIPE,
     #         stdout=subprocess.PIPE,
     #     )
-        
+
     #     if proc.returncode:
     #         print(f"    - Error: {proc.stderr.decode()}")
     #     print("".center(100, "-"))
@@ -1281,21 +1370,21 @@ def rerender_thumbnail(paths: list[str], directory: str, objects: list[tuple[str
     #     print(new_text)
     #     print("".center(100, "-"))
     #     print()
-        
+
     #     return None
 
 
 def resolve_angle(angle: str, flip_x: str, flip_y: str, flip_z: str):
     if flip_x:
-        angle=angle.replace('X','-X')
+        angle = angle.replace("X", "-X")
     if flip_y:
-        angle=angle.replace('Y','-Y')
+        angle = angle.replace("Y", "-Y")
     if flip_z:
-        angle=angle.replace('Z','-Z')
+        angle = angle.replace("Z", "-Z")
     return angle
 
 
-def mouse_in_window(window:Window, x, y) -> bool:
+def mouse_in_window(window: Window, x, y) -> bool:
     """
     Check if the mouse coordinates (x, y) are within the boundaries of the given window.
 
@@ -1307,28 +1396,25 @@ def mouse_in_window(window:Window, x, y) -> bool:
     Returns:
     bool: True if the mouse is within the window boundaries, False otherwise.
     """
-    return window.x <= x <= window.x + window.width and window.y <= y <= window.y + window.height
+    return (
+        window.x <= x <= window.x + window.width
+        and window.y <= y <= window.y + window.height
+    )
 
 
-def pack_files(blend_file: Path):    
+def pack_files(blend_file: Path):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "pack_files.py"
-    
-    args = [
-        bpy.app.binary_path,
-        "-b",
-        str(blend_file),
-        "-P",
-        str(python_file)
-    ]
+
+    args = [bpy.app.binary_path, "-b", str(blend_file), "-P", str(python_file)]
     print(" ".join(args))
-    
+
     subprocess.run(args)
 
 
 def move_blend_file(src: Path, dst: Path, pack: bool = False):
     """Save the blend file to the new location with remapped filepaths and compression."""
     python_file = Path(__file__).parent / "stand_alone_scripts" / "move_blend_file.py"
-        
+
     args = [
         bpy.app.binary_path,
         "-b",
@@ -1339,16 +1425,21 @@ def move_blend_file(src: Path, dst: Path, pack: bool = False):
         str(dst),
         str(pack),
     ]
-    
+
     proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if proc.returncode > 1:
         print(f"Error: {proc.stderr.decode()}")
         print(f"Output: {proc.stdout.decode()}")
 
 
-def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remove: list[ID | AssetRepresentation] = None, types: list[str] = None):
+def clean_blend_file(
+    blend_file: Path,
+    ids_to_keep: list[ID] = None,
+    ids_to_remove: list[ID | AssetRepresentation] = None,
+    types: list[str] = None,
+):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "clear_blend_file.py"
-        
+
     args = [
         bpy.app.binary_path,
         "-b",
@@ -1360,16 +1451,20 @@ def clean_blend_file(blend_file: Path, ids_to_keep: list[ID] = None, ids_to_remo
         ":--separator--:".join(ids_to_remove) if ids_to_remove else "None",
         ":--separator--:".join(types),
     ]
-    
+
     proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if proc.returncode > 1:
         print(f"Error: {proc.stderr.decode()}")
         print(f"Output: {proc.stdout.decode()}")
 
 
-def export_helper(blend_file: Path, destination_dir: Path, op: 'export_library.SH_OT_ExportLibrary' = None):
+def export_helper(
+    blend_file: Path,
+    destination_dir: Path,
+    op: "export_library.SH_OT_ExportLibrary" = None,
+):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "export_helper.py"
-        
+
     args = [
         bpy.app.binary_path,
         "-b",
@@ -1379,10 +1474,12 @@ def export_helper(blend_file: Path, destination_dir: Path, op: 'export_library.S
         str(python_file),
         str(destination_dir),
     ]
-    
-    proc = subprocess.Popen(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True)
+
+    proc = subprocess.Popen(
+        args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True
+    )
     # proc = subprocess.Popen(args)
-    
+
     if op:
         while True:
             line = proc.stdout.readline()
@@ -1412,27 +1509,28 @@ def export_helper(blend_file: Path, destination_dir: Path, op: 'export_library.S
                 if line == "|":
                     print()
                     continue
-                
+
                 line_split = line.split("+=+")
                 if len(line_split) == 2:
-                    text,end = line_split
+                    text, end = line_split
                     if end == "r\n":
                         end = "\r"
                 else:
                     text = line_split[0]
                     end = "\n"
                 print(text, end=end)
-    
+
     if proc.returncode > 1:
         print()
         print(f"Error: {proc.stderr.decode()}")
         print(f"Output: {proc.stdout.decode()}")
-    
 
 
-def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_library=True):
+def update_asset_browser_areas(
+    context: Context = None, tag_redraw=True, update_library=True
+):
     C = context or bpy.context
-    
+
     for area in C.screen.areas:
         if asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active):
             if tag_redraw:
@@ -1443,3 +1541,174 @@ def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_
                         bpy.ops.asset.library_refresh()
                 except Exception as e:
                     print(f"Error while refreshing all asset browser areas: {e}")
+
+
+def mark_assets_in_blend(
+    lib: AssetLibrary,
+    directory: str,
+    mark_actions: bool,
+    mark_collections: bool,
+    mark_materials: bool,
+    mark_node_trees: bool,
+    mark_objects: bool,
+    mark_obj_armatures: bool,
+    mark_obj_cameras: bool,
+    mark_obj_curves: bool,
+    mark_obj_empties: bool,
+    mark_obj_fonts: bool,
+    mark_obj_gpencils: bool,
+    mark_obj_lattices: bool,
+    mark_obj_lights: bool,
+    mark_obj_light_probes: bool,
+    mark_obj_meshes: bool,
+    mark_obj_metas: bool,
+    mark_obj_point_clouds: bool,
+    mark_obj_speakers: bool,
+    mark_obj_surfaces: bool,
+    mark_obj_volumes: bool,
+    mark_worlds: bool,
+    clear_other_assets: bool,
+    skip_hidden: bool,
+    catalog_source: str,
+    new_catalog_name: str,
+    author: str,
+    description: str,
+    license: str,
+    copyright: str,
+    tags: list[str],
+    move_to_library: bool,
+    override_existing_data: bool = False,
+    recursive: bool = True,
+    op: "import_from_directory.SH_OT_ImportFromDirectory" = None,
+) -> dict[str, tuple[str, str]]:
+    """
+    Mark assets in a blend file and add them to the library.
+    Returns a dictionary of assets marked in the blend files for rendering icons
+        Key: Blend File Path
+        Value: Tuple of (Asset Name, Asset Type)
+    """
+    python_file = (
+        Path(__file__).parent / "stand_alone_scripts" / "mark_assets_in_blend_file.py"
+    )
+
+    blends = (
+        list(Path(directory).rglob("**/*.blend"))
+        if recursive
+        else list(Path(directory).glob("*.blend"))
+    )
+
+    tags_to_add = []
+    for tag_name, tag_bool in zip(hive_mind.TAGS_DICT.keys(), tags):
+        if tag_bool:
+            tags_to_add.append(tag_name)
+
+    match catalog_source:
+        case "Directory":
+            dpath = Path(directory)
+            catalog = lib.catalogs.get_catalog_by_name(dpath.name)
+            if not catalog:
+                catalog = lib.catalogs.add_catalog(dpath.name)
+            catalog_id = catalog.id
+        case "Filename":
+            for blend_file in blends:
+                catalog = lib.catalogs.get_catalog_by_name(blend_file.stem)
+                if not catalog:
+                    catalog = lib.catalogs.add_catalog(blend_file.stem)
+            lib.catalogs.write_file()
+        case "NONE":
+            catalog_id = "NONE"
+        case "NEW":
+            catalog_id = lib.catalogs.add_catalog(new_catalog_name).id
+
+    assets_marked: dict[str, list[str, str]] = {}
+    for i, blend_file in enumerate(blends):
+        if catalog_source == "Filename":
+            catalog = lib.catalogs.get_catalog_by_name(blend_file.stem)
+            catalog_id = catalog.id
+        args = (
+            bpy.app.binary_path,
+            "-b",
+            "--factory-startup",
+            str(blend_file),
+            "-P",
+            str(python_file),
+            str(mark_actions),
+            str(mark_collections),
+            str(mark_materials),
+            str(mark_node_trees),
+            str(mark_objects),
+            str(mark_obj_armatures),
+            str(mark_obj_cameras),
+            str(mark_obj_curves),
+            str(mark_obj_empties),
+            str(mark_obj_fonts),
+            str(mark_obj_gpencils),
+            str(mark_obj_lattices),
+            str(mark_obj_lights),
+            str(mark_obj_light_probes),
+            str(mark_obj_meshes),
+            str(mark_obj_metas),
+            str(mark_obj_point_clouds),
+            str(mark_obj_speakers),
+            str(mark_obj_surfaces),
+            str(mark_obj_volumes),
+            str(mark_worlds),
+            str(clear_other_assets),
+            str(skip_hidden),
+            catalog_source,
+            catalog_id,
+            str(override_existing_data),
+            author,
+            description,
+            license,
+            copyright,
+            ",".join(tags_to_add),
+            str(move_to_library),
+            str(lib.path),
+        )
+
+        proc = subprocess.Popen(
+            # proc = subprocess.run(
+            args,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
+            text=True,
+            # args
+        )
+
+        """{blend file path, (asset name, asset type)}"""
+        active_blend_path = None
+        while True:
+            line = proc.stdout.readline()
+            if not line and proc.poll() is not None:
+                break
+            elif line and line[:2] == "~~":
+                if line.startswith("~~FP:"):
+                    active_blend_path = line[5:-1]
+                    assets_marked[active_blend_path] = []
+                else:
+                    assets_marked[active_blend_path].append(line[2:-1].split(","))
+
+        if op:
+            op.metadata_progress = (i + 1) / len(blends)
+            op.update = True
+        #     elif line and line[0] == "|":
+        #         if line == "|":
+        #             print()
+        #             continue
+
+        #         line_split = line.split("+=+")
+        #         if len(line_split) == 2:
+        #             text, end = line_split
+        #             if end == "r\n":
+        #                 end = "\r"
+        #         else:
+        #             text = line_split[0]
+        #             end = "\n"
+        #         print(text, end=end)
+
+        # if proc.returncode > 1:
+        #     print()
+        #     print(f"Error: {proc.stderr.decode()}")
+        #     print(f"Output: {proc.stdout.decode()}")
+    return assets_marked

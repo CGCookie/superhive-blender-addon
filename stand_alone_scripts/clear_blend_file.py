@@ -34,7 +34,11 @@ def remove_other_assets():
         if not isinstance(ids_data, bpy.types.bpy_prop_collection):
             continue
         for id in ids_data:
-            if hasattr(id, "asset_data") and id.asset_data and id.name not in IDS_TO_KEEP:
+            if (
+                hasattr(id, "asset_data")
+                and id.asset_data
+                and id.name not in IDS_TO_KEEP
+            ):
                 id.asset_clear()
 
 
@@ -50,13 +54,16 @@ if __name__ == "__main__":
                 if id.name not in IDS_TO_KEEP:
                     data_type.remove(id)
     elif IDS_TO_REMOVE:
-        for id,id_type in zip(IDS_TO_REMOVE, TYPES):
+        for id, id_type in zip(IDS_TO_REMOVE, TYPES):
             if id_type == "NODETREE":
                 data_type = bpy.data.node_groups
             else:
                 data_type = getattr(bpy.data, id_type.lower() + "s")
             data_type.remove(data_type[id])
-    
+
+    # TODO: Remove the orphaned data
+    # TODO: Option to only remove asset data and not the actual ID
+
     bpy.ops.outliner.orphans_purge(do_recursive=True)
-    
+
     bpy.ops.wm.save_mainfile(compress=True, relative_remap=True)

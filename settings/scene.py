@@ -4,9 +4,16 @@ from time import time
 import bpy
 import bpy.utils
 from bpy.app.translations import contexts as i18n_contexts
-from bpy.props import (BoolProperty, BoolVectorProperty, CollectionProperty,
-                       EnumProperty, FloatProperty, IntProperty,
-                       PointerProperty, StringProperty)
+from bpy.props import (
+    BoolProperty,
+    BoolVectorProperty,
+    CollectionProperty,
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+    PointerProperty,
+    StringProperty,
+)
 from bpy.types import AssetRepresentation, Context, PropertyGroup, UILayout
 
 from .. import hive_mind, utils
@@ -17,85 +24,73 @@ class RenderThumbnailProps:
     shading: EnumProperty(
         name="Thumbnail Shading",
         items=(
-            ("Material","Material","Material"),
-            ("Eevee","Eevee","Eevee"),
-            ("Cycles","Cycles","Cycles")
+            ("Material", "Material", "Material"),
+            ("Eevee", "Eevee", "Eevee"),
+            ("Cycles", "Cycles", "Cycles"),
         ),
-        default='Cycles'
+        default="Cycles",
     )
-    
+
     camera_angle: EnumProperty(
         items=(
-            ('XZ','X-Axis','X-Axis'),
-            ('YZ','Y-Axis','Y-Axis'),
-            ('XYZ','Isometric','Equal distance on all axis')
+            ("XZ", "X-Axis", "X-Axis"),
+            ("YZ", "Y-Axis", "Y-Axis"),
+            ("XYZ", "Isometric", "Equal distance on all axis"),
         )
     )
-    
-    flip_z: BoolProperty(
-        name="Flip Z",
-        default=False
-    )
-    
-    flip_x: BoolProperty(
-        name="Flip X",
-        default=False
-    )
-    
-    flip_y: BoolProperty(
-        name="Flip Y",
-        default=False
-    )
-    
+
+    flip_z: BoolProperty(name="Flip Z", default=False)
+
+    flip_x: BoolProperty(name="Flip X", default=False)
+
+    flip_y: BoolProperty(name="Flip Y", default=False)
+
     thumb_res: IntProperty(
-        default=256,
-        min=128,
-        max=1024,
-        subtype='PIXEL',
-        name="Resolution"
+        default=256, min=128, max=1024, subtype="PIXEL", name="Resolution"
     )
-    
+
     camera_height: FloatProperty(
         default=1.0,
         min=0,
         max=2,
         soft_max=1,
-        subtype='PERCENTAGE',
-        name='Camera Height'
+        subtype="PERCENTAGE",
+        name="Camera Height",
     )
-    
-    camera_zoom: FloatProperty(
-        default=1,
-        min=0.5,
-        max=5,
-        soft_max=2,
-        name="Zoom"
-    )
-    
+
+    camera_zoom: FloatProperty(default=1, min=0.5, max=5, soft_max=2, name="Zoom")
+
     world_strength: FloatProperty(
         name="World Lighting Strength",
         default=1,
     )
-    
+
     add_ground_plane: BoolProperty(
         name="Add Ground Plane",
         description="Add ground plane for thumbnails",
         default=False,
     )
-    
+
     def _get_scene_lighting_items(self, context):
         return (
-            ("Studio Soft","Studio Soft","", sh_icons.studio_soft_icon.icon_id, 0),
-            ("Studio Harsh","Studio Harsh","", sh_icons.studio_harsh_icon.icon_id, 1),
-            ("Outdoor Soft","Outdoor Soft","", sh_icons.outdoor_soft_icon.icon_id, 2),
-            ("Outdoor Harsh","Outdoor Harsh","", sh_icons.outdoor_harsh_icon.icon_id, 3)
+            ("Studio Soft", "Studio Soft", "", sh_icons.studio_soft_icon.icon_id, 0),
+            ("Studio Harsh", "Studio Harsh", "", sh_icons.studio_harsh_icon.icon_id, 1),
+            ("Outdoor Soft", "Outdoor Soft", "", sh_icons.outdoor_soft_icon.icon_id, 2),
+            (
+                "Outdoor Harsh",
+                "Outdoor Harsh",
+                "",
+                sh_icons.outdoor_harsh_icon.icon_id,
+                3,
+            ),
         )
+
     scene_lighting: EnumProperty(
         name="Lighting Setup",
         description="The lighting setup to use for the thumbnail",
         items=_get_scene_lighting_items,
     )
-    
+
     padding: FloatProperty(
         name="Padding",
         description="Padding around the object in the thumbnail.",
@@ -103,57 +98,56 @@ class RenderThumbnailProps:
         min=0.0,
         max=1,
     )
-    
+
     rotate_world: BoolProperty(
         name="Rotate World",
         description="Rotate the world to match the camera angle so the lighting aligns with the camera view",
-        default=True
+        default=True,
     )
-    
+
     debug_scene: BoolProperty(
         name="Debug Scene",
         description="Setup the blend file like normal but don't render the thumbnail and keep the scene open for debugging",
-        default=False
+        default=False,
     )
-    
+
     def draw_thumbnail_props(self, layout: UILayout) -> None:
-        layout.row().prop(self, 'shading', expand=True)
-        layout.prop(self, 'world_strength')
-        layout.row().prop(self, 'camera_angle', expand=True)
-        row=layout.row(align=True)
+        layout.row().prop(self, "shading", expand=True)
+        layout.prop(self, "world_strength")
+        layout.row().prop(self, "camera_angle", expand=True)
+        row = layout.row(align=True)
         # layout.prop(self,'camera_height')
         # layout.prop(self,'camera_zoom')
-        row.prop(self, 'flip_x', toggle=True)
-        row.prop(self, 'flip_y', toggle=True)
-        row.prop(self, 'flip_z', toggle=True)
+        row.prop(self, "flip_x", toggle=True)
+        row.prop(self, "flip_y", toggle=True)
+        row.prop(self, "flip_z", toggle=True)
 
         if not self.flip_z:
-            row=layout.row(align=True)
+            row = layout.row(align=True)
             row.prop(
                 self,
-                'add_ground_plane',
+                "add_ground_plane",
                 toggle=True,
-                icon='CHECKBOX_HLT' if self.add_ground_plane else "CHECKBOX_DEHLT",
+                icon="CHECKBOX_HLT" if self.add_ground_plane else "CHECKBOX_DEHLT",
             )
-        
-        layout.prop(self, 'padding', text="Extra Padding", slider=True)
+
+        layout.prop(self, "padding", text="Extra Padding", slider=True)
         layout.prop(
-            self, 'rotate_world',
-            icon='CHECKBOX_HLT' if self.rotate_world else "CHECKBOX_DEHLT",
+            self,
+            "rotate_world",
+            icon="CHECKBOX_HLT" if self.rotate_world else "CHECKBOX_DEHLT",
         )
-        
+
         # layout.prop(self,'thumb_res')
-        if self.shading != 'Material':
-            layout.template_icon_view(
-                self, 'scene_lighting', show_labels=True
-            )
+        if self.shading != "Material":
+            layout.template_icon_view(self, "scene_lighting", show_labels=True)
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text=self.scene_lighting)
-        
+
         if utils.get_prefs().display_extras:
-            layout.prop(self, 'debug_scene')
-    
+            layout.prop(self, "debug_scene")
+
     def reset_thumbnail_settings(self) -> None:
         prefs = utils.get_prefs()
         self.shading = prefs.shading
@@ -171,9 +165,10 @@ class RenderThumbnailProps:
         self.add_ground_plane = prefs.add_ground_plane
         self.debug_scene = prefs.debug_scene
 
+
 class BatchUpdateAction(PropertyGroup):
     metadata_item: StringProperty()
-    
+
     update_type: EnumProperty(
         name="Update Type",
         items=[
@@ -208,7 +203,7 @@ class BatchUpdateAction(PropertyGroup):
             ("SWAP", "Swap", "Swap the case"),
         ],
     )
-    
+
     match_case_find: BoolProperty(
         name="Match Case",
         description="Match the case of the original text when finding",
@@ -225,23 +220,25 @@ class BatchUpdateAction(PropertyGroup):
         name="Use Regex",
         description="Use regular expressions when replacing",
     )
-    
+
     # use () to capture groups and \1, \2, etc. to reference them
-    
+
     action_add: BoolProperty(
-        name="Add", description="Add a new action",
-        translation_context=i18n_contexts.operator_default
+        name="Add",
+        description="Add a new action",
+        translation_context=i18n_contexts.operator_default,
     )
     action_remove: BoolProperty(
-        name="Remove", description="Remove a this action",
-        translation_context=i18n_contexts.operator_default
+        name="Remove",
+        description="Remove a this action",
+        translation_context=i18n_contexts.operator_default,
     )
-    
-    def draw(self, layout: UILayout, index:int, use_ops:bool=False):
+
+    def draw(self, layout: UILayout, index: int, use_ops: bool = False):
         row = layout.row()
         col_l = row.column()
         col_l.prop(self, "update_type")
-        
+
         match self.update_type:
             case "OVERWRITE":
                 self.draw_overwrite(col_l)
@@ -253,7 +250,7 @@ class BatchUpdateAction(PropertyGroup):
                 self.draw_case(col_l)
             case _:
                 raise ValueError(f"Invalid update type: {self.update_type}")
-            
+
         col_r = row.column()
         row = col_r.row(align=True)
         row.scale_x = 1.2
@@ -267,14 +264,14 @@ class BatchUpdateAction(PropertyGroup):
         else:
             row.prop(self, "action_remove", text="", icon="REMOVE", toggle=1)
             row.prop(self, "action_add", text="", icon="ADD", toggle=1)
-    
+
     def draw_overwrite(self, layout: UILayout):
         layout.prop(self, "value")
-    
+
     def draw_add(self, layout: UILayout):
         layout.prop(self, "add_type")
         layout.prop(self, "value")
-    
+
     def draw_replace(self, layout: UILayout):
         row = layout.row(align=True)
         re_error_src = None
@@ -287,13 +284,13 @@ class BatchUpdateAction(PropertyGroup):
         row.prop(self, "value")
         row.prop(self, "match_case_find", icon="SYNTAX_OFF", text="")
         row.prop(self, "use_regex_find", icon="SORTBYEXT", text="")
-        
+
         if re_error_src is not None:
             row = layout.split(factor=0.25)
             row.label(text="")
             row.alert = True
             row.label(text=re_error_src)
-        
+
         row = layout.row(align=True)
         re_error_dst = None
         if self.use_regex_find and self.use_regex_replace and re_error_src is None:
@@ -306,24 +303,28 @@ class BatchUpdateAction(PropertyGroup):
         r = row.row(align=True)
         r.active = self.use_regex_find
         r.prop(self, "use_regex_replace", icon="SORTBYEXT", text="")
-        
+
         if re_error_dst is not None:
             row = layout.split(factor=0.25)
             row.label(text="")
             row.alert = True
             row.label(text=re_error_dst)
-    
+
     def draw_case(self, layout: UILayout):
         layout.prop(self, "case_type")
 
-    def process_text(self, text:str) -> str:
+    def process_text(self, text: str) -> str:
         if not self.value and self.update_type != "CASE":
             return text
         match self.update_type:
             case "OVERWRITE":
                 return self.value
             case "ADD":
-                return text + self.value if self.add_type == "SUFFIX" else self.value + text
+                return (
+                    text + self.value
+                    if self.add_type == "SUFFIX"
+                    else self.value + text
+                )
             case "REPLACE":
                 if self.use_regex_find:
                     replace_src = self.value
@@ -338,10 +339,7 @@ class BatchUpdateAction(PropertyGroup):
                     replace_src,
                     replace_dst,
                     text,
-                    flags=(
-                        0 if self.match_case_find else
-                        re.IGNORECASE
-                    ),
+                    flags=(0 if self.match_case_find else re.IGNORECASE),
                 )
             case "CASE":
                 match self.case_type:
@@ -364,7 +362,7 @@ class BatchItemWithActions(PropertyGroup):
         name="Batch Items",
         type=BatchUpdateAction,
     )
-    
+
     def check(self):
         changed = False
         action: BatchUpdateAction
@@ -388,42 +386,70 @@ class BatchItemWithActions(PropertyGroup):
         #     changed = True
 
         return changed
-    
-    def add_action(self, index:int):
+
+    def add_action(self, index: int):
         item: BatchUpdateAction = self.batch_items.add()
         item.metadata_item = self.name
         if index + 2 != len(self.batch_items):
             self.batch_items.move(len(self.batch_items) - 1, index + 1)
-    
-    def remove_action(self, index:int):
+
+    def remove_action(self, index: int):
         if len(self.batch_items) > 1:
             self.batch_items.remove(index)
-    
-    def draw(self, layout: UILayout, use_ops:bool=False):
+
+    def draw(self, layout: UILayout, use_ops: bool = False):
         action: BatchUpdateAction
         for i, action in enumerate(self.batch_items):
             action.draw(layout.box(), i, use_ops)
 
-    def process_text(self, text:str) -> str:
+    def process_text(self, text: str) -> str:
         action: BatchUpdateAction
         for action in self.batch_items:
             text = action.process_text(text)
         return text
 
 
-class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):    
+class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
     metadata_type: EnumProperty(
         name="Metadata Type",
         description="Choose metadata settings to display",
         items=[
-            ("name", "Name", "Display the settings for updating the name of the asset(s)"),
-            ("description", "Description", "Display the settings for updating the description of the asset(s)"),
-            ("author", "Author", "Display the settings for updating the author of the asset(s)"),
-            ("license", "License", "Display the settings for updating the license of the asset(s)"),
-            ("catalog", "Catalog", "Display the settings for updating the catalog of the asset(s)"),
-            ("copyright", "Copyright", "Display the settings for updating the copyright of the asset(s)"),
-            ("tags", "Tags", "Display the settings for updating the tags of the asset(s)"),
-        ]
+            (
+                "name",
+                "Name",
+                "Display the settings for updating the name of the asset(s)",
+            ),
+            (
+                "description",
+                "Description",
+                "Display the settings for updating the description of the asset(s)",
+            ),
+            (
+                "author",
+                "Author",
+                "Display the settings for updating the author of the asset(s)",
+            ),
+            (
+                "license",
+                "License",
+                "Display the settings for updating the license of the asset(s)",
+            ),
+            (
+                "catalog",
+                "Catalog",
+                "Display the settings for updating the catalog of the asset(s)",
+            ),
+            (
+                "copyright",
+                "Copyright",
+                "Display the settings for updating the copyright of the asset(s)",
+            ),
+            (
+                "tags",
+                "Tags",
+                "Display the settings for updating the tags of the asset(s)",
+            ),
+        ],
     )
 
     metadata_items: CollectionProperty(
@@ -432,21 +458,27 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
     )
 
     def _get_ignore_licenses(self, context):
-        self.metadata_items: bpy.types.CollectionProperty | list[BatchItemWithActions] | dict[str, BatchItemWithActions]
+        self.metadata_items: (
+            bpy.types.CollectionProperty
+            | list[BatchItemWithActions]
+            | dict[str, BatchItemWithActions]
+        )
         return [
             ("IGNORE", "Ignore", "Ignore the license"),
         ] + hive_mind.get_licenses()
+
     license: EnumProperty(
         name="License",
         description="The license to apply to the asset",
         items=_get_ignore_licenses,
         default=1,
     )
-    
+
     def _get_ignore_licenses(self, context):
         return [
             ("IGNORE", "Ignore", "Ignore the license"),
         ] + hive_mind.get_categories()
+
     catalog: EnumProperty(
         name="Catalog",
         description="The catalog to apply to the asset",
@@ -460,7 +492,7 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
             ("ADD", "Add", "Add tags to the existing tags"),
             ("OVERWRITE", "Overwrite", "Overwrite the existing tags"),
             ("REMOVE", "Remove", "Match and remove existing tags"),
-        ]
+        ],
     )
     # Don't set overwrite as default otherwise all tags
     # will be removed by default behavior
@@ -474,39 +506,39 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         name="Render Thumbnails",
         description="Render thumbnails for the assets when updating",
     )
-    
+
     reset_settings: BoolProperty(
         name="Reset Settings",
         description="Reset the settings after updating the assets",
-        default=True
+        default=True,
     )
 
-    def process_text(self, metadata_item:str, text:str) -> str:
+    def process_text(self, metadata_item: str, text: str) -> str:
         item = self.metadata_items.get(metadata_item)
         return item.process_text(text)
 
-    def draw(self, context: Context, layout: UILayout, use_ops:bool=False):
+    def draw(self, context: Context, layout: UILayout, use_ops: bool = False):
         box = layout.box()
         header, body = box.panel("asset_update_render_thumbnail")
         header.scale_y = 1.25
         r = header.row()
         r.alignment = "CENTER"
         r.label(text="Render Thumbnails", icon="FILE_IMAGE")
-        
+
         if body:
             col = body.column()
             col.enabled = self.render_thumbnails
             self.draw_thumbnail_props(col)
-        
+
         layout.separator()
-        
+
         box = layout.box()
         header, body = box.panel("asset_update_metadata")
         header.scale_y = 1.25
         r = header.row()
         r.alignment = "CENTER"
         r.label(text="Metadata", icon="TEXT")
-        
+
         if body:
             self.draw_metadata_settings(context, box, use_ops)
 
@@ -514,7 +546,7 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         row = layout.row()
         row.scale_y = 1.5
         row.prop(self, "metadata_type", expand=True)
-        
+
         if self.metadata_type == "license":
             layout.prop(self, "license")
         elif self.metadata_type == "catalog":
@@ -525,9 +557,11 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
             for i, tag in enumerate(hive_mind.get_tags()):
                 grid.prop(self, "tags", index=i, text=tag[1], expand=True)
         else:
-            meta_data_item: BatchItemWithActions = self.metadata_items.get(self.metadata_type)
+            meta_data_item: BatchItemWithActions = self.metadata_items.get(
+                self.metadata_type
+            )
             meta_data_item.draw(layout, use_ops=use_ops)
-            
+
             box = layout.box()
             row = box.row()
             row.alignment = "CENTER"
@@ -536,17 +570,19 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
             asset: AssetRepresentation
             for asset in context.selected_assets[:5]:
                 col.label(
-                    text=asset.name+": "+meta_data_item.process_text(
+                    text=asset.name
+                    + ": "
+                    + meta_data_item.process_text(
                         getattr(
                             asset if self.metadata_type == "name" else asset.metadata,
-                            self.metadata_type
+                            self.metadata_type,
                         )
                     )
                 )
             if len(context.selected_assets) > 5:
                 col.label(text="...")
-    
-    def process_tags(self, asset:utils.Asset):
+
+    def process_tags(self, asset: utils.Asset):
         selected_tags = [
             tag_id
             for i, (tag_id, _tag_name, _tag_desc) in enumerate(hive_mind.get_tags())
@@ -556,10 +592,10 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
             return sorted(selected_tags)
         elif self.tags_update_type == "ADD":
             return sorted(list(set(asset.bpy_tags + selected_tags)))
-        elif self.tags_update_type == "REMOVE": # REMOVE
+        elif self.tags_update_type == "REMOVE":  # REMOVE
             return sorted(list(set(asset.bpy_tags) - set(selected_tags)))
         return asset.bpy_tags
-    
+
     def process_asset_metadata(self, asset: utils.Asset) -> None:
         """
         Process the metadata according to the set actions.
@@ -579,25 +615,25 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         if self.license != "IGNORE":
             asset.catalog_id = self.catalog
         asset.tags = self.process_tags(asset)
-    
+
     def reset(self):
         self.metadata_items.clear()
-        for name in ("name","description","author","copyright"):
+        for name in ("name", "description", "author", "copyright"):
             item: BatchItemWithActions = self.metadata_items.add()
             item.name = name
             item.add_action(0)
-        
+
         for i in range(len(hive_mind.get_tags())):
             self.tags[i] = False
-        
+
         self.license = "IGNORE"
         self.catalog = "IGNORE"
-        
+
         self.metadata_type = "name"
         self.tags_update_type = "ADD"
-        
+
         self.render_thumbnails = False
-        
+
         self.reset_thumbnail_settings()
 
 
@@ -621,7 +657,7 @@ class ProgressBarBase:
         self.reset()
         self.show = True
         self.update_start_time()
-    
+
     def reset(self) -> None:
         self.progress = 0
         self.cancel = False
@@ -630,7 +666,7 @@ class ProgressBarBase:
     def end(self) -> None:
         self.is_complete = True
         self.show = False
-    
+
     def update_start_time(self) -> None:
         self.start_time = str(time())
 
@@ -660,13 +696,15 @@ class ProgressBarBase:
 
     def draw(self, layout: UILayout, draw_time: bool = False) -> None:
         row = layout.row(align=True)
-        row.progress(text=self.label or f"{round(self.progress*100, 2)}%", factor=self.progress)
-        
+        row.progress(
+            text=self.label or f"{round(self.progress*100, 2)}%", factor=self.progress
+        )
+
         if draw_time:
             row.label(text=self.formated_time)
 
 
-class ProgressBar(PropertyGroup, ProgressBarBase):...
+class ProgressBar(PropertyGroup, ProgressBarBase): ...
 
 
 class ProgressBarForMulti(PropertyGroup, ProgressBarBase):
@@ -676,43 +714,47 @@ class ProgressBarForMulti(PropertyGroup, ProgressBarBase):
 class MultiProgressBarBase:
     show: BoolProperty()
     progress_bars: CollectionProperty(type=ProgressBarForMulti)
-    
+
     total_progress: PointerProperty(type=ProgressBar)
-    
+
     active_bar_index: IntProperty(default=0)
-    
+
     @property
     def active_bar(self) -> ProgressBarForMulti:
         if self.active_bar_index < len(self.progress_bars):
             return self.progress_bars[self.active_bar_index]
-    
+
     def new_progress_bar(self, name: str) -> ProgressBarForMulti:
-        self.progress_bars: bpy.types.CollectionProperty | list[ProgressBarForMulti] | dict[str, ProgressBarForMulti]
+        self.progress_bars: (
+            bpy.types.CollectionProperty
+            | list[ProgressBarForMulti]
+            | dict[str, ProgressBarForMulti]
+        )
         self.total_progress: ProgressBar
         pb: ProgressBarForMulti = self.progress_bars.add()
         pb.name = name
         return pb
-    
+
     def clear(self) -> None:
         self.progress_bars.clear()
-    
+
     def start(self) -> None:
         self.show = True
         self.active_bar_index = 0
         for pb in self.progress_bars:
             pb.is_complete = False
-    
+
     def start_next_active(self) -> ProgressBarForMulti:
         self.active_bar.is_complete = True
-        
+
         self.active_bar_index += 1
         if not self.active_bar:
             return
-        
+
         self.active_bar.start()
-        
+
         return self.active_bar
-    
+
     def end(self) -> None:
         self.show = False
 
@@ -721,17 +763,17 @@ class ProgressUpdate_Asset(PropertyGroup, MultiProgressBarBase):
     @property
     def metadata_bar(self) -> ProgressBar:
         return self.progress_bars.get("Metadata Update")
-    
+
     @property
     def icon_bar(self) -> ProgressBar:
         return self.progress_bars.get("Icon Rendering")
-    
+
     def setup(self):
         self.progress_bars.clear()
-        
+
         self.new_progress_bar("Metadata Update")
         self.new_progress_bar("Icon Rendering")
-    
+
     def draw(self, layout: UILayout) -> None:
         self.total_progress.draw(layout)
         for pb in self.progress_bars:
@@ -742,17 +784,17 @@ class IconRenderingProgressBars(PropertyGroup):
     setup_bar: PointerProperty(type=ProgressBar)
     render_bar: PointerProperty(type=ProgressBar)
     apply_bar: PointerProperty(type=ProgressBar)
-    
+
     def reset(self) -> None:
         self.setup_bar.reset()
         self.render_bar.reset()
         self.apply_bar.reset()
-    
+
     def draw(self, layout: UILayout) -> None:
         self.setup_bar: ProgressBar
         self.render_bar: ProgressBar
         self.apply_bar: ProgressBar
-        
+
         col = layout.column()
         col.active = self.setup_bar.progress == 1
         row = col.row()
@@ -781,38 +823,39 @@ class IconRenderingProgressBars(PropertyGroup):
 class MultiProgressBarUpdate_Assets(PropertyGroup):
     show: BoolProperty()
     metadata_bar: PointerProperty(type=ProgressBar)
+    metadata_label: StringProperty(default="Metadata Update")
     icon_rendering: PointerProperty(type=IconRenderingProgressBars)
-    
+
     draw_icon_rendering: BoolProperty()
-    
+
     cancel: BoolProperty()
-    
+
     def start(self) -> None:
         self.reset()
         self.show = True
-        
+
     def end(self) -> None:
         self.show = False
         self.reset()
-    
+
     def reset(self) -> None:
         self.metadata_bar.reset()
         self.icon_rendering.reset()
-    
+
     def draw(self, layout: UILayout) -> None:
         self.metadata_bar: ProgressBar
         self.icon_rendering: IconRenderingProgressBars
-        
+
         row = layout.row()
         r = row.row()
         r.alignment = "LEFT"
-        r.label(text="Metadata Update:")
+        r.label(text=f"{self.metadata_label}:")
         self.metadata_bar.draw(row, draw_time=True)
-        
+
         if self.draw_icon_rendering:
             row = layout.row()
             row.label(text="Icon Rendering:")
-            
+
             split = layout.split(factor=0.25)
             split.separator()
             self.icon_rendering.draw(split.column())
@@ -822,12 +865,12 @@ class MovingFilesProgressBar(PropertyGroup):
     main: PointerProperty(type=ProgressBar)
     file: PointerProperty(type=ProgressBar)
     sub: PointerProperty(type=ProgressBar)
-    
+
     sub_label: StringProperty()
     file_label: StringProperty()
-    
+
     show_sub: BoolProperty()
-    
+
     def reset(self) -> None:
         self.main: ProgressBar
         self.file: ProgressBar
@@ -835,18 +878,18 @@ class MovingFilesProgressBar(PropertyGroup):
         self.main.reset()
         self.file.reset()
         self.sub.reset()
-    
+
     def update_formated_time(self) -> None:
         self.main.update_formated_time()
         self.file.update_formated_time()
         if self.show_sub:
             self.sub.update_formated_time()
-    
+
     def draw(self, layout: UILayout, draw_time=False) -> None:
         split = layout.split(factor=0.05)
         split.separator()
         self.main.draw(split, draw_time=True)
-        
+
         split = layout.split(factor=0.1)
         split.separator()
         r = split.row()
@@ -854,73 +897,82 @@ class MovingFilesProgressBar(PropertyGroup):
         split = layout.split(factor=0.15)
         split.separator()
         self.file.draw(split, draw_time=True)
-        
+
         if self.show_sub:
             row = layout.row()
             row.label(text=self.sub_label)
             self.sub.draw(row, draw_time=True)
+
 
 class MultiProgressBarExportLibrary(PropertyGroup):
     show: BoolProperty()
     movingfiles_bar: PointerProperty(type=MovingFilesProgressBar)
     zipping_bar: PointerProperty(type=ProgressBar)
     upload_bar: PointerProperty(type=ProgressBar)
-        
+
     cancel: BoolProperty()
-    
+
     def start(self) -> None:
         self.reset()
         self.show = True
-        
+
     def end(self) -> None:
         self.show = False
         self.reset()
-    
+
     def reset(self) -> None:
         self.movingfiles_bar.reset()
         self.zipping_bar.reset()
         self.upload_bar.reset()
-    
+
     def draw(self, layout: UILayout) -> None:
         self.movingfiles_bar: MovingFilesProgressBar
         self.zipping_bar: ProgressBar
         self.upload_bar: ProgressBar
-        
+
         layout.label(text="Exporting Library:")
         split = layout.split(factor=0.05)
         split.separator()
         col = split.column()
-        
+
         r = col.row()
         r.alignment = "LEFT"
         r.label(text="Gathering Files:")
-        
+
         self.movingfiles_bar.draw(col, draw_time=True)
-        
+
         row = col.row()
         row.label(text="Zipping Files:")
-        
+
         self.zipping_bar.draw(col.column(), draw_time=True)
-        
+
         # row = layout.row()
         # row.label(text="Uploading:")
         # split = layout.split(factor=0.25)
         # split.separator()
         # self.upload_bar.draw(split.column())
-        
 
 
 class SH_Scene(PropertyGroup):
     header_progress_bar: PointerProperty(type=ProgressBar)
-    side_panel_batch_asset_update_progress_bar: PointerProperty(type=MultiProgressBarUpdate_Assets)
-    
+    side_panel_batch_asset_update_progress_bar: PointerProperty(
+        type=MultiProgressBarUpdate_Assets
+    )
+
     export_library: PointerProperty(type=MultiProgressBarExportLibrary)
 
     library_mode: EnumProperty(
         items=(
-            ("BLENDER", "Blender",
-             "Blender's default asset library settings and options"),
-            ("SUPERHIVE", "SuperHive", "Settings and options for uploading to Superhive's asset system"),
+            (
+                "BLENDER",
+                "Blender",
+                "Blender's default asset library settings and options",
+            ),
+            (
+                "SUPERHIVE",
+                "SuperHive",
+                "Settings and options for uploading to Superhive's asset system",
+            ),
         ),
         name="Library Mode",
         description="Choose which asset library settings to use",
@@ -928,9 +980,8 @@ class SH_Scene(PropertyGroup):
 
     utils = utils
     hivemind = hive_mind
-    
+
     metadata_update: PointerProperty(type=BatchMetadataUpdate)
-    
 
     def __ignore__(self):
         self.metadata_update: BatchMetadataUpdate
