@@ -7,7 +7,6 @@ from bpy_extras import asset_utils
 from .. import __package__ as base_package
 from .. import utils
 
-# from ..helpers import asset_helper
 from ..ops import polls, import_from_directory
 
 if TYPE_CHECKING:

@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (C) 2024 Zach Eastin, Richard Traynor, Superhive
 
 Created by Zach Eastin, Richard Traynor, Superhive
@@ -15,11 +15,12 @@ Created by Zach Eastin, Richard Traynor, Superhive
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
+
 print()
 print()
-print(f"Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(80, '-'))
-from . import hive_mind, icons, ui, settings, ops, helpers, handlers
+print(f"Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(80, "-"))
+from . import hive_mind, icons, ui, settings, ops, handlers
 
 
 def _call_globals(attr_name):
@@ -32,7 +33,11 @@ def register():
     print(f"Registering {__package__}")
     _call_globals("register")
 
-    print(f"Finished Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(80, '-'))
+    print(
+        f"Finished Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(
+            80, "-"
+        )
+    )
     print()
     print()
 

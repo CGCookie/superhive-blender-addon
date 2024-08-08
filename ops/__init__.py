@@ -3,7 +3,6 @@ from . import (
     add_to_library,
     asset_ops,
     blender_exes_ops,
-    convert_asset_to_hive,
     create_hive_asset_library,
     export_library,
     import_from_directory,
