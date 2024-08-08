@@ -1,4 +1,3 @@
-from importlib import metadata
 import re
 from time import time
 
@@ -9,7 +8,6 @@ from bpy.props import (BoolProperty, BoolVectorProperty, CollectionProperty,
                        EnumProperty, FloatProperty, IntProperty,
                        PointerProperty, StringProperty)
 from bpy.types import AssetRepresentation, Context, PropertyGroup, UILayout
-from sympy import cancel
 
 from .. import hive_mind, utils
 from ..icons import sh_icons
