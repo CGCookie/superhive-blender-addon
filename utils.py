@@ -715,20 +715,26 @@ class Asset:
             sh_tags.new_tag(tag.name, context)
         self.orig_asset.metadata.sh_is_dirty_tags = False
 
-    def rerender_thumbnail(self, path, directory, objects, shading, angle='X', add_plane=False):
+    def rerender_thumbnail(
+        self, path, directory, objects, shading, angle="X", add_plane=False
+    ):
         prefs = get_prefs()
         cmd = [bpy.app.binary_path]
-        #cmd.append("--background")
-        #cmd.append(path[0])
+        # cmd.append("--background")
+        # cmd.append(path[0])
         cmd.append("--factory-startup")
         cmd.append("--python")
         # cmd.append(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)), "rerender_thumbnails.py"))
-        cmd.append(str(Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"))
-        cmd.append('--')
+        cmd.append(
+            str(
+                Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
+            )
+        )
+        cmd.append("--")
         cmd.append(":--separator--:".join(path))
-        names=[]
-        types=[]
+        names = []
+        types = []
         for o in objects:
             names.append(":--separator2--:".join([a[0] for a in o]))
             types.append(":--separator2--:".join([a[1] for a in o]))
@@ -739,9 +745,13 @@ class Asset:
         cmd.append(angle)
         cmd.append(str(add_plane))
         cmd.append(str(prefs.world_strength))
-        cmd.append(bpy.context.preferences.addons['cycles'].preferences.compute_device_type if 'cycles' in bpy.context.preferences.addons.keys() else 'NONE')
+        cmd.append(
+            bpy.context.preferences.addons["cycles"].preferences.compute_device_type
+            if "cycles" in bpy.context.preferences.addons.keys()
+            else "NONE"
+        )
         if prefs.non_blocking:
-            t1=threading.Thread(target=functools.partial(subprocess.run,cmd))
+            t1 = threading.Thread(target=functools.partial(subprocess.run, cmd))
             t1.start()
             return t1
         else:
