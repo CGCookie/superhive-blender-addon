@@ -45,6 +45,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         if not context.selected_assets:
             return
 
+        asset = context.selected_assets[0]
         if asset and asset.metadata.sh_is_dirty():
             row = layout.split(factor=0.8)
 
@@ -64,7 +65,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         if scene_sets.side_panel_batch_asset_update_progress_bar.show:
             scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
-        elif not context.asset:
+        elif not context.selected_assets:
             row = layout.row()
             row.alignment = "CENTER"
             row.label(text="Please select asset(s)")
