@@ -378,7 +378,7 @@ class SH_OT_ExportLibrary(Operator):
     
     def invoke(self, context, event):
         self.z_to_close = []
-        context.window_manager.invoke_props_dialog(self)
+        context.window_manager.invoke_props_dialog(self, width=400)
         return {"RUNNING_MODAL"}
     
     def execute(self, context):
