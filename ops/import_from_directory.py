@@ -207,21 +207,21 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
 
         dpath = Path(context.space_data.params.directory.decode("utf-8"))
 
-        if self.catalog_source == "Filename":
-            blends = (
-                list(dpath.rglob("**/*.blend"))
-                if self.recursive
-                else list(dpath.glob("*.blend"))
-            )
-            blends_count = len(blends)
-        else:
-            blends_count = len(
-                list(dpath.rglob("**/*.blend"))
-                if self.recursive
-                else list(dpath.glob("*.blend"))
-            )
+        # if self.catalog_source == "Filename":
+        #     blends = (
+        #         list(dpath.rglob("**/*.blend"))
+        #         if self.recursive
+        #         else list(dpath.glob("*.blend"))
+        #     )
+        #     blends_count = len(blends)
+        # else:
+        #     blends_count = len(
+        #         list(dpath.rglob("**/*.blend"))
+        #         if self.recursive
+        #         else list(dpath.glob("*.blend"))
+        #     )
 
-        layout.label(text=f"Blend Files Found: {blends_count}")
+        # layout.label(text=f"Blend Files Found: {blends_count}")
 
         col = layout.column()
         col.use_property_split = True
