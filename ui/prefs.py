@@ -154,6 +154,55 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
 
     def draw(self, context):
         layout = self.layout
+
+        box = layout.box()
+        header, body = box.panel("quick_start", default_closed=True)
+        row = header.row()
+        row.scale_y = 1.25
+        row.alignment = "CENTER"
+        row.label(text="Quick Start Information", icon="INFO")
+
+        if body:
+            col = body.column(align=True)
+            col.scale_y = 0.75
+            col.label(text="Location:      Asset Browser > Side Panel > Superhive Tab")
+            col.label(
+                text="  " * 8 + "Ensure new dropdown on the left side of the header"
+            )
+            col.label(text="  " * 8 + "is set to 'Superhive' instead of 'Blender'")
+
+            layout.separator()
+
+            col = body.column(align=True)
+            col.scale_y = 0.75
+            col.label(text="Add Assets to Libraries:")
+            col.label(text=" " * 8 + "From Asset Browser")
+            col.label(
+                text=" " * 16
+                + "Select existing assets. Then right-click to bring up menu."
+            )
+            col.label(text=" " * 16 + "Notice the 'SuperHive' section.")
+            col.label(
+                text=" " * 16
+                + "Click 'Add to Library'. Select library or choose '+ New'"
+            )
+            col.label(text=" " * 16 + "in order to create a new library")
+            col.label(text=" " * 8 + "From Outliner/3D View")
+            col.label(
+                text=" " * 16 + "Select the object(s) you want to add. Then right-click"
+            )
+            col.label(
+                text=" " * 16 + "to bring up menu. Notice the 'SuperHive' section."
+            )
+            col.label(
+                text=" " * 16
+                + "Click 'Add to Library'. Select library or choose '+ New'"
+            )
+            col.label(
+                text=" " * 16
+                + "to create a new library. Items will be marked as an asset and added."
+            )
+
         layout.label(text="Metadata Defaults:")
         layout.prop(self, "default_author_name")
         layout.prop(self, "default_license")
