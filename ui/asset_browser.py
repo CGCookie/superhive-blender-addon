@@ -106,7 +106,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             row.prop(asset.metadata, prop, text=set_is_dirty_text(orig_prop))
             if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
                 op = row.operator(
-                    "bkeeper.reset_asset_metadata_property", icon="FORWARD", text=""
+                    "bkeeper.reset_asset_metadata_property", icon="X", text=""
                 )
                 op.property = prop
                 op.original_value = orig_value
