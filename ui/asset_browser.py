@@ -107,10 +107,15 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             return None
 
         def display_metadata(
-            layout: UILayout, data, prop: str, orig_prop: str, orig_value: str
+            layout: UILayout,
+            data,
+            prop: str,
+            orig_prop: str,
+            orig_value: str,
+            text=None,
         ):
             row = layout.row(align=True)
-            row.prop(asset.metadata, prop, text=set_is_dirty_text(orig_prop))
+            row.prop(asset.metadata, prop, text=text or set_is_dirty_text(orig_prop))
             if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
                 op = row.operator(
                     "bkeeper.reset_asset_metadata_property", icon="X", text=""
@@ -123,10 +128,32 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             layout, asset, "sh_description", "description", asset.metadata.description
         )
         display_metadata(layout, asset, "sh_author", "author", asset.metadata.author)
-        display_metadata(layout, asset, "sh_license", "license", asset.metadata.license)
-        display_metadata(
-            layout, asset, "sh_catalog", "catalog", asset.metadata.catalog_id
-        )
+        col = layout.column(align=True)
+        display_metadata(col, asset, "sh_license", "license", asset.metadata.license)
+        if asset.metadata.sh_license == "CUSTOM":
+            display_metadata(
+                col,
+                asset,
+                "sh_license_custom",
+                "license",
+                asset.metadata.license,
+                text="Custom License",
+            )
+        col = layout.column(align=True)
+        display_metadata(col, asset, "sh_catalog", "catalog", asset.metadata.catalog_id)
+        if asset.metadata.sh_catalog == "CUSTOM":
+            row = col.row(align=True)
+            row.prop(
+                asset.metadata,
+                "sh_catalog_custom",
+                text=f"Custom Catalog{'*' if asset.metadata.sh_is_dirty_catalog_custom else ''}",
+            )
+            if asset.metadata.sh_is_dirty_catalog_custom:
+                op = row.operator(
+                    "bkeeper.reset_asset_metadata_property", icon="X", text=""
+                )
+                op.property = "sh_catalog_custom"
+                op.original_value = ""
         display_metadata(
             layout, asset, "sh_copyright", "copyright", asset.metadata.copyright
         )

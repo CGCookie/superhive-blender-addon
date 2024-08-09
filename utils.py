@@ -636,7 +636,10 @@ class Asset:
         self.uuid = asset.metadata.sh_uuid
         self.author = asset.metadata.sh_author
         self.description = asset.metadata.sh_description
-        self.license = asset.metadata.sh_license
+        if asset.metadata.sh_license == "CUSTOM":
+            self.license = asset.metadata.sh_license_custom
+        else:
+            self.license = asset.metadata.sh_license
         self.copyright = asset.metadata.sh_copyright
         self.catalog_simple_name = asset.metadata.catalog_simple_name
         """The original `catalog_simple_name` of the asset. Not a new one"""

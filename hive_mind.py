@@ -50,12 +50,20 @@ def load_licenses():
 
     LICENSES_ENUM.append(
         (
-            "UNRECOGNIZED",
-            "Unrecognized License",
-            "The license for this product either doesn't exist or is not recognized by Superhive",
+            "CUSTOM",
+            "Custom License",
+            "The license for this product will not be recognized by Superhive",
             444,
         ),
     )
+    # LICENSES_ENUM.append(
+    #     (
+    #         "UNRECOGNIZED",
+    #         "Unrecognized License",
+    #         "The license for this product either doesn't exist or is not recognized by Superhive",
+    #         444,
+    #     ),
+    # )
 
     LICENSES_DICT = {
         id: {"index": i, "id": id, "name": name, "description": desc, "id_int": id_int}
@@ -320,9 +328,9 @@ def load_categories():
     ]
     CATALOG_ENUM.append(
         (
-            "UNRECOGNIZED",
-            "Unrecognized Catalog",
-            "The set catalog is not supported by Superhive",
+            "CUSTOM",
+            "Custom Catalog",
+            "The set catalog will not be supported by Superhive",
             444,
         )
     )

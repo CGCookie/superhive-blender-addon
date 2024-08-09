@@ -307,6 +307,24 @@ def register():
         get=_get_asset_catalog,
         set=_set_asset_catalog,
     )
+
+    def _get_sh_catalog_custom(self) -> dict:
+        item = self.get("_sh_catalog_custom", None)
+        if item is not None:
+            return item
+        return ""
+
+    def _set_sh_catalog_custom(self, value: str) -> dict:
+        self.sh_is_dirty_catalog_custom = value != ""
+        self["_sh_catalog_custom"] = value
+
+    AssetMetaData.sh_is_dirty_catalog_custom = BoolProperty()
+    AssetMetaData.sh_catalog_custom = StringProperty(
+        name="Custom Catalog",
+        description="Catalog for the asset",
+        get=_get_sh_catalog_custom,
+        set=_set_sh_catalog_custom,
+    )
     AssetMetaData.sh_is_dirty_author = BoolProperty()
     AssetMetaData.sh_author = StringProperty(
         name="Author",
@@ -346,6 +364,12 @@ def register():
         items=hive_mind.get_licenses(),
         get=_get_asset_license,
         set=_set_asset_license,
+    )
+    AssetMetaData.sh_license_custom = StringProperty(
+        name="Custom License",
+        description="License for the asset",
+        get=_get_asset_data("license"),
+        set=_set_asset_data("license"),
     )
     AssetMetaData.sh_is_dirty_copyright = BoolProperty()
     AssetMetaData.sh_copyright = StringProperty(

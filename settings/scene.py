@@ -474,6 +474,11 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         default=1,
     )
 
+    license_custom: StringProperty(
+        name="Custom License",
+        description="The custom license to apply to the asset",
+    )
+
     def _get_ignore_licenses(self, context):
         return [
             ("IGNORE", "Ignore", "Ignore the license"),
@@ -483,6 +488,11 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         name="Catalog",
         description="The catalog to apply to the asset",
         items=_get_ignore_licenses,
+    )
+
+    catalog_custom: StringProperty(
+        name="Custom Catalog",
+        description="The custom catalog to apply to the asset",
     )
 
     # TAGS #
@@ -547,40 +557,51 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         row.scale_y = 1.5
         row.prop(self, "metadata_type", expand=True)
 
-        if self.metadata_type == "license":
-            layout.prop(self, "license")
-        elif self.metadata_type == "catalog":
-            layout.prop(self, "catalog")
-        elif self.metadata_type == "tags":
-            layout.prop(self, "tags_update_type")
-            grid = layout.grid_flow(columns=3, even_columns=True)
-            for i, tag in enumerate(hive_mind.get_tags()):
-                grid.prop(self, "tags", index=i, text=tag[1], expand=True)
-        else:
-            meta_data_item: BatchItemWithActions = self.metadata_items.get(
-                self.metadata_type
-            )
-            meta_data_item.draw(layout, use_ops=use_ops)
+        match self.metadata_type:
+            case "license":
+                col = layout.column(align=True)
+                col.prop(self, "license")
+                if self.license == "CUSTOM":
+                    col.prop(self, "license_custom")
+            case "catalog":
+                col = layout.column(align=True)
+                col.prop(self, "catalog")
+                if self.catalog == "CUSTOM":
+                    col.prop(self, "catalog_custom")
+            case "tags":
+                layout.prop(self, "tags_update_type")
+                grid = layout.grid_flow(columns=3, even_columns=True)
+                for i, tag in enumerate(hive_mind.get_tags()):
+                    grid.prop(self, "tags", index=i, text=tag[1], expand=True)
+            case _:
+                meta_data_item: BatchItemWithActions = self.metadata_items.get(
+                    self.metadata_type
+                )
+                meta_data_item.draw(layout, use_ops=use_ops)
 
-            box = layout.box()
-            row = box.row()
-            row.alignment = "CENTER"
-            row.label(text="Preview")
-            col = box.column(align=True)
-            asset: AssetRepresentation
-            for asset in context.selected_assets[:5]:
-                col.label(
-                    text=asset.name
-                    + ": "
-                    + meta_data_item.process_text(
-                        getattr(
-                            asset if self.metadata_type == "name" else asset.metadata,
-                            self.metadata_type,
+                box = layout.box()
+                row = box.row()
+                row.alignment = "CENTER"
+                row.label(text="Preview")
+                col = box.column(align=True)
+                asset: AssetRepresentation
+                for asset in context.selected_assets[:5]:
+                    col.label(
+                        text=asset.name
+                        + ": "
+                        + meta_data_item.process_text(
+                            getattr(
+                                (
+                                    asset
+                                    if self.metadata_type == "name"
+                                    else asset.metadata
+                                ),
+                                self.metadata_type,
+                            )
                         )
                     )
-                )
-            if len(context.selected_assets) > 5:
-                col.label(text="...")
+                if len(context.selected_assets) > 5:
+                    col.label(text="...")
 
     def process_tags(self, asset: utils.Asset):
         selected_tags = [
@@ -596,7 +617,12 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
             return sorted(list(set(asset.bpy_tags) - set(selected_tags)))
         return asset.bpy_tags
 
-    def process_asset_metadata(self, asset: utils.Asset) -> None:
+    def process_asset_metadata(
+        self,
+        asset: utils.Asset,
+        bpy_asset: AssetRepresentation,
+        lib: utils.AssetLibrary,
+    ) -> None:
         """
         Process the metadata according to the set actions.
 
@@ -610,9 +636,32 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
         asset.description = self.process_text("description", asset.description)
         asset.author = self.process_text("author", asset.author)
         asset.copyright = self.process_text("copyright", asset.copyright)
-        if self.license != "IGNORE":
+        if self.license == "CUSTOM":
+            asset.license = self.license_custom
+        elif self.license != "IGNORE":
             asset.license = self.license
-        if self.license != "IGNORE":
+        if self.catalog == "CUSTOM":
+            # Create catalog_id if it doesn't exist
+            catalog_simple_name: str = self.catalog_custom
+            if catalog_simple_name:
+                cat = lib.catalogs.get_catalog_by_path(catalog_simple_name)
+                if cat:
+                    asset.catalog_id = cat.id
+                else:
+                    if "/" not in catalog_simple_name:
+                        cat = lib.catalogs.get_catalog_by_name(catalog_simple_name)
+                        if cat:
+                            asset.catalog_id = cat.id
+                    if not cat:
+                        with lib.open_catalogs_file() as cat_file:
+                            cat_file: "utils.CatalogsFile"
+                            if "/" in catalog_simple_name:
+                                name = catalog_simple_name.split("/")[-1]
+                                cat = cat_file.add_catalog(name, path=catalog_simple_name)
+                            else:
+                                cat = cat_file.add_catalog(catalog_simple_name)
+                            asset.catalog_id = cat.id
+        elif self.catalog != "IGNORE":
             asset.catalog_id = self.catalog
         asset.tags = self.process_tags(asset)
 

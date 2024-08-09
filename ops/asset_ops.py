@@ -29,8 +29,6 @@ class SH_OT_UpdateAsset(Operator):
         return polls.is_asset_browser(context, cls=cls) and context.asset
 
     def execute(self, context):
-        # lib = utils.from_active(context, load_assets=True)
-        # if not lib.assets:
         if not context.asset:
             self.report({"ERROR"}, "No active asset found")
             return {"CANCELLED"}
@@ -38,36 +36,32 @@ class SH_OT_UpdateAsset(Operator):
         prefs = utils.get_prefs()
 
         asset = utils.Asset(context.asset)
+
+        if context.asset.metadata.sh_catalog == "CUSTOM":
+            # Create catalog_id if it doesn't exist
+            catalog_simple_name: str = context.asset.metadata.sh_catalog_custom
+            if catalog_simple_name:
+                lib = utils.from_active(context, load_catalogs=True)
+                cat = lib.catalogs.get_catalog_by_path(catalog_simple_name)
+                if cat:
+                    asset.catalog_id = cat.id
+                else:
+                    with lib.open_catalogs_file() as cat_file:
+                        cat_file: "utils.CatalogsFile"
+                        if "/" in catalog_simple_name:
+                            name = catalog_simple_name.split("/")[-1]
+                            cat = cat_file.add_catalog(name, path=catalog_simple_name)
+                        else:
+                            cat = cat_file.add_catalog(catalog_simple_name)
+                        asset.catalog_id = cat.id
+
+        # Custom license handled when creating the custom Asset object
+
         asset.update_asset(prefs.ensure_default_blender_version().path)
 
         bpy.ops.asset.library_refresh()
 
-        # self.context = context
-
-        # bpy.app.timers.register(
-        #     partial(self.in_1_second, context, asset),
-        #     first_interval=2.0,
-        #     persistent=False
-        # )
-
         return {"FINISHED"}
-
-    # def in_1_second(self, context: Context, asset):
-    # TODO: Implement Timer to check if the asset has been updated
-    #  https://docs.blender.org/api/current/bpy.app.timers.html#module-bpy.app.timers
-
-    # context.scene.update_tag()
-
-    # lib = utils.from_active(context, load_assets=True)
-
-    # new_asset = lib.assets[asset.new_name]
-
-    # context.space_data.activate_asset_by_id(new_asset.orig_asset.local_id)
-
-    # sh_tags: 'asset_settings.SH_AssetTags' = new_asset.orig_asset.metadata.sh_tags
-    # sh_tags.load_from_asset(new_asset.orig_asset)
-
-    # return {"FINISHED"}
 
 
 class BatchUpdateAssets:
@@ -180,11 +174,12 @@ class BatchUpdateAssets:
     ):
         prefs = utils.get_prefs()
 
+        lib = utils.from_name(library_name, load_catalogs=True)
         for i, bpy_asset in enumerate(selected_assets):
             if self.prog.cancel:
                 break
             asset = utils.Asset(bpy_asset)
-            md_update.process_asset_metadata(asset)
+            md_update.process_asset_metadata(asset, bpy_asset, lib)
             asset.update_asset(
                 prefs.ensure_default_blender_version().path, debug=md_update.debug_scene
             )
