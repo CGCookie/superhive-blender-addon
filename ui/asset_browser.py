@@ -20,7 +20,7 @@ def draw_assetbrowser_header(self, context: Context):
 
     if polls.is_asset_browser(context):
         layout.prop(context.scene.superhive, "library_mode", text="")
-        layout.operator("bkeeper.create_hive_asset_library", text="", icon="ADD")
+        layout.operator("bkeeper.create_new_library", text="", icon="ADD")
 
     layout.label(text=context.scene.sh_progress_t)
 

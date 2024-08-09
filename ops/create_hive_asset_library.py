@@ -11,10 +11,10 @@ if TYPE_CHECKING:
     from ..ui import prefs
 
 
-class SH_OT_CreateHiveAssetLibrary(Operator):
-    bl_idname = "bkeeper.create_hive_asset_library"
-    bl_label = "Create Hive Asset Library"
-    bl_description = "Create a new asset library for the Superhive system"
+class SH_OT_CreateNewAssetLibrary(Operator):
+    bl_idname = "bkeeper.create_new_library"
+    bl_label = "Create Asset Library"
+    bl_description = "Create a new asset library"
     bl_options = {"REGISTER", "UNDO"}
 
     ui_width = 400
@@ -131,7 +131,7 @@ class SH_OT_CreateHiveAssetLibrary(Operator):
         self.asset_lib_prefs.new(name=self.library_name, directory=str(dir))
 
 
-classes = (SH_OT_CreateHiveAssetLibrary,)
+classes = (SH_OT_CreateNewAssetLibrary,)
 
 
 def register():
