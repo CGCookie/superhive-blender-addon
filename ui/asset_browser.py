@@ -44,13 +44,15 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         asset = context.asset
         if asset and asset.metadata.sh_is_dirty():
-            row = layout.row()
-            row.active = False
-            row.label(text="*Unsaved Changes")
+            row = layout.split(factor=0.8)
 
-            row = layout.row()
-            row.alignment = "RIGHT"
-            row.operator("bkeeper.reset_asset_metadata", icon="FILE_REFRESH", text="")
+            row.operator(
+                "bkeeper.update_asset", text="*Unsaved Changes", icon="FILE_TICK"
+            )
+
+            r = row.row()
+            r.alignment = "RIGHT"
+            r.operator("bkeeper.reset_asset_metadata", icon="FILE_REFRESH", text="")
 
     def draw(self, context):
         layout: UILayout = self.layout
@@ -147,7 +149,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         row = layout.row()
         row.active = asset.metadata.sh_is_dirty()
-        row.operator("bkeeper.update_asset", icon="FILE_REFRESH")
+        row.operator("bkeeper.update_asset", text="Save Changes", icon="FILE_TICK")
 
     def draw_multiple_assets(self, context: Context, layout: UILayout):
         # layout.operator("bkeeper.rerender_thumbnail", icon="RESTRICT_RENDER_OFF")
