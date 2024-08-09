@@ -42,7 +42,9 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         layout.alignment = "LEFT"
         layout.label(text="Superhive")
 
-        asset = context.asset
+        if not context.selected_assets:
+            return
+
         if asset and asset.metadata.sh_is_dirty():
             row = layout.split(factor=0.8)
 
