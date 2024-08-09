@@ -76,8 +76,12 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             self.draw_single_asset(context, layout)
 
     def draw_single_asset(self, context: Context, layout: UILayout):
-        prefs = utils.get_prefs()
         asset: AssetRepresentation = context.asset
+        if asset.local_id:
+            self.draw_single_local_id(context, layout)
+            return
+
+        prefs = utils.get_prefs()
         active_file = context.active_file
 
         row = layout.row()
@@ -153,6 +157,16 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         row = layout.row()
         row.active = asset.metadata.sh_is_dirty()
         row.operator("bkeeper.update_asset", text="Save Changes", icon="FILE_TICK")
+
+    def draw_single_local_id(self, context: Context, layout: UILayout):
+        col = layout.column(align=True)
+        col.scale_y = 0.75
+        row = col.row(align=True)
+        row.alignment = "CENTER"
+        row.label(text="Please use the settings above to set the asset metadata")
+        row = col.row(align=True)
+        row.alignment = "CENTER"
+        row.label(text="as this is the active asset's file.")
 
     def draw_multiple_assets(self, context: Context, layout: UILayout):
         # layout.operator("bkeeper.rerender_thumbnail", icon="RESTRICT_RENDER_OFF")
