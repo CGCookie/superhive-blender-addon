@@ -3,7 +3,7 @@ id = "bkeeper" # Unique identifier for the extension.
 name = "Bkeeper"
 version = "0.0.3"
 tagline = "Aid in the creation and uploading of asset libraries"
-maintainer = "Zach Eastin, Richard Trainer"
+maintainer = "Zach Eastin, Richard Traynor"
 # Supported types: "add-on", "theme"
 type = "add-on"
 
