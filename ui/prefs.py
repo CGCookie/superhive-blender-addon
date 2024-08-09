@@ -159,6 +159,9 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         layout.prop(self, "default_license")
         layout.prop(self, "library_directory")
 
+        layout.separator()
+
+        layout.label(text="Blender Versions:", icon="BLENDER")
         row = layout.row()
         row.template_list(
             "SH_UL_BlenderVersions",
