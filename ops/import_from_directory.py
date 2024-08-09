@@ -355,7 +355,7 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 icon="VOLUME_DATA",
             )
 
-        layout.prop(self, "mark_worlds", icon="WORLD", toggle=True)
+        layout.prop(self, "mark_worlds", text="Worlds", icon="WORLD", toggle=True)
 
         layout.prop(self, "clear_other_assets", text="Clear Existing")
         layout.prop(self, "skip_hidden", text="Skip Hidden")
