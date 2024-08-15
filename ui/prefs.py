@@ -1,4 +1,5 @@
 import os
+import subprocess
 from pathlib import Path
 
 import bpy
@@ -7,6 +8,7 @@ from bpy.props import (
     CollectionProperty,
     EnumProperty,
     IntProperty,
+    IntVectorProperty,
     StringProperty,
 )
 from bpy.types import AddonPreferences, PropertyGroup, UILayout, UIList
@@ -36,6 +38,8 @@ class SH_UL_BlenderVersions(UIList):
         row.alignment = "LEFT"
         row.prop(item, "display_name", icon="BLENDER", text="", emboss=False)
 
+        row.label(text=f"v{item.version[0]}.{item.version[1]}.{item.version[2]}")
+
         row = layout.row()
         row.active = False
         row.label(text=item.path)
@@ -51,6 +55,12 @@ class SH_BlenderVersion(PropertyGroup):
     display_name: StringProperty(
         name="Name",
         description="The name to display for the Blender version",
+    )
+
+    version: IntVectorProperty(
+        name="Version",
+        description="The version of Blender",
+        size=3,
     )
 
     def _update_is_default(self, context):
@@ -69,6 +79,12 @@ class SH_BlenderVersion(PropertyGroup):
     @property
     def data(self) -> "SH_AddonPreferences":
         return utils.get_prefs()
+
+    def load_version(self):
+        proc = subprocess.run([self.path, "-v"], stdout=subprocess.PIPE)
+        vers = proc.stdout.decode("utf-8").splitlines()[0].split()[1]
+        for i, v in enumerate(vers.split(".")):
+            self.version[i] = int(v)
 
 
 class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
@@ -119,7 +135,8 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
 
     @property
     def active_blender_version(self) -> SH_BlenderVersion:
-        return self.blender_versions[self.active_blender_version_index]
+        if self.blender_versions:
+            return self.blender_versions[self.active_blender_version_index]
 
     @property
     def default_blender_version(self) -> SH_BlenderVersion:
@@ -130,6 +147,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         bv.name = name
         bv.display_name = name
         bv.path = path
+        bv.load_version()
         return bv
 
     def remove_blender_version(self, item: SH_BlenderVersion | str | int):
@@ -152,6 +170,20 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             return self.blender_versions
         return self.default_blender_version
 
+    def get_by_blender_version(
+        self, name: str, version: tuple[int, int, int], get_exact_version=False
+    ) -> SH_BlenderVersion:
+        """Get the Blender version by name or if name doesn't exist get it by the version"""
+        bv = self.blender_versions.get(name)
+        if not bv or bv.version != tuple(version):
+            bv = next((bv for bv in self.blender_versions if tuple(bv.version) == tuple(version)), None)
+
+            if get_exact_version:
+                return bv
+
+            bv = next((bv for bv in self.blender_versions if tuple(bv.version[:2]) == tuple(version[:2])), None)
+        return bv
+
     def draw(self, context):
         layout = self.layout
 
@@ -166,9 +198,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             col = body.column(align=True)
             col.scale_y = 0.75
             col.label(text="Location:      Asset Browser > Side Panel > Superhive Tab")
-            col.label(
-                text="  " * 8 + "Ensure new dropdown on the left side of the header"
-            )
+            col.label(text="  " * 8 + "Ensure new dropdown on the left side of the header")
             col.label(text="  " * 8 + "is set to 'Superhive' instead of 'Blender'")
 
             layout.separator()
@@ -177,31 +207,15 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             col.scale_y = 0.75
             col.label(text="Add Assets to Libraries:")
             col.label(text=" " * 8 + "From Asset Browser")
-            col.label(
-                text=" " * 16
-                + "Select existing assets. Then right-click to bring up menu."
-            )
+            col.label(text=" " * 16 + "Select existing assets. Then right-click to bring up menu.")
             col.label(text=" " * 16 + "Notice the 'SuperHive' section.")
-            col.label(
-                text=" " * 16
-                + "Click 'Add to Library'. Select library or choose '+ New'"
-            )
+            col.label(text=" " * 16 + "Click 'Add to Library'. Select library or choose '+ New'")
             col.label(text=" " * 16 + "in order to create a new library")
             col.label(text=" " * 8 + "From Outliner/3D View")
-            col.label(
-                text=" " * 16 + "Select the object(s) you want to add. Then right-click"
-            )
-            col.label(
-                text=" " * 16 + "to bring up menu. Notice the 'SuperHive' section."
-            )
-            col.label(
-                text=" " * 16
-                + "Click 'Add to Library'. Select library or choose '+ New'"
-            )
-            col.label(
-                text=" " * 16
-                + "to create a new library. Items will be marked as an asset and added."
-            )
+            col.label(text=" " * 16 + "Select the object(s) you want to add. Then right-click")
+            col.label(text=" " * 16 + "to bring up menu. Notice the 'SuperHive' section.")
+            col.label(text=" " * 16 + "Click 'Add to Library'. Select library or choose '+ New'")
+            col.label(text=" " * 16 + "to create a new library. Items will be marked as an asset and added.")
 
         layout.label(text="Metadata Defaults:")
         layout.prop(self, "default_author_name")

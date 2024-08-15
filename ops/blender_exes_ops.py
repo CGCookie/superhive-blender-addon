@@ -8,6 +8,8 @@ from bpy.types import Operator
 
 from .. import utils
 
+from time import time
+
 
 class SH_OT_GatherBlenderExes(Operator):
     bl_idname = "bkeeper.gather_blender_exes"
@@ -20,14 +22,42 @@ class SH_OT_GatherBlenderExes(Operator):
 
         prefs = utils.get_prefs()
 
+        print()
         for path in paths:
             p = Path(path)
-            for bexe in p.glob(f"**/{executable_name}"):
+            
+            t = time()
+            bexes = self.find_blender_executables(str(p), executable_name)
+            
+            if not bexes:
+                continue
+            
+            print(f"Search: {time() - t:.2f}s")
+            t = time()
+            
+            for bexe in bexes:
                 prefs.add_blender_version(
                     bexe.parent.name.replace("-", " ").title(), str(bexe)
                 )
+        print()
 
         return {"FINISHED"}
+    
+    def find_blender_executables(self, path: str, executable_name: str) -> list[Path]:
+        if not os.path.exists(path):
+            return []
+        found_files = []
+
+        def scan_dir(directory):
+            with os.scandir(directory) as it:
+                for entry in it:
+                    if entry.is_file() and entry.name == executable_name:
+                        found_files.append(Path(entry.path))
+                    elif entry.is_dir():
+                        scan_dir(entry.path)
+        
+        scan_dir(path)
+        return found_files
 
     def _get_blender_paths(self) -> list[str]:
         system = platform.system()

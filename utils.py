@@ -17,7 +17,7 @@ from . import hive_mind
 if TYPE_CHECKING:
     from .ops import asset_ops, export_library, import_from_directory
     from .settings import asset as asset_settings
-    from .ui.prefs import SH_AddonPreferences
+    from .ui.prefs import SH_AddonPreferences, SH_BlenderVersion
 
 
 ASSET_TYPES_TO_ID_TYPES = {
@@ -365,9 +365,7 @@ class CatalogsFile:
                     self.path = dir / "blender_assets.cats.txt"
                     break
             if not found_new:
-                raise FileNotFoundError(
-                    f"Catalogs file not found in directory: {self.path.parent}"
-                )
+                raise FileNotFoundError(f"Catalogs file not found in directory: {self.path.parent}")
 
         self.load_catalogs()
 
@@ -420,9 +418,7 @@ class CatalogsFile:
         if self.exists():
             self.path.unlink()
 
-    def add_catalog(
-        self, name: str, id: str = None, path: str = None, auto_place=False
-    ) -> Catalog:
+    def add_catalog(self, name: str, id: str = None, path: str = None, auto_place=False) -> Catalog:
         """
         Add a catalog at the root level or under a parent catalog.
 
@@ -647,12 +643,14 @@ class Asset:
         self.bpy_tags = [tag.name for tag in asset.metadata.tags]
         self.icon_path = None
 
-    def update_asset(self, blender_exe: str, debug: bool = False) -> None:
+        self.blender_exe: "SH_BlenderVersion" = asset.metadata.sh_get_blender_version()
+
+    def update_asset(self, debug: bool = False) -> None:
         """Open asset's blend file and update the asset's metadata."""
         python_file = Path(__file__).parent / "stand_alone_scripts" / "update_asset.py"
         proc: subprocess.CompletedProcess = subprocess.run(
             [
-                blender_exe,
+                self.blender_exe.path,
                 "-b",
                 "--factory-startup",
                 str(self.blend_path),
@@ -679,9 +677,7 @@ class Asset:
             print("".center(100, "-"))
             text = proc.stdout.decode()
             text.splitlines()
-            new_text = "\n".join(
-                line for line in text.splitlines() if line.startswith("|")
-            )
+            new_text = "\n".join(line for line in text.splitlines() if line.startswith("|"))
             print(new_text)
             print("".center(100, "-"))
             print()
@@ -727,9 +723,7 @@ class Asset:
             sh_tags.new_tag(tag.name, context)
         self.orig_asset.metadata.sh_is_dirty_tags = False
 
-    def rerender_thumbnail(
-        self, path, directory, objects, shading, angle="X", add_plane=False
-    ):
+    def rerender_thumbnail(self, path, directory, objects, shading, angle="X", add_plane=False):
         prefs = get_prefs()
         cmd = [bpy.app.binary_path]
         # cmd.append("--background")
@@ -738,11 +732,7 @@ class Asset:
         cmd.append("--python")
         # cmd.append(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)), "rerender_thumbnails.py"))
-        cmd.append(
-            str(
-                Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
-            )
-        )
+        cmd.append(str(Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"))
         cmd.append("--")
         cmd.append(":--separator--:".join(path))
         names = []
@@ -772,9 +762,7 @@ class Asset:
 
     def save_out_preview(self, directory: Path) -> None:
         """Save out the preview image of the asset."""
-        python_file = (
-            Path(__file__).parent / "stand_alone_scripts" / "save_out_previews.py"
-        )
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "save_out_previews.py"
 
         args = [
             bpy.app.binary_path,
@@ -845,8 +833,7 @@ class AssetLibrary:
                     area
                     for window in context.window_manager.windows
                     for area in window.screen.areas
-                    if area.type == "FILE_BROWSER"
-                    and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+                    if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
                 ),
                 None,
             )
@@ -868,9 +855,7 @@ class AssetLibrary:
 
     def get_context(self) -> Context:
         if not self.context:
-            raise ValueError(
-                "Context not set. Please set `context` before calling this method."
-            )
+            raise ValueError("Context not set. Please set `context` before calling this method.")
         return self.context
 
     def load_catalogs(self):
@@ -897,9 +882,7 @@ class AssetLibrary:
     @classmethod
     def create_bpy_library(cls, name: str, path: str) -> UserAssetLibrary:
         """Create a new UserAssetLibrary in Blender."""
-        return bpy.context.preferences.filepaths.asset_libraries.new(
-            name=name, directory=path
-        )
+        return bpy.context.preferences.filepaths.asset_libraries.new(name=name, directory=path)
 
     @classmethod
     def create_new_library(
@@ -934,11 +917,7 @@ class AssetLibrary:
         if not prefs_blend.exists():
             return
 
-        python_file = (
-            Path(__file__).parent
-            / "stand_alone_scripts"
-            / "add_repository_to_userpref.py"
-        )
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "add_repository_to_userpref.py"
 
         args = [
             bpy.app.binary_path,
@@ -954,17 +933,14 @@ class AssetLibrary:
         subprocess.run(args)
 
 
-def get_active_bpy_library_from_context(
-    context: Context, area: Area = None
-) -> UserAssetLibrary:
+def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
     if not area:
         area = next(
             (
                 area
                 for window in context.window_manager.windows
                 for area in window.screen.areas
-                if area.type == "FILE_BROWSER"
-                and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+                if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
             ),
             None,
         )
@@ -976,21 +952,15 @@ def get_active_bpy_library_from_context(
     return context.preferences.filepaths.asset_libraries.get(lib_name)
 
 
-def from_name(
-    name: str, context: Context = None, load_assets=False, load_catalogs=False
-) -> AssetLibrary:
+def from_name(name: str, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
     """Gets a library by name and returns an AssetLibrary object."""
     lib = bpy.context.preferences.filepaths.asset_libraries.get(name)
     if not lib:
         raise ValueError(f"Library with name '{name}' not found.")
-    return AssetLibrary(
-        lib, context=context, load_assets=load_assets, load_catalogs=load_catalogs
-    )
+    return AssetLibrary(lib, context=context, load_assets=load_assets, load_catalogs=load_catalogs)
 
 
-def from_active(
-    context: Context, area: Area = None, load_assets=False, load_catalogs=False
-) -> AssetLibrary:
+def from_active(context: Context, area: Area = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
     """Gets the active library from the UI context and returns an AssetLibrary object."""
     return AssetLibrary(
         get_active_bpy_library_from_context(context, area=area),
@@ -1112,9 +1082,10 @@ def get_prefs() -> "SH_AddonPreferences":
 
 
 def rerender_thumbnail(
+    blender_exe: str,
     paths: list[str],
     directory: str,
-    objects: list[tuple[str, str]],
+    objects: list[tuple[str, str, str]],
     shading: str,
     angle: str = "X",
     add_plane: bool = False,
@@ -1129,6 +1100,7 @@ def rerender_thumbnail(
     Rerenders the thumbnail using the specified parameters.
 
     Parameters:
+    - blender_exe (str): The path to the Blender executable.
     - path (str): The path of the blend files.
     - directory (str): The directory where the thumbnail will be saved.
     - objects: A list of tuples containing the object name and type.
@@ -1151,9 +1123,7 @@ def rerender_thumbnail(
         print("*" * 115)
         print("Thread Starting".center(100, "*"))
         print("*" * 115)
-    python_file = (
-        Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
-    )
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
 
     names = []
     types = []
@@ -1181,7 +1151,7 @@ def rerender_thumbnail(
         op.label = "Setting Up Scenes"
         op.update = True
     args = [
-        bpy.app.binary_path,
+        blender_exe or bpy.app.binary_path,
         "-b",
         "--factory-startup",
         "-P",
@@ -1247,14 +1217,8 @@ def rerender_thumbnail(
     for i, tbp in enumerate(thumbnail_blends):
         orig_stem = tbp.stem.split("=+=")[0]
         orig_blend_path = tbp.with_stem(orig_stem)
-        thumbnail_path = (
-            orig_blend_path.parent
-            / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
-        )
-        thumbnail_path_for_terminal = (
-            orig_blend_path.parent
-            / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
-        )
+        thumbnail_path = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
+        thumbnail_path_for_terminal = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
         args = [
             bpy.app.binary_path,
             "-b",
@@ -1274,9 +1238,7 @@ def rerender_thumbnail(
             print("   - exists", tbp.exists())
             print("CMD:", " ".join(args))
         try:
-            proc: subprocess.CompletedProcess = subprocess.run(
-                args, stdout=subprocess.PIPE, check=True
-            )
+            proc: subprocess.CompletedProcess = subprocess.run(args, stdout=subprocess.PIPE, check=True)
             proc.returncode
         except subprocess.CalledProcessError as e:
             print(f"- Error: {e}")
@@ -1422,10 +1384,7 @@ def mouse_in_window(window: Window, x, y) -> bool:
     Returns:
     bool: True if the mouse is within the window boundaries, False otherwise.
     """
-    return (
-        window.x <= x <= window.x + window.width
-        and window.y <= y <= window.y + window.height
-    )
+    return window.x <= x <= window.x + window.width and window.y <= y <= window.y + window.height
 
 
 def pack_files(blend_file: Path):
@@ -1501,9 +1460,7 @@ def export_helper(
         str(destination_dir),
     ]
 
-    proc = subprocess.Popen(
-        args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True
-    )
+    proc = subprocess.Popen(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True)
     # proc = subprocess.Popen(args)
 
     if op:
@@ -1552,9 +1509,7 @@ def export_helper(
         print(f"Output: {proc.stdout.decode()}")
 
 
-def update_asset_browser_areas(
-    context: Context = None, tag_redraw=True, update_library=True
-):
+def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_library=True):
     C = context or bpy.context
 
     for area in C.screen.areas:
@@ -1613,15 +1568,9 @@ def mark_assets_in_blend(
         Key: Blend File Path
         Value: Tuple of (Asset Name, Asset Type)
     """
-    python_file = (
-        Path(__file__).parent / "stand_alone_scripts" / "mark_assets_in_blend_file.py"
-    )
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "mark_assets_in_blend_file.py"
 
-    blends = (
-        list(Path(directory).rglob("**/*.blend"))
-        if recursive
-        else list(Path(directory).glob("*.blend"))
-    )
+    blends = list(Path(directory).rglob("**/*.blend")) if recursive else list(Path(directory).glob("*.blend"))
 
     tags_to_add = []
     for tag_name, tag_bool in zip(hive_mind.TAGS_DICT.keys(), tags):
