@@ -47,7 +47,6 @@ class SH_OT_UpdateAsset(Operator):
                     asset.catalog_id = cat.id
                 else:
                     with lib.open_catalogs_file() as cat_file:
-                        cat_file: "utils.CatalogsFile"
                         if "/" in catalog_simple_name:
                             name = catalog_simple_name.split("/")[-1]
                             cat = cat_file.add_catalog(name, path=catalog_simple_name)

@@ -137,15 +137,17 @@ class SH_OT_AddToLibrary(Operator):
                 / self.new_library_name.replace(" ", "_").casefold()
             )
             dir.mkdir(parents=True, exist_ok=True)
-            lib = utils.AssetLibrary.create_new_library(
+            self.lib = utils.AssetLibrary.create_new_library(
                 self.new_library_name, str(dir), context=context, load_catalogs=True
             )
             self.is_new_library = True
         else:
-            lib = utils.from_name(self.library, context=context, load_catalogs=True)
+            self.lib = utils.from_name(
+                self.library, context=context, load_catalogs=True, load_assets=True
+            )
             self.is_new_library = False
 
-        lib.path.mkdir(parents=True, exist_ok=True)
+        self.lib.path.mkdir(parents=True, exist_ok=True)
 
         assets = context.selected_assets
 
@@ -155,11 +157,13 @@ class SH_OT_AddToLibrary(Operator):
 
         if self.keep_blend_files_as_is:
             self._thread = Thread(
-                target=self.add_to_library_keep, args=(assets, lib.path)
+                target=self.add_to_library_keep, args=(assets, self.lib.path)
             )
             # self.add_to_library_keep(assets, lib.path)
         else:
-            self._thread = Thread(target=self.add_to_library_split, args=(assets, lib))
+            self._thread = Thread(
+                target=self.add_to_library_split, args=(assets, self.lib)
+            )
             # self.add_to_library_split(assets, lib)
 
         context.window_manager.modal_handler_add(self)
@@ -195,6 +199,7 @@ class SH_OT_AddToLibrary(Operator):
 
         # try:
         utils.update_asset_browser_areas(context)
+        self.lib.save_json()
         # except Exception as e:
         #     print(f"An error occurred while refreshing the asset library: {e}")
 
@@ -202,6 +207,7 @@ class SH_OT_AddToLibrary(Operator):
 
     def follow_up(self):
         self.prog.end()
+
         for area in bpy.context.screen.areas:
             area.tag_redraw()
 
@@ -267,7 +273,6 @@ class SH_OT_AddToLibrary(Operator):
                     self.updated = True
 
         with lib.open_catalogs_file() as catfile:
-            catfile: utils.CatalogsFile
             for catalog in catalogs:
                 catfile.add_catalog_from_other(catalog)
 
