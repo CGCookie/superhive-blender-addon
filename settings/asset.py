@@ -45,15 +45,15 @@ class SH_UL_TagList(UIList):
 class SH_AssetTag(PropertyGroup):
     id: StringProperty(
         name="ID",
-        description="UUID of the tag in the Superhive system",
+        description="UUID of the tag in the Superhive (formerly Blender Market) system",
     )
     name: StringProperty(
         name="Name",
-        description="Name of the tag in the Superhive system",
+        description="Name of the tag in the Superhive (formerly Blender Market) system",
     )
     desc: StringProperty(
         name="Description",
-        description="Description of the tag in the Superhive system",
+        description="Description of the tag in the Superhive (formerly Blender Market) system",
     )
 
 
@@ -68,13 +68,10 @@ class SH_AssetTags(PropertyGroup):
             return False  # No asset to check
         asset = context.asset
         return len(asset.metadata.tags) != len(self.tags) or any(
-            orig_tag.name not in {new_tag.name for new_tag in self.tags}
-            for orig_tag in asset.metadata.tags
+            orig_tag.name not in {new_tag.name for new_tag in self.tags} for orig_tag in asset.metadata.tags
         )
 
-    def set_is_dirty(
-        self, context: Context, value: bool, context_check: bool = None
-    ) -> None:
+    def set_is_dirty(self, context: Context, value: bool, context_check: bool = None) -> None:
         if context_check is None and not _has_context_asset(C=context):
             return False  # No asset to check
         asset = context.asset
@@ -90,9 +87,7 @@ class SH_AssetTags(PropertyGroup):
             context_check=True,
         )
 
-    def new_tag(
-        self, name: str, context: Context, id: str = None, desc: str = None
-    ) -> SH_AssetTag:
+    def new_tag(self, name: str, context: Context, id: str = None, desc: str = None) -> SH_AssetTag:
         """
         Create a new asset tag.
 
@@ -181,24 +176,22 @@ class SH_AssetTags(PropertyGroup):
         self.update_is_dirty(context)
 
     def validate(self, context: Context) -> None:
-        """Ensure all tags are supported by Superhive."""
+        """Ensure all tags are supported by Superhive (formerly Blender Market)."""
         pass
 
 
 def is_dirty(self: AssetRepresentation) -> bool:
-    return any(
-        [
-            self.sh_is_dirty_name,
-            self.sh_is_dirty_description,
-            self.sh_is_dirty_catalog,
-            self.sh_is_dirty_author,
-            self.sh_is_dirty_license,
-            self.sh_is_dirty_copyright,
-            self.sh_is_dirty_tags,
-            self.sh_is_dirty_created_blender_version,
-            # self.sh_is_dirty_icon,
-        ]
-    )
+    return any([
+        self.sh_is_dirty_name,
+        self.sh_is_dirty_description,
+        self.sh_is_dirty_catalog,
+        self.sh_is_dirty_author,
+        self.sh_is_dirty_license,
+        self.sh_is_dirty_copyright,
+        self.sh_is_dirty_tags,
+        self.sh_is_dirty_created_blender_version,
+        # self.sh_is_dirty_icon,
+    ])
 
 
 classes = (
@@ -234,7 +227,7 @@ def register():
 
     AssetMetaData.sh_uuid = StringProperty(
         name="UUID",
-        description="UUID of the asset in the Superhive system",
+        description="UUID of the asset in the Superhive (formerly Blender Market) system",
         default="",
     )
 
@@ -254,7 +247,7 @@ def register():
     AssetMetaData.sh_is_dirty_name = BoolProperty()
     AssetMetaData.sh_name = StringProperty(
         name="Name",
-        description="Name of the asset in the Superhive system",
+        description="Name of the asset in the Superhive (formerly Blender Market) system",
         default="",
         get=_get_active_asset_name,
         set=_set_active_asset_name,
@@ -262,7 +255,7 @@ def register():
     AssetMetaData.sh_is_dirty_description = BoolProperty()
     AssetMetaData.sh_description = StringProperty(
         name="Description",
-        description="Description of the asset in the Superhive system",
+        description="Description of the asset in the Superhive (formerly Blender Market) system",
         default="",
         get=_get_asset_data("description"),
         set=_set_asset_data("description"),
@@ -277,9 +270,7 @@ def register():
         if item:
             return item.get("id_int", 444)
 
-        item = hive_mind.get_catalog_by_name(
-            self.catalog_simple_name, is_catalog_simple_name=True
-        )
+        item = hive_mind.get_catalog_by_name(self.catalog_simple_name, is_catalog_simple_name=True)
 
         return item.get("id_int", 444) if item else 444
 
@@ -295,14 +286,12 @@ def register():
         else:
             set_cat_name = self.catalog_simple_name
 
-        self.sh_is_dirty_catalog = not any(
-            (item["id"] == self.catalog_id, item["name"] == set_cat_name)
-        )
+        self.sh_is_dirty_catalog = not any((item["id"] == self.catalog_id, item["name"] == set_cat_name))
 
     AssetMetaData.sh_is_dirty_catalog = BoolProperty()
     AssetMetaData.sh_catalog = EnumProperty(
         name="Catalog",
-        description="Catalog for the asset in the Superhive system",
+        description="Catalog for the asset in the Superhive (formerly Blender Market) system",
         items=hive_mind.get_categories(),
         get=_get_asset_catalog,
         set=_set_asset_catalog,
@@ -328,7 +317,7 @@ def register():
     AssetMetaData.sh_is_dirty_author = BoolProperty()
     AssetMetaData.sh_author = StringProperty(
         name="Author",
-        description="Author of the asset in the Superhive system",
+        description="Author of the asset in the Superhive (formerly Blender Market) system",
         default="",
         get=_get_asset_data("author"),
         set=_set_asset_data("author"),
@@ -353,14 +342,12 @@ def register():
             None,
         )
 
-        self.sh_is_dirty_license = not any(
-            (item["id"] == self.license, item["name"] == self.license)
-        )
+        self.sh_is_dirty_license = not any((item["id"] == self.license, item["name"] == self.license))
 
     AssetMetaData.sh_is_dirty_license = BoolProperty()
     AssetMetaData.sh_license = EnumProperty(
         name="License",
-        description="Superhive compatible license for the asset",
+        description="Superhive (formerly Blender Market) compatible license for the asset",
         items=hive_mind.get_licenses(),
         get=_get_asset_license,
         set=_set_asset_license,
@@ -374,7 +361,7 @@ def register():
     AssetMetaData.sh_is_dirty_copyright = BoolProperty()
     AssetMetaData.sh_copyright = StringProperty(
         name="Copyright",
-        description="Copyright for the asset in the Superhive system",
+        description="Copyright for the asset in the Superhive (formerly Blender Market) system",
         get=_get_asset_data("copyright"),
         set=_set_asset_data("copyright"),
     )
@@ -387,7 +374,7 @@ def register():
     AssetMetaData.sh_is_dirty_tags = BoolProperty()
     AssetMetaData.sh_tags = PointerProperty(
         name="Tags",
-        description="Tags for the asset in the Superhive system",
+        description="Tags for the asset in the Superhive (formerly Blender Market) system",
         type=SH_AssetTags,
     )
 

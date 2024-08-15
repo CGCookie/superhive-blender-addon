@@ -1,4 +1,5 @@
-from . import asset, scene
+from . import asset as asset
+from . import scene as scene
 
 
 def _call_globals(attr_name):

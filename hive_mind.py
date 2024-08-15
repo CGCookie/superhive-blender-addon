@@ -52,7 +52,7 @@ def load_licenses():
         (
             "CUSTOM",
             "Custom License",
-            "The license for this product will not be recognized by Superhive",
+            "The license for this product will not be recognized by Superhive (formerly Blender Market)",
             444,
         ),
     )
@@ -98,10 +98,7 @@ def load_tags():
         ("UI", "UI", "UI"),
         ("Vehicle", "Vehicle", "Vehicle"),
     ]
-    TAGS_DICT = {
-        id: {"id": id, "name": name, "description": desc}
-        for id, name, desc in TAGS_ENUM
-    }
+    TAGS_DICT = {id: {"id": id, "name": name, "description": desc} for id, name, desc in TAGS_ENUM}
 
 
 def load_categories():
@@ -326,14 +323,12 @@ def load_categories():
         )
         for subcat in SUBCATEGORIES_DICT.get(models_uuid, {}).values()
     ]
-    CATALOG_ENUM.append(
-        (
-            "CUSTOM",
-            "Custom Catalog",
-            "The set catalog will not be supported by Superhive",
-            444,
-        )
-    )
+    CATALOG_ENUM.append((
+        "CUSTOM",
+        "Custom Catalog",
+        "The set catalog will not be supported by Superhive (formerly Blender Market)",
+        444,
+    ))
 
     CATALOG_DICT = {
         id: {

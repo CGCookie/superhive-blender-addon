@@ -8,12 +8,12 @@ from . import polls
 class SH_OT_AddCategoriesToLibrary(Operator):
     bl_idname = "bkeeper.add_categories_to_library"
     bl_label = "Add Categories to Library"
-    bl_description = "Add Superhive's categories to the asset library. Hold Alt to remove existing categories."
+    bl_description = "Add Superhive's (formerly Blender Market) categories to the asset library. Hold Alt to remove existing categories."
     bl_options = {"REGISTER", "UNDO"}
 
     load_from_superhive: bpy.props.BoolProperty(
         name="Load from Superhive",
-        description="Load categories from Superhive API",
+        description="Load categories from Superhive (formerly Blender Market)",
         default=False,
     )
 

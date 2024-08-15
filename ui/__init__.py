@@ -1,9 +1,17 @@
 from . import (
-    asset_browser,
-    asset_browser_context_menu,
-    object_context_menu,
-    outliner_context_menu,
-    prefs,
+    asset_browser as asset_browser,
+)
+from . import (
+    asset_browser_context_menu as asset_browser_context_menu,
+)
+from . import (
+    object_context_menu as object_context_menu,
+)
+from . import (
+    outliner_context_menu as outliner_context_menu,
+)
+from . import (
+    prefs as prefs,
 )
 
 

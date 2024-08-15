@@ -56,7 +56,7 @@ license = [
 #
 # clipboard = "Copy and paste bone transforms"
 [permissions]
-network = "Need to gather data from the Superhive API and upload assets"
+network = "Need to gather data from the Superhive (formerly Blender Market) API and upload assets"
 files = "Import/export files for library creation and upload"
 
 # Optional: build setting.

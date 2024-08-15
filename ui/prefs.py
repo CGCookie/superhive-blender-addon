@@ -101,7 +101,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
 
     library_directory: StringProperty(
         name="Asset Library Directory",
-        description="The directory to create new asset libraries in for the Superhive system",
+        description="The directory to create new asset libraries in for the Superhive (formerly Blender Market) system",
         subtype="DIR_PATH",
         default=os.path.join(os.path.expanduser("~"), "Superhive Libraries"),
     )
@@ -170,6 +170,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
                 text="  " * 8 + "Ensure new dropdown on the left side of the header"
             )
             col.label(text="  " * 8 + "is set to 'Superhive' instead of 'Blender'")
+            col.label(text="  " * 8 + "Ensure new dropdown on the left side of the header")
 
             layout.separator()
 
@@ -177,6 +178,7 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             col.scale_y = 0.75
             col.label(text="Add Assets to Libraries:")
             col.label(text=" " * 8 + "From Asset Browser")
+            col.label(text=" " * 16 + "Select existing assets. Then right-click to bring up menu.")
             col.label(
                 text=" " * 16
                 + "Select existing assets. Then right-click to bring up menu."
@@ -186,8 +188,10 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
                 text=" " * 16
                 + "Click 'Add to Library'. Select library or choose '+ New'"
             )
+            col.label(text=" " * 16 + "Click 'Add to Library'. Select library or choose '+ New'")
             col.label(text=" " * 16 + "in order to create a new library")
             col.label(text=" " * 8 + "From Outliner/3D View")
+            col.label(text=" " * 16 + "Select the object(s) you want to add. Then right-click")
             col.label(
                 text=" " * 16 + "Select the object(s) you want to add. Then right-click"
             )
@@ -202,6 +206,8 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
                 text=" " * 16
                 + "to create a new library. Items will be marked as an asset and added."
             )
+            col.label(text=" " * 16 + "Click 'Add to Library'. Select library or choose '+ New'")
+            col.label(text=" " * 16 + "to create a new library. Items will be marked as an asset and added.")
 
         layout.label(text="Metadata Defaults:")
         layout.prop(self, "default_author_name")
