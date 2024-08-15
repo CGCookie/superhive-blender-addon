@@ -34,7 +34,9 @@ print(f"{ASSET_TYPE=}")
 print(f"{DO_WHOLE_FILE=}")
 
 
-def set_compression(spec: ImageSpec, extension: str, quality: int = 100, quality_other: Any = None) -> None:
+def set_compression(
+    spec: ImageSpec, extension: str, quality: int = 100, quality_other: Any = None
+) -> None:
     if extension == ".bmp":
         spec.attribute("compression", quality_other)  # "rle4" or "rle8"
     elif extension in {".jpg", ".jpeg", ".jpe", ".jif", ".jfif", ".jfi"}:

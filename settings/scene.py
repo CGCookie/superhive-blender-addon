@@ -657,7 +657,9 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
                             cat_file: "utils.CatalogsFile"
                             if "/" in catalog_simple_name:
                                 name = catalog_simple_name.split("/")[-1]
-                                cat = cat_file.add_catalog(name, path=catalog_simple_name)
+                                cat = cat_file.add_catalog(
+                                    name, path=catalog_simple_name
+                                )
                             else:
                                 cat = cat_file.add_catalog(catalog_simple_name)
                             asset.catalog_id = cat.id

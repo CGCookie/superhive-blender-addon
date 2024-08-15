@@ -18,26 +18,36 @@ if TYPE_CHECKING:
     from ..settings import scene
 
 comp_enum = [
-    ("ZIP_STORED", "None", "No compression. Just place files in .zip file. This is the fastest option. (ZIP_STORED)")
+    (
+        "ZIP_STORED",
+        "None",
+        "No compression. Just place files in .zip file. This is the fastest option. (ZIP_STORED)",
+    )
 ]
 if find_spec("zlib"):
-    comp_enum.append((
-        "ZIP_DEFLATED",
-        "Standard",
-        "Compress files using zlib, ie the normal zip compression algorithm. This option is slow with not the best compression. (ZIP_DEFLATED)",
-    ))
+    comp_enum.append(
+        (
+            "ZIP_DEFLATED",
+            "Standard",
+            "Compress files using zlib, ie the normal zip compression algorithm. This option is slow with not the best compression. (ZIP_DEFLATED)",
+        )
+    )
 if find_spec("bz2"):
-    comp_enum.append((
-        "ZIP_BZIP2",
-        "Maximum",
-        "Compress files using bzip2 compression algorithm. This is a good balance between speed and compression ratio. (ZIP_BZIP2)",
-    ))
+    comp_enum.append(
+        (
+            "ZIP_BZIP2",
+            "Maximum",
+            "Compress files using bzip2 compression algorithm. This is a good balance between speed and compression ratio. (ZIP_BZIP2)",
+        )
+    )
 if find_spec("lzma"):
-    comp_enum.append((
-        "ZIP_LZMA",
-        "Ultra",
-        "Compress files using LZMA compression algorithm. This is the slowest option but gives the best compression ratio. NOT RECOMMENDED as not all OS's include this library when extracting/importing(ZIP_LZMA)",
-    ))
+    comp_enum.append(
+        (
+            "ZIP_LZMA",
+            "Ultra",
+            "Compress files using LZMA compression algorithm. This is the slowest option but gives the best compression ratio. NOT RECOMMENDED as not all OS's include this library when extracting/importing(ZIP_LZMA)",
+        )
+    )
 
 
 class EmptyCompressor(object):
@@ -72,7 +82,9 @@ class ZipFileParallel(zipfile.ZipFile):
         if isinstance(data, str):
             data = data.encode("utf-8")
         if not isinstance(zinfo_or_arcname, zipfile.ZipInfo):
-            zinfo = zipfile.ZipInfo(filename=zinfo_or_arcname, date_time=time.localtime(time.time())[:6])
+            zinfo = zipfile.ZipInfo(
+                filename=zinfo_or_arcname, date_time=time.localtime(time.time())[:6]
+            )
             zinfo.compress_type = self.compression
             zinfo._compresslevel = self.compresslevel
             if zinfo.filename[-1] == "/":
@@ -102,7 +114,9 @@ class ZipFileParallel(zipfile.ZipFile):
 
         with self._lock:
             with self.open(zinfo, mode="w") as dest:
-                dest._compressor = None  # remove the compressor so it doesn't compress again
+                dest._compressor = (
+                    None  # remove the compressor so it doesn't compress again
+                )
                 dest.write(data)
                 dest._crc = crc
                 dest._file_size = zinfo.file_size
@@ -186,7 +200,9 @@ class _SH_OT_ExportLibrary(Operator):
 
     def execute(self, context):
         lib_name: str = context.space_data.params.asset_library_reference
-        self.lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(lib_name)
+        self.lib: UserAssetLibrary = context.preferences.filepaths.asset_libraries.get(
+            lib_name
+        )
         if not self.lib:
             self.report({"ERROR"}, f"Asset library '{lib_name}' not found")
             return {"CANCELLED"}
@@ -194,7 +210,9 @@ class _SH_OT_ExportLibrary(Operator):
         # TODO: Run Library Checks
 
         self.directory = Path(self.lib.path)
-        self.files: list[Path] = [file for file in self.directory.rglob("*") if file.is_file()]
+        self.files: list[Path] = [
+            file for file in self.directory.rglob("*") if file.is_file()
+        ]
         self.total_files: int = len(self.files)
         self.files_written = 0
         self.updated = False
@@ -227,7 +245,11 @@ class _SH_OT_ExportLibrary(Operator):
             self.prog.progress = round(self.files_written / self.total_files, 2)
         self.prog.update_formated_time()
 
-        if (event.type == "ESC" and event.mouse_region_x > 0 and event.mouse_region_y > 0) or self.prog.cancel:
+        if (
+            event.type == "ESC"
+            and event.mouse_region_x > 0
+            and event.mouse_region_y > 0
+        ) or self.prog.cancel:
             self.prog.cancel = True
             self.finished(context)
             return {"CANCELLED"}
@@ -402,7 +424,9 @@ class SH_OT_ExportLibrary(Operator):
         scn_sets: "scene.SH_Scene" = context.scene.superhive
         self.prog = scn_sets.export_library
         context.window_manager.modal_handler_add(self)
-        self._timer = context.window_manager.event_timer_add(0.01, window=context.window)
+        self._timer = context.window_manager.event_timer_add(
+            0.01, window=context.window
+        )
 
         self._th = Thread(target=self.handle_files)
 
@@ -455,7 +479,9 @@ class SH_OT_ExportLibrary(Operator):
             files_zipped = 0
             while files_to_write:
                 if is_multi:
-                    self.zip_path.rename(self.zip_path.with_stem(f"{self.zip_path.stem}_{self.zip_num}"))
+                    self.zip_path.rename(
+                        self.zip_path.with_stem(f"{self.zip_path.stem}_{self.zip_num}")
+                    )
                     self.zip_num += 1
                 with zipfile.ZipFile(self.zip_path, "w") as zipf:
                     for _ in range(len(files_to_write)):
@@ -475,7 +501,9 @@ class SH_OT_ExportLibrary(Operator):
                             break
 
             if is_multi:
-                self.zip_path = self.zip_path.rename(self.zip_path.with_stem(f"{self.zip_path.stem}_{self.zip_num}"))
+                self.zip_path = self.zip_path.rename(
+                    self.zip_path.with_stem(f"{self.zip_path.stem}_{self.zip_num}")
+                )
             self.zipping_bar_prog = 1
             self.updated = True
             print("Progress: 100.00%")
