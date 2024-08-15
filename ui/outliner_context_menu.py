@@ -7,7 +7,9 @@ def asset_browser_context_menu(self, context):
     layout.separator()
     layout.label(text="Bkeeper")
     layout.operator_context = "INVOKE_DEFAULT"
-    layout.operator_menu_enum("bkeeper.add_to_library_from_outliner", "library", text="Add to Library")
+    layout.operator_menu_enum(
+        "bkeeper.add_to_library_from_outliner", "library", text="Add to Library"
+    )
 
 
 def register():

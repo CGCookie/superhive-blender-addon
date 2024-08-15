@@ -38,7 +38,11 @@ def register():
     print(f"Registering {__package__}")
     _call_globals("register")
 
-    print(f"Finished Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(80, "-"))
+    print(
+        f"Finished Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(
+            80, "-"
+        )
+    )
     print()
     print()
 

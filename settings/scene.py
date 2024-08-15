@@ -45,7 +45,9 @@ class RenderThumbnailProps:
 
     flip_y: BoolProperty(name="Flip Y", default=False)
 
-    thumb_res: IntProperty(default=256, min=128, max=1024, subtype="PIXEL", name="Resolution")
+    thumb_res: IntProperty(
+        default=256, min=128, max=1024, subtype="PIXEL", name="Resolution"
+    )
 
     camera_height: FloatProperty(
         default=1.0,
@@ -318,7 +320,11 @@ class BatchUpdateAction(PropertyGroup):
             case "OVERWRITE":
                 return self.value
             case "ADD":
-                return text + self.value if self.add_type == "SUFFIX" else self.value + text
+                return (
+                    text + self.value
+                    if self.add_type == "SUFFIX"
+                    else self.value + text
+                )
             case "REPLACE":
                 if self.use_regex_find:
                     replace_src = self.value
@@ -452,7 +458,11 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
     )
 
     def _get_ignore_licenses(self, context):
-        self.metadata_items: bpy.types.CollectionProperty | list[BatchItemWithActions] | dict[str, BatchItemWithActions]
+        self.metadata_items: (
+            bpy.types.CollectionProperty
+            | list[BatchItemWithActions]
+            | dict[str, BatchItemWithActions]
+        )
         return [
             ("IGNORE", "Ignore", "Ignore the license"),
         ] + hive_mind.get_licenses()
@@ -564,7 +574,9 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
                 for i, tag in enumerate(hive_mind.get_tags()):
                     grid.prop(self, "tags", index=i, text=tag[1], expand=True)
             case _:
-                meta_data_item: BatchItemWithActions = self.metadata_items.get(self.metadata_type)
+                meta_data_item: BatchItemWithActions = self.metadata_items.get(
+                    self.metadata_type
+                )
                 meta_data_item.draw(layout, use_ops=use_ops)
 
                 box = layout.box()
@@ -579,7 +591,11 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
                         + ": "
                         + meta_data_item.process_text(
                             getattr(
-                                (asset if self.metadata_type == "name" else asset.metadata),
+                                (
+                                    asset
+                                    if self.metadata_type == "name"
+                                    else asset.metadata
+                                ),
                                 self.metadata_type,
                             )
                         )
@@ -589,7 +605,9 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
 
     def process_tags(self, asset: utils.Asset):
         selected_tags = [
-            tag_id for i, (tag_id, _tag_name, _tag_desc) in enumerate(hive_mind.get_tags()) if self.tags[i]
+            tag_id
+            for i, (tag_id, _tag_name, _tag_desc) in enumerate(hive_mind.get_tags())
+            if self.tags[i]
         ]
         if self.tags_update_type == "OVERWRITE":
             return sorted(selected_tags)
@@ -639,7 +657,9 @@ class BatchMetadataUpdate(PropertyGroup, RenderThumbnailProps):
                             cat_file: "utils.CatalogsFile"
                             if "/" in catalog_simple_name:
                                 name = catalog_simple_name.split("/")[-1]
-                                cat = cat_file.add_catalog(name, path=catalog_simple_name)
+                                cat = cat_file.add_catalog(
+                                    name, path=catalog_simple_name
+                                )
                             else:
                                 cat = cat_file.add_catalog(catalog_simple_name)
                             asset.catalog_id = cat.id
@@ -727,7 +747,9 @@ class ProgressBarBase:
 
     def draw(self, layout: UILayout, draw_time: bool = False) -> None:
         row = layout.row(align=True)
-        row.progress(text=self.label or f"{round(self.progress * 100, 2)}%", factor=self.progress)
+        row.progress(
+            text=self.label or f"{round(self.progress * 100, 2)}%", factor=self.progress
+        )
 
         if draw_time:
             row.label(text=self.formated_time)
@@ -754,7 +776,11 @@ class MultiProgressBarBase:
             return self.progress_bars[self.active_bar_index]
 
     def new_progress_bar(self, name: str) -> ProgressBarForMulti:
-        self.progress_bars: bpy.types.CollectionProperty | list[ProgressBarForMulti] | dict[str, ProgressBarForMulti]
+        self.progress_bars: (
+            bpy.types.CollectionProperty
+            | list[ProgressBarForMulti]
+            | dict[str, ProgressBarForMulti]
+        )
         self.total_progress: ProgressBar
         pb: ProgressBarForMulti = self.progress_bars.add()
         pb.name = name
@@ -980,7 +1006,9 @@ class MultiProgressBarExportLibrary(PropertyGroup):
 
 class SH_Scene(PropertyGroup):
     header_progress_bar: PointerProperty(type=ProgressBar)
-    side_panel_batch_asset_update_progress_bar: PointerProperty(type=MultiProgressBarUpdate_Assets)
+    side_panel_batch_asset_update_progress_bar: PointerProperty(
+        type=MultiProgressBarUpdate_Assets
+    )
 
     export_library: PointerProperty(type=MultiProgressBarExportLibrary)
 
