@@ -1,4 +1,5 @@
 import uuid
+from typing import TYPE_CHECKING
 
 import bpy
 from bpy.props import (
@@ -6,6 +7,7 @@ from bpy.props import (
     CollectionProperty,
     EnumProperty,
     IntProperty,
+    IntVectorProperty,
     PointerProperty,
     StringProperty,
 )
@@ -18,7 +20,10 @@ from bpy.types import (
     UIList,
 )
 
-from .. import hive_mind
+from .. import hive_mind, utils
+
+if TYPE_CHECKING:
+    from ..ui import prefs
 
 
 def _has_context_asset(C: Context = None) -> bool:
@@ -68,13 +73,10 @@ class SH_AssetTags(PropertyGroup):
             return False  # No asset to check
         asset = context.asset
         return len(asset.metadata.tags) != len(self.tags) or any(
-            orig_tag.name not in {new_tag.name for new_tag in self.tags}
-            for orig_tag in asset.metadata.tags
+            orig_tag.name not in {new_tag.name for new_tag in self.tags} for orig_tag in asset.metadata.tags
         )
 
-    def set_is_dirty(
-        self, context: Context, value: bool, context_check: bool = None
-    ) -> None:
+    def set_is_dirty(self, context: Context, value: bool, context_check: bool = None) -> None:
         if context_check is None and not _has_context_asset(C=context):
             return False  # No asset to check
         asset = context.asset
@@ -90,9 +92,7 @@ class SH_AssetTags(PropertyGroup):
             context_check=True,
         )
 
-    def new_tag(
-        self, name: str, context: Context, id: str = None, desc: str = None
-    ) -> SH_AssetTag:
+    def new_tag(self, name: str, context: Context, id: str = None, desc: str = None) -> SH_AssetTag:
         """
         Create a new asset tag.
 
@@ -186,19 +186,17 @@ class SH_AssetTags(PropertyGroup):
 
 
 def is_dirty(self: AssetRepresentation) -> bool:
-    return any(
-        [
-            self.sh_is_dirty_name,
-            self.sh_is_dirty_description,
-            self.sh_is_dirty_catalog,
-            self.sh_is_dirty_author,
-            self.sh_is_dirty_license,
-            self.sh_is_dirty_copyright,
-            self.sh_is_dirty_tags,
-            self.sh_is_dirty_created_blender_version,
-            # self.sh_is_dirty_icon,
-        ]
-    )
+    return any([
+        self.sh_is_dirty_name,
+        self.sh_is_dirty_description,
+        self.sh_is_dirty_catalog,
+        self.sh_is_dirty_author,
+        self.sh_is_dirty_license,
+        self.sh_is_dirty_copyright,
+        self.sh_is_dirty_tags,
+        self.sh_is_dirty_created_blender_version,
+        # self.sh_is_dirty_icon,
+    ])
 
 
 classes = (
@@ -238,6 +236,124 @@ def register():
         default="",
     )
 
+    AssetMetaData.sh_blend_version = IntVectorProperty(
+        name="Blender Version",
+        description="Blender version the asset was created in and/or should use for editing",
+        size=3,
+        default=(-1, -1, -1),
+    )
+    AssetMetaData.sh_blend_version_str = StringProperty(default="Default")
+    AssetMetaData.sh_is_dirty_blend_version = BoolProperty()
+
+    def _get_blend_version_items(self: "AssetMetaData", context: Context) -> list:
+        items = [
+            ("Default", "Default", "Use the default Blender version", 0),
+        ]
+
+        bv: "prefs.SH_BlenderVersion"
+        for i, bv in enumerate(utils.get_prefs().blender_versions):
+            items.append((
+                bv.name,
+                f"{bv.display_name} (v{bv.version[0]}.{bv.version[1]}.{bv.version[2]})",
+                f"Use Blender version {bv.display_name}",
+                i + 1,
+            ))
+        return items
+
+    def _update_blend_version(self: "AssetMetaData", context: Context) -> None:
+        self.sh_blend_version_str = self.sh_blend_version_enum
+        if self.sh_blend_version_enum == "Default":
+            self.sh_blend_version = [-1, -1, -1]
+        else:
+            bv = utils.get_prefs().blender_versions.get(self.sh_blend_version_enum)
+            self.sh_blend_version = bv.version
+
+    AssetMetaData.sh_blend_version_enum = EnumProperty(
+        name="Blender Version",
+        description="Blender version the asset was created in and/or should use for editing",
+        items=_get_blend_version_items,
+        update=_update_blend_version,
+    )
+
+    def sh_get_blender_version(self: "AssetMetaData") -> str:
+        prefs = utils.get_prefs()
+        blender_versions = prefs.blender_versions
+        bv = blender_versions.get(self.sh_blend_version_enum)
+
+        if not bv and self.sh_blend_version_str != "Default":
+            print("No blender version found for", self.sh_blend_version_enum)
+            bv = blender_versions.get(self.sh_blend_version_str)
+            if not bv and self.sh_blend_version != (-1, -1, -1):
+                print("No blender version found for", self.sh_blend_version_str)
+                bv = prefs.get_by_blender_version(self.sh_blend_version)
+
+        if not bv and self.sh_blend_version_str == "Default" or self.sh_blend_version == (-1, -1, -1):
+            print("No blender version found for", self.sh_blend_version, ", using default")
+            bv = prefs.ensure_default_blender_version()
+
+        return bv
+
+    AssetMetaData.sh_get_blender_version = sh_get_blender_version
+
+    AssetMetaData.sh_blend_version = IntVectorProperty(
+        name="Blender Version",
+        description="Blender version the asset was created in and/or should use for editing",
+        size=3,
+        default=(-1, -1, -1),
+    )
+    AssetMetaData.sh_blend_version_str = StringProperty(default="Default")
+    AssetMetaData.sh_is_dirty_blend_version = BoolProperty()
+
+    def _get_blend_version_items(self: "AssetMetaData", context: Context) -> list:
+        items = [
+            ("Default", "Default", "Use the default Blender version", 0),
+        ]
+
+        bv: "prefs.SH_BlenderVersion"
+        for i, bv in enumerate(utils.get_prefs().blender_versions):
+            items.append((
+                bv.name,
+                f"{bv.display_name} (v{bv.version[0]}.{bv.version[1]}.{bv.version[2]})",
+                f"Use Blender version {bv.display_name}",
+                i + 1,
+            ))
+        return items
+
+    def _update_blend_version(self: "AssetMetaData", context: Context) -> None:
+        self.sh_blend_version_str = self.sh_blend_version_enum
+        if self.sh_blend_version_enum == "Default":
+            self.sh_blend_version = [-1, -1, -1]
+        else:
+            bv = utils.get_prefs().blender_versions.get(self.sh_blend_version_enum)
+            self.sh_blend_version = bv.version
+
+    AssetMetaData.sh_blend_version_enum = EnumProperty(
+        name="Blender Version",
+        description="Blender version the asset was created in and/or should use for editing",
+        items=_get_blend_version_items,
+        update=_update_blend_version,
+    )
+
+    def sh_get_blender_version(self: "AssetMetaData") -> str:
+        prefs = utils.get_prefs()
+        blender_versions = prefs.blender_versions
+        bv = blender_versions.get(self.sh_blend_version_enum)
+
+        if not bv and self.sh_blend_version_str != "Default":
+            print("No blender version found for", self.sh_blend_version_enum)
+            bv = blender_versions.get(self.sh_blend_version_str)
+            if not bv and self.sh_blend_version != (-1, -1, -1):
+                print("No blender version found for", self.sh_blend_version_str)
+                bv = prefs.get_by_blender_version(self.sh_blend_version)
+
+        if not bv and self.sh_blend_version_str == "Default" or self.sh_blend_version == (-1, -1, -1):
+            print("No blender version found for", self.sh_blend_version, ", using default")
+            bv = prefs.ensure_default_blender_version()
+
+        return bv
+
+    AssetMetaData.sh_get_blender_version = sh_get_blender_version
+
     def _get_active_asset_name(self: "AssetMetaData"):
         item = self.get("_name", None)
         if item is not None:
@@ -259,6 +375,7 @@ def register():
         get=_get_active_asset_name,
         set=_set_active_asset_name,
     )
+
     AssetMetaData.sh_is_dirty_description = BoolProperty()
     AssetMetaData.sh_description = StringProperty(
         name="Description",
@@ -277,9 +394,7 @@ def register():
         if item:
             return item.get("id_int", 444)
 
-        item = hive_mind.get_catalog_by_name(
-            self.catalog_simple_name, is_catalog_simple_name=True
-        )
+        item = hive_mind.get_catalog_by_name(self.catalog_simple_name, is_catalog_simple_name=True)
 
         return item.get("id_int", 444) if item else 444
 
@@ -295,9 +410,7 @@ def register():
         else:
             set_cat_name = self.catalog_simple_name
 
-        self.sh_is_dirty_catalog = not any(
-            (item["id"] == self.catalog_id, item["name"] == set_cat_name)
-        )
+        self.sh_is_dirty_catalog = not any((item["id"] == self.catalog_id, item["name"] == set_cat_name))
 
     AssetMetaData.sh_is_dirty_catalog = BoolProperty()
     AssetMetaData.sh_catalog = EnumProperty(
@@ -325,6 +438,7 @@ def register():
         get=_get_sh_catalog_custom,
         set=_set_sh_catalog_custom,
     )
+
     AssetMetaData.sh_is_dirty_author = BoolProperty()
     AssetMetaData.sh_author = StringProperty(
         name="Author",
@@ -353,9 +467,7 @@ def register():
             None,
         )
 
-        self.sh_is_dirty_license = not any(
-            (item["id"] == self.license, item["name"] == self.license)
-        )
+        self.sh_is_dirty_license = not any((item["id"] == self.license, item["name"] == self.license))
 
     AssetMetaData.sh_is_dirty_license = BoolProperty()
     AssetMetaData.sh_license = EnumProperty(
@@ -378,12 +490,14 @@ def register():
         get=_get_asset_data("copyright"),
         set=_set_asset_data("copyright"),
     )
+
     AssetMetaData.sh_is_dirty_created_blender_version = BoolProperty()
     AssetMetaData.sh_created_blender_version = StringProperty(
         name="Created Blender Version",
         description="Blender version the asset was created in",
         default=bpy.app.version_string,
     )
+
     AssetMetaData.sh_is_dirty_tags = BoolProperty()
     AssetMetaData.sh_tags = PointerProperty(
         name="Tags",

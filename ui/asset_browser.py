@@ -32,10 +32,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return (
-            polls.is_asset_browser(context)
-            and context.scene.superhive.library_mode == "SUPERHIVE"
-        )
+        return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "SUPERHIVE"
 
     def draw_header(self, context: Context) -> None:
         layout = self.layout
@@ -49,9 +46,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         if asset and asset.metadata.sh_is_dirty():
             row = layout.split(factor=0.8)
 
-            row.operator(
-                "bkeeper.update_asset", text="*Unsaved Changes", icon="FILE_TICK"
-            )
+            row.operator("bkeeper.update_asset", text="*Unsaved Changes", icon="FILE_TICK")
 
             r = row.row()
             r.alignment = "RIGHT"
@@ -110,7 +105,6 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         def display_metadata(
             layout: UILayout,
-            data,
             prop: str,
             orig_prop: str,
             orig_value: str,
@@ -119,19 +113,15 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             row = layout.row(align=True)
             row.prop(asset.metadata, prop, text=text or set_is_dirty_text(orig_prop))
             if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
-                op = row.operator(
-                    "bkeeper.reset_asset_metadata_property", icon="X", text=""
-                )
+                op = row.operator("bkeeper.reset_asset_metadata_property", icon="X", text="")
                 op.property = prop
                 op.original_value = orig_value
 
-        display_metadata(layout, asset, "sh_name", "name", asset.name)
-        display_metadata(
-            layout, asset, "sh_description", "description", asset.metadata.description
-        )
-        display_metadata(layout, asset, "sh_author", "author", asset.metadata.author)
+        display_metadata(layout, "sh_name", "name", asset.name)
+        display_metadata(layout, "sh_description", "description", asset.metadata.description)
+        display_metadata(layout, "sh_author", "author", asset.metadata.author)
         col = layout.column(align=True)
-        display_metadata(col, asset, "sh_license", "license", asset.metadata.license)
+        display_metadata(col, "sh_license", "license", asset.metadata.license)
         if asset.metadata.sh_license == "CUSTOM":
             display_metadata(
                 col,
@@ -142,7 +132,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
                 text="Custom License",
             )
         col = layout.column(align=True)
-        display_metadata(col, asset, "sh_catalog", "catalog", asset.metadata.catalog_id)
+        display_metadata(col, "sh_catalog", "catalog", asset.metadata.catalog_id)
         if asset.metadata.sh_catalog == "CUSTOM":
             row = col.row(align=True)
             row.prop(
@@ -151,18 +141,13 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
                 text=f"Custom Catalog{'*' if asset.metadata.sh_is_dirty_catalog_custom else ''}",
             )
             if asset.metadata.sh_is_dirty_catalog_custom:
-                op = row.operator(
-                    "bkeeper.reset_asset_metadata_property", icon="X", text=""
-                )
+                op = row.operator("bkeeper.reset_asset_metadata_property", icon="X", text="")
                 op.property = "sh_catalog_custom"
                 op.original_value = ""
-        display_metadata(
-            layout, asset, "sh_copyright", "copyright", asset.metadata.copyright
-        )
+        display_metadata(layout, "sh_copyright", "copyright", asset.metadata.copyright)
+        display_metadata(layout, "sh_blend_version_enum", "blend_version", asset.metadata.sh_blend_version_str)
 
-        layout.label(
-            text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG"
-        )
+        layout.label(text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG")
         row = layout.row()
         row.template_list(
             "SH_UL_TagList",
@@ -210,9 +195,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         row = col.row(align=True)
         row.operator("bkeeper.batch_update_assets_from_scene")
-        row.prop(
-            scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH"
-        )
+        row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
 
 
 class SH_PT_LibrarySettings(Panel):
@@ -226,10 +209,7 @@ class SH_PT_LibrarySettings(Panel):
 
     @classmethod
     def poll(cls, context):
-        return (
-            polls.is_asset_browser(context)
-            and context.scene.superhive.library_mode == "SUPERHIVE"
-        )
+        return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "SUPERHIVE"
 
     def draw(self, context):
         layout: UILayout = self.layout
