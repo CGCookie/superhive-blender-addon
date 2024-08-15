@@ -992,8 +992,8 @@ class SH_Scene(PropertyGroup):
                 "Blender's default asset library settings and options",
             ),
             (
-                "SUPERHIVE",
-                "SuperHive",
+                "BKEEPER",
+                "Bkeeper",
                 "Settings and options for uploading to Superhive's (formerly Blender Market) asset system",
             ),
         ),
