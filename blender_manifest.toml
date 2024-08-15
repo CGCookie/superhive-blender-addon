@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "bkeeper" # Unique identifier for the extension.
-name = "BKeeper"
+name = "Bkeeper"
 version = "0.0.3"
 tagline = "Aid in the creation and uploading of asset libraries"
 maintainer = "Zach Eastin, Richard Traynor"
