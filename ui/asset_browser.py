@@ -94,6 +94,8 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         col = row.column(align=True)
         col.operator("bkeeper.change_asset_icon", icon="FILE_FOLDER", text="")
         col.operator("bkeeper.rerender_thumbnail", icon="RESTRICT_RENDER_OFF", text="")
+        if prefs.display_extras:
+            col.operator("bkeeper.save_out_preview", icon="FILE_TICK", text="")
 
         layout.separator()
 
