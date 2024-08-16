@@ -808,6 +808,9 @@ class Assets:
             self._dict[a.name] = a
             self._list.append(a)
 
+    def to_dict(self, apply_changes=False) -> list[dict]:
+        return [asset.to_dict(apply_changes=apply_changes) for asset in self._list]
+
     def __getitem__(self, key_or_index: str | int) -> Asset:
         if isinstance(key_or_index, str):
             return self._dict[key_or_index]

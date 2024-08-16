@@ -427,9 +427,6 @@ class SH_OT_ExportLibrary(Operator):
             self.prog.movingfiles_bar.main.update_start_time()
             self.prog.movingfiles_bar.show_sub = True
 
-            self.movingfiles_main_prog = 1 / (len(self.assets) + 1)
-            self.updated = True
-
             for i, asset in enumerate(self.assets):
                 p = Path(asset.full_library_path)
 
@@ -440,7 +437,7 @@ class SH_OT_ExportLibrary(Operator):
 
                 utils.export_helper(p, tempdir, self.json_data, op=self)
 
-                self.movingfiles_main_prog = (i + 1) / (len(self.assets) + 1)
+                self.movingfiles_main_prog = i / len(self.assets)
                 self.updated = True
 
                 prog = f"{self.movingfiles_main_prog * 100:.2f}"
