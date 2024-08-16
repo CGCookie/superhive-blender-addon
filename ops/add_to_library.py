@@ -838,8 +838,8 @@ class AddAsAsset(scene.RenderThumbnailProps):
             None,
         )
 
-        if self.area and not self.area.spaces.active.show_region_tool_props:
-            self.area.spaces.active.show_region_tool_props = True
+        if self.area:
+            utils.ensure_sidepanel_right_is_open(self.area.spaces.active)
 
         self.prog = self.scene_sets.side_panel_batch_asset_update_progress_bar
         self.prog.start()

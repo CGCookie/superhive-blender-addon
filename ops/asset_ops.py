@@ -93,15 +93,12 @@ class BatchUpdateAssets:
             ),
         )
 
-        if not context.space_data.show_region_tool_props:
-            context.space_data.show_region_tool_props = True
+        utils.ensure_sidepanel_right_is_open(context.space_data)
 
         self.prog = self.scene_sets.side_panel_batch_asset_update_progress_bar
         self.prog.metadata_label = "Metadata Update"
         self.prog.start()
-        self.prog.draw_icon_rendering = (
-            self.scene_sets.metadata_update.render_thumbnails
-        )
+        self.prog.draw_icon_rendering = self.scene_sets.metadata_update.render_thumbnails
 
         self.active_bar = self.prog.metadata_bar
 
@@ -151,9 +148,7 @@ class BatchUpdateAssets:
             context.window_manager.event_timer_remove(self._timer)
             bpy.app.timers.register(self.prog.end, first_interval=1)
             return {"FINISHED"}
-        elif event.value == "ESC" and utils.mouse_in_window(
-            context.window, event.mouse_x, event.mouse_y
-        ):
+        elif event.value == "ESC" and utils.mouse_in_window(context.window, event.mouse_x, event.mouse_y):
             self.prog.cancel = True
         elif self.prog.cancel:
             self._thread.join()
@@ -180,9 +175,7 @@ class BatchUpdateAssets:
                 break
             asset = utils.Asset(bpy_asset)
             md_update.process_asset_metadata(asset, bpy_asset, lib)
-            asset.update_asset(
-                prefs.ensure_default_blender_version().path, debug=md_update.debug_scene
-            )
+            asset.update_asset(prefs.ensure_default_blender_version().path, debug=md_update.debug_scene)
             self.metadata_progress = (i + 1) / len(selected_assets)
             self.update = True
 
@@ -196,16 +189,10 @@ class BatchUpdateAssets:
                 if a.id_type in {"OBJECT", "COLLECTION", "MATERIAL"}:
                     blend_data = blends.get(a.full_library_path)
                     blends[a.full_library_path] = (
-                        blend_data + [(a.name, a.id_type)]
-                        if blend_data
-                        else [(a.name, a.id_type)]
+                        blend_data + [(a.name, a.id_type)] if blend_data else [(a.name, a.id_type)]
                     )
 
-            lib_path = [
-                a
-                for a in bpy.context.preferences.filepaths.asset_libraries
-                if a.name == library_name
-            ]
+            lib_path = [a for a in bpy.context.preferences.filepaths.asset_libraries if a.name == library_name]
             if lib_path:
                 lib_path = lib_path[0].path
 
@@ -383,9 +370,7 @@ class SH_OT_RerenderThumbnail(Operator, scene.RenderThumbnailProps):
             if a.id_type in {"OBJECT", "COLLECTION", "MATERIAL"}:
                 blend_data = blends.get(a.full_library_path)
                 blends[a.full_library_path] = (
-                    blend_data + [(a.name, a.id_type)]
-                    if blend_data
-                    else [(a.name, a.id_type)]
+                    blend_data + [(a.name, a.id_type)] if blend_data else [(a.name, a.id_type)]
                 )
 
         self.threads = []
@@ -404,9 +389,7 @@ class SH_OT_RerenderThumbnail(Operator, scene.RenderThumbnailProps):
             directory=lib_path,
             objects=[f for f in blends.values()],
             shading=self.shading,
-            angle=utils.resolve_angle(
-                self.camera_angle, self.flip_x, self.flip_y, self.flip_z
-            ),
+            angle=utils.resolve_angle(self.camera_angle, self.flip_x, self.flip_y, self.flip_z),
             add_plane=prefs.add_ground_plane and not self.flip_z,
             world_name=self.scene_lighting,
             world_strength=self.world_strength,

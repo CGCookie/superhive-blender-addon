@@ -10,7 +10,7 @@ from platform import system
 from typing import TYPE_CHECKING, Generator, Union
 
 import bpy
-from bpy.types import ID, Area, AssetRepresentation, Context, UserAssetLibrary, Window
+from bpy.types import ID, Area, AssetRepresentation, Context, Space, UserAssetLibrary, Window
 from bpy_extras import asset_utils
 
 from . import hive_mind
@@ -986,6 +986,11 @@ class AssetLibrary:
             json.dump(data, file, indent=4)
 
         return json_path
+
+
+def ensure_sidepanel_right_is_open(space_data: Space) -> None:
+    if not space_data.show_region_tool_props:
+        space_data.show_region_tool_props = True
 
 
 def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:

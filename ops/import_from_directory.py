@@ -31,7 +31,8 @@ class Catalogs(PropertyGroup):
 
     def clear(self):
         for item in reversed([c for c in self.items]):
-            self.items.remove(item)
+            # self.items.remove(item)
+            self.items.remove(0)
 
     def get_items(self):
         self.items: list[Catalog] | dict[str, Catalog]
@@ -417,8 +418,7 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             target=self.main,
         )
 
-        if not context.space_data.show_region_tool_props:
-            context.space_data.show_region_tool_props = True
+        utils.ensure_sidepanel_right_is_open(context.space_data)
 
         self.prog = self.scene_sets.side_panel_batch_asset_update_progress_bar
         self.prog.metadata_label = "Importing Blend Files"
