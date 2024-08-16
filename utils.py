@@ -1534,6 +1534,10 @@ def export_helper(
 
     def handle_preview_path(v: str):
         item_name, item_type, path = v.split("+,+")
+
+        if "NODETREE" in item_type:
+            item_type = "NODETREE"
+
         item_dict = next(
             (
                 asset_dict
