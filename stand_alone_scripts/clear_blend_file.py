@@ -11,21 +11,23 @@ Argument Order:
      6. IDs to keep (if None, look at IDs to remove)
      7. IDs to remove
      8. types (this is a list of strings that represent the types of the IDs to keep or remove)
+     9. remove (if True, remove the IDs, if False, only remove the asset data)
 """
 
 import sys
 
 import bpy
 
-print(f"{sys.argv=}")
-
 IDS_TO_KEEP = sys.argv[6].split(":--separator--:") if sys.argv[6] != "None" else []
 IDS_TO_REMOVE = sys.argv[7].split(":--separator--:") if sys.argv[7] != "None" else []
 TYPES = sys.argv[8].split(":--separator--:")
+REMOVE = sys.argv[9] == "True"
+
 
 print(f"{IDS_TO_KEEP=}")
 print(f"{IDS_TO_REMOVE=}")
 print(f"{TYPES=}")
+print(f"{REMOVE=}")
 
 
 def remove_other_assets():
@@ -35,11 +37,7 @@ def remove_other_assets():
         if not isinstance(ids_data, bpy.types.bpy_prop_collection):
             continue
         for id in ids_data:
-            if (
-                hasattr(id, "asset_data")
-                and id.asset_data
-                and id.name not in IDS_TO_KEEP
-            ):
+            if hasattr(id, "asset_data") and id.asset_data and id.name not in IDS_TO_KEEP:
                 id.asset_clear()
 
 
@@ -60,7 +58,10 @@ if __name__ == "__main__":
                 data_type = bpy.data.node_groups
             else:
                 data_type = getattr(bpy.data, id_type.lower() + "s")
-            data_type.remove(data_type[id])
+            if REMOVE:
+                data_type.remove(data_type[id])
+            else:
+                data_type[id].asset_clear()
 
     # TODO: Remove the orphaned data
     # TODO: Option to only remove asset data and not the actual ID

@@ -1,12 +1,13 @@
 # Utilities for interacting with the blender_assets.cats.txt file
 import functools
+import json
 import subprocess
 import threading
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from platform import system
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Generator, Union
 
 import bpy
 from bpy.types import ID, Area, AssetRepresentation, Context, UserAssetLibrary, Window
@@ -1471,6 +1472,7 @@ def clean_blend_file(
     ids_to_keep: list[ID] = None,
     ids_to_remove: list[ID | AssetRepresentation] = None,
     types: list[str] = None,
+    remove=False,
 ):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "clear_blend_file.py"
 
@@ -1484,6 +1486,7 @@ def clean_blend_file(
         ":--separator--:".join(ids_to_keep) if ids_to_keep else "None",
         ":--separator--:".join(ids_to_remove) if ids_to_remove else "None",
         ":--separator--:".join(types),
+        str(remove),
     ]
 
     proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
