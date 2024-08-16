@@ -482,8 +482,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             bpy.app.timers.register(self.prog.end, first_interval=1)
             return {"CANCELLED"}
 
-        if "MOUSEWHEEL" in event.type:
+        if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
             return {"PASS_THROUGH"}
+
         return {"RUNNING_MODAL"}
 
     def main(self):

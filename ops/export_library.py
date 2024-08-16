@@ -239,6 +239,9 @@ class _SH_OT_ExportLibrary(Operator):
             self.finished(context)
             return {"FINISHED"}
 
+        if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            return {"PASS_THROUGH"}
+
         return {"RUNNING_MODAL"}
 
     def zip_files(self):

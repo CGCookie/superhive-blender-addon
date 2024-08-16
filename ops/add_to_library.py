@@ -172,6 +172,9 @@ class SH_OT_AddToLibrary(Operator):
             bpy.app.timers.register(self.follow_up, first_interval=1)
             return self.finished(context)
 
+        if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            return {"PASS_THROUGH"}
+
         return {"RUNNING_MODAL"}
 
     def finished(self, context: Context):
@@ -325,6 +328,8 @@ class SH_OT_RemoveFromLibrary(Operator):
         context.window_manager.modal_handler_add(self)
         self._timer = context.window_manager.event_timer_add(0.1, window=context.window)
 
+        utils.ensure_sidepanel_right_is_open(context.space_data)
+
         sets: "scene.SH_Scene" = context.scene.superhive
         self.prog = sets.header_progress_bar
         self.prog.start()
@@ -343,6 +348,9 @@ class SH_OT_RemoveFromLibrary(Operator):
         if not self._thread.is_alive():
             bpy.app.timers.register(self.follow_up, first_interval=1)
             return self.finished(context)
+
+        if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            return {"PASS_THROUGH"}
 
         return {"RUNNING_MODAL"}
 
@@ -709,7 +717,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
     def get_ids(self, context: Context) -> list[ID]: ...
 
     def execute(self, context: Context):
-        if self.lib == None:
+        if self.lib is None:
             if self.is_multi and self.add_as_collection:  # TODO: Use Popup Dialog to get correct collection name
                 if not self.collection_name:
                     self.report({"ERROR"}, "Collection name not entered")
@@ -817,6 +825,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
         if not self._thread.is_alive():
             return self.finish(context)
+
+        if event.type in {"MIDDLEMOUSE", "WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            return {"PASS_THROUGH"}
 
         return {"RUNNING_MODAL"}
 
