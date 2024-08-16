@@ -259,13 +259,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             toggle=True,
         )
 
-        layout.prop(
-            self, "mark_materials", text="Materials", icon="MATERIAL", toggle=True
-        )
+        layout.prop(self, "mark_materials", text="Materials", icon="MATERIAL", toggle=True)
 
-        layout.prop(
-            self, "mark_node_trees", text="Node Trees", icon="NODETREE", toggle=True
-        )
+        layout.prop(self, "mark_node_trees", text="Node Trees", icon="NODETREE", toggle=True)
 
         header, body = layout.panel("mark_object_types")
         header.prop(self, "mark_objects", text="Objects", icon="OBJECT_DATAMODE")
@@ -287,15 +283,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 text="Cameras",
                 icon="CAMERA_DATA",
             )
-            grid.prop(
-                self, "mark_obj_curves", toggle=True, text="Curves", icon="CURVE_DATA"
-            )
-            grid.prop(
-                self, "mark_obj_empties", toggle=True, text="Empties", icon="EMPTY_DATA"
-            )
-            grid.prop(
-                self, "mark_obj_fonts", toggle=True, text="Fonts", icon="FONT_DATA"
-            )
+            grid.prop(self, "mark_obj_curves", toggle=True, text="Curves", icon="CURVE_DATA")
+            grid.prop(self, "mark_obj_empties", toggle=True, text="Empties", icon="EMPTY_DATA")
+            grid.prop(self, "mark_obj_fonts", toggle=True, text="Fonts", icon="FONT_DATA")
             grid.prop(
                 self,
                 "mark_obj_gpencils",
@@ -310,9 +300,7 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 text="Lattices",
                 icon="LATTICE_DATA",
             )
-            grid.prop(
-                self, "mark_obj_lights", toggle=True, text="Lights", icon="LIGHT_DATA"
-            )
+            grid.prop(self, "mark_obj_lights", toggle=True, text="Lights", icon="LIGHT_DATA")
             grid.prop(
                 self,
                 "mark_obj_light_probes",
@@ -320,12 +308,8 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 text="Light Probes",
                 icon="OUTLINER_OB_LIGHTPROBE",
             )
-            grid.prop(
-                self, "mark_obj_meshes", toggle=True, text="Meshes", icon="MESH_DATA"
-            )
-            grid.prop(
-                self, "mark_obj_metas", toggle=True, text="Metas", icon="META_DATA"
-            )
+            grid.prop(self, "mark_obj_meshes", toggle=True, text="Meshes", icon="MESH_DATA")
+            grid.prop(self, "mark_obj_metas", toggle=True, text="Metas", icon="META_DATA")
             grid.prop(
                 self,
                 "mark_obj_point_clouds",
@@ -412,9 +396,7 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
         catalogs = self.lib.catalogs.get_catalogs()
         catalogs = sorted(catalogs, key=lambda x: x.name.lower())
 
-        items = [
-            (b.name, b.name, f"Add assets to the '{b.name}' catalog") for b in catalogs
-        ]
+        items = [(b.name, b.name, f"Add assets to the '{b.name}' catalog") for b in catalogs]
 
         self.catalog_items.clear()
 
@@ -491,9 +473,7 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             context.window_manager.event_timer_remove(self._timer)
             bpy.app.timers.register(self.prog.end, first_interval=1)
             return {"FINISHED"}
-        elif event.value == "ESC" and utils.mouse_in_window(
-            context.window, event.mouse_x, event.mouse_y
-        ):
+        elif event.value == "ESC" and utils.mouse_in_window(context.window, event.mouse_x, event.mouse_y):
             self.prog.cancel = True
         elif self.prog.cancel:
             self._thread.join()
@@ -556,9 +536,7 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 directory=str(self.lib.path),
                 objects=[f for f in assets_marked.values()],
                 shading=self.shading,
-                angle=utils.resolve_angle(
-                    self.camera_angle, self.flip_x, self.flip_y, self.flip_z
-                ),
+                angle=utils.resolve_angle(self.camera_angle, self.flip_x, self.flip_y, self.flip_z),
                 add_plane=prefs.add_ground_plane and not self.flip_z,
                 world_name=self.scene_lighting,
                 world_strength=self.world_strength,
@@ -574,11 +552,12 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
         return {"FINISHED"}
 
     def cancel(self, context: Context):
-        self.prog.cancel = True
-        self._thread.join()
-        bpy.ops.asset.library_refresh()
-        context.window_manager.event_timer_remove(self._timer)
-        bpy.app.timers.register(self.prog.end, first_interval=2)
+        if hasattr(self, "_thread"):  # Ensure `execute` has run
+            self.prog.cancel = True
+            self._thread.join()
+            bpy.ops.asset.library_refresh()
+            context.window_manager.event_timer_remove(self._timer)
+            bpy.app.timers.register(self.prog.end, first_interval=2)
         return {"CANCELLED"}
 
 
