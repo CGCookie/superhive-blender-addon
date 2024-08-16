@@ -558,7 +558,6 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             bpy.ops.asset.library_refresh()
             context.window_manager.event_timer_remove(self._timer)
             bpy.app.timers.register(self.prog.end, first_interval=2)
-        return {"CANCELLED"}
 
 
 classes = (Catalog, Catalogs, SH_OT_ImportFromDirectory)
