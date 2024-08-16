@@ -79,6 +79,8 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         if scene_sets.side_panel_batch_asset_update_progress_bar.show:
             scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
+        elif scene_sets.export_library.show:
+            scene_sets.export_library.draw(layout)
         elif not context.selected_assets:
             row = layout.row()
             row.alignment = "CENTER"
@@ -217,35 +219,35 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
 
 
-class SH_PT_LibrarySettings(Panel):
-    bl_idname = "SH_PT_LibrarySettings"
-    bl_label = "Bkeeper"
-    bl_space_type = "FILE_BROWSER"
-    bl_region_type = "TOOLS"
-    bl_order = 1000
-    bl_options = {"HIDE_HEADER"}
+# class SH_PT_LibrarySettings(Panel):
+#     bl_idname = "SH_PT_LibrarySettings"
+#     bl_label = "Bkeeper"
+#     bl_space_type = "FILE_BROWSER"
+#     bl_region_type = "TOOLS"
+#     bl_order = 1000
+#     bl_options = {"HIDE_HEADER"}
 
-    @classmethod
-    def poll(cls, context):
-        return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "BKEEPER"
+#     @classmethod
+#     def poll(cls, context):
+#         return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "BKEEPER"
 
-    def draw(self, context):
-        layout: UILayout = self.layout
+#     def draw(self, context):
+#         layout: UILayout = self.layout
 
-        scene_sets: "scene.SH_Scene" = context.scene.superhive
-        if scene_sets.export_library.show:
-            scene_sets.export_library.draw(layout)
-            return
+# scene_sets: "scene.SH_Scene" = context.scene.superhive
+# if scene_sets.export_library.show:
+#     scene_sets.export_library.draw(layout)
+#     return
 
-        # layout.operator("bkeeper.add_categories_to_library")
-        # layout.operator("bkeeper.remove_empty_catalogs")
-        # layout.operator("bkeeper.export_library", text="Export to Superhive")
-        # layout.operator("bkeeper.import_from_directory")
+# layout.operator("bkeeper.add_categories_to_library")
+# layout.operator("bkeeper.remove_empty_catalogs")
+# layout.operator("bkeeper.export_library", text="Export to Superhive")
+# layout.operator("bkeeper.import_from_directory")
 
 
 classes = (
     SH_PT_AssetSettings,
-    SH_PT_LibrarySettings,
+    # SH_PT_LibrarySettings,
     SH_MT_AssetBrowserHeaderMenu,
 )
 

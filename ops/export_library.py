@@ -410,6 +410,8 @@ class SH_OT_ExportLibrary(Operator):
         context.window_manager.modal_handler_add(self)
         self._timer = context.window_manager.event_timer_add(0.01, window=context.window)
 
+        utils.ensure_sidepanel_right_is_open(context.space_data)
+
         self._th = Thread(target=self.handle_files)
 
         self._th.start()

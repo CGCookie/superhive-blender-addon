@@ -993,6 +993,11 @@ def ensure_sidepanel_right_is_open(space_data: Space) -> None:
         space_data.show_region_tool_props = True
 
 
+def ensure_sidepanel_left_is_open(space_data: Space) -> None:
+    if not space_data.show_region_toolbar:
+        space_data.show_region_toolbar = True
+
+
 def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
     if not area:
         area = next(
