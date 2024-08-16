@@ -461,6 +461,27 @@ class IDsToHandle(PropertyGroup):
                 ith.draw(layout)
 
 
+class AddAsAssetEnum:
+    def __init__(self) -> None:
+        self._active = 0
+
+        self.DEFAULT = 0
+        self.COL_NAME = 1
+        self.COL_NAME_EXISTS = 2
+        self.LIB_NAME = 3
+        self.LIB_NAME_EXISTS = 4
+        self.IDS_TO_HANDLE = 5
+        self.IDS_TO_RENAME = 6
+
+    @property
+    def active(self):
+        return self._active
+
+    @active.setter
+    def active(self, value):
+        self._active = value
+
+
 class AddAsAsset(scene.RenderThumbnailProps):
     bl_label = "Add to Library"
     bl_description = "Mark as asset, set default data, and add to a library"
@@ -526,11 +547,6 @@ class AddAsAsset(scene.RenderThumbnailProps):
         size=len(hive_mind.TAGS_ENUM),
     )
 
-    display_ids_to_handle: BoolProperty()
-    """Show the IDs to Handle UI instead of the regular UI"""
-
-    display_ids_to_rename: BoolProperty()
-
     ids_to_handle: PointerProperty(type=IDsToHandle)
 
     icon_source: EnumProperty(
@@ -565,6 +581,8 @@ class AddAsAsset(scene.RenderThumbnailProps):
         default=False,
     )
 
+    draw_enum = AddAsAssetEnum()
+
     update = False
     label = ""
     progress = 0.0
@@ -585,9 +603,17 @@ class AddAsAsset(scene.RenderThumbnailProps):
         layout: UILayout = self.layout
         layout.use_property_split = True
 
-        if self.display_ids_to_handle:
+        if self.draw_enum.active == self.draw_enum.COL_NAME:
+            self.draw_enter_collection_name(layout)
+        elif self.draw_enum.active == self.draw_enum.COL_NAME_EXISTS:
+            self.draw_collection_name_exists(layout)
+        elif self.draw_enum.active == self.draw_enum.LIB_NAME:
+            self.draw_enter_library_name(layout)
+        elif self.draw_enum.active == self.draw_enum.LIB_NAME_EXISTS:
+            self.draw_library_name_exists(layout)
+        elif self.draw_enum.active == self.draw_enum.IDS_TO_HANDLE:
             self.draw_ids_to_handle(layout)
-        elif self.display_ids_to_rename:
+        elif self.draw_enum.active == self.draw_enum.IDS_TO_RENAME:
             self.draw_ids_to_rename(layout)
         else:
             self.draw_regular(context, layout)
@@ -601,48 +627,10 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
         if self.is_multi:
             layout.prop(self, "add_as_collection")
-            row = layout.row()
-            row.active = self.add_as_collection
-            row.prop(
-                self,
-                "collection_name",
-                icon=(
-                    "COLLECTION_COLOR_01"
-                    if self.collection_name in bpy.data.collections
-                    else (
-                        "COLLECTION_COLOR_04"
-                        if self.collection_name
-                        else ("COLLECTION_COLOR_01" if self.add_as_collection else "OUTLINER_COLLECTION")
-                    )
-                ),
-            )
-            row = layout.row()
-            row.alignment = "RIGHT"
-            if self.add_as_collection:
-                if self.collection_name in bpy.data.collections:
-                    row.alert = True
-                    row.label(text="Collection name already exists")
-                elif self.collection_name:
-                    row.active = False
-                    row.label(text="Creating new collection")
-                else:
-                    row.alert = True
-                    row.label(text="Please enter a collection name")
-            else:
-                row.label(text="")
-            row.separator()
+            self.draw_collection_name(layout)
 
         if self.library == "NEW":
-            row = layout.row()
-            row.alert = not self.new_library_name
-            row.activate_init = True
-            row.prop(self, "new_library_name")
-
-            if self.new_library_name in context.preferences.filepaths.asset_libraries:
-                row = layout.row()
-                row.alert = True
-                row.alignment = "CENTER"
-                row.label(text=f"Library `{self.new_library_name}` already exists")
+            self.draw_library_name(context, layout)
 
         layout.prop(self, "description")
         layout.prop(self, "author")
@@ -697,8 +685,86 @@ class AddAsAsset(scene.RenderThumbnailProps):
         col.label(text="Please choose what to do for each asset:")
         self.ids_to_handle.draw(col, only_tagged=True)
 
+    def draw_enter_collection_name(self, layout: UILayout):
+        layout.label(text="Please Enter Collection Name")
+        self.draw_collection_name(layout)
+        layout.label(text="OR disable 'Add as Collection'")
+        layout.prop(self, "add_as_collection")
+
+    def draw_collection_name_exists(self, layout: UILayout):
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.alert = True
+        row.label(text="Collection Name Already Exists")
+        layout.label(text="Please enter a new name")
+        layout.prop(self, "add_as_collection")
+        self.draw_collection_name(layout)
+
+    def draw_collection_name(self, layout: UILayout):
+        row = layout.row()
+        row.active = self.add_as_collection
+        row.prop(
+            self,
+            "collection_name",
+            icon=(
+                "COLLECTION_COLOR_01"
+                if self.collection_name in bpy.data.collections
+                else (
+                    "COLLECTION_COLOR_04"
+                    if self.collection_name
+                    else ("COLLECTION_COLOR_01" if self.add_as_collection else "OUTLINER_COLLECTION")
+                )
+            ),
+        )
+        row = layout.row()
+        row.alignment = "RIGHT"
+        if self.add_as_collection:
+            if self.collection_name in bpy.data.collections:
+                row.alert = True
+                row.label(text="Collection name already exists")
+            elif self.collection_name:
+                row.active = False
+                row.label(text="Creating new collection")
+            else:
+                row.alert = True
+                row.label(text="Please enter a collection name")
+        else:
+            row.label(text="")
+        row.separator()
+
+    def draw_library_name(self, context: Context, layout: UILayout):
+        row = layout.row()
+        row.alert = not self.new_library_name
+        row.activate_init = True
+        row.prop(self, "new_library_name")
+
+        if self.new_library_name in context.preferences.filepaths.asset_libraries:
+            row = layout.row()
+            row.alert = True
+            row.alignment = "CENTER"
+            row.label(text=f"Library `{self.new_library_name}` already exists")
+
+    def draw_enter_library_name(self, layout: UILayout) -> None:
+        layout.label(text="Please enter a library name")
+        self.draw_library_name(bpy.context, layout)
+
+    def draw_library_name_exists(self, layout: UILayout) -> None:
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.alert = True
+        row.label(text="Library Name Already Exists")
+
+        layout.label(text="Please enter a new name")
+        self.draw_library_name(bpy.context, layout)
+
     def invoke(self, context: Context, event):
         self.ids_to_handle: IDsToHandle
+
+        # Defaults
+        self.draw_enum.active = self.draw_enum.DEFAULT
+        self.add_as_collection = True
+        self.collection_name = ""
+        self.new_library_name = ""
 
         prefs = utils.get_prefs()
         self.name = context.object.name
@@ -708,8 +774,6 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
         self.ids = context.selected_ids
         self.is_multi = len(self.ids) > 1
-
-        self.display_ids_to_handle = False
 
         self.lib = None
 
@@ -721,19 +785,19 @@ class AddAsAsset(scene.RenderThumbnailProps):
         if self.lib is None:
             if self.is_multi and self.add_as_collection:  # TODO: Use Popup Dialog to get correct collection name
                 if not self.collection_name:
-                    self.report({"ERROR"}, "Collection name not entered")
-                    return {"CANCELLED"}
+                    self.draw_enum.active = self.draw_enum.COL_NAME
+                    return context.window_manager.invoke_props_dialog(self, width=500)
                 elif self.collection_name in bpy.data.collections:
-                    self.report({"ERROR"}, f"Collection `{self.collection_name}` already exists")
-                    return {"CANCELLED"}
+                    self.draw_enum.active = self.draw_enum.COL_NAME_EXISTS
+                    return context.window_manager.invoke_props_dialog(self, width=500)
 
             if self.library == "NEW":  # TODO: Use Popup Dialog to get unique Library name
                 if not self.new_library_name:
-                    self.report({"ERROR"}, "Name not entered for new library")
-                    return {"CANCELLED"}
+                    self.draw_enum.active = self.draw_enum.LIB_NAME
+                    return context.window_manager.invoke_props_dialog(self, width=500)
                 if self.new_library_name in context.preferences.filepaths.asset_libraries:
-                    self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
-                    return {"CANCELLED"}
+                    self.draw_enum.active = self.draw_enum.LIB_NAME_EXISTS
+                    return context.window_manager.invoke_props_dialog(self, width=500)
 
                 dir: Path = (
                     Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
@@ -768,7 +832,6 @@ class AddAsAsset(scene.RenderThumbnailProps):
                     self.ids_to_handle.new(id, self.lib.path)
 
             if self.ids_to_handle.ids:
-                self.display_ids_to_handle = True
                 return context.window_manager.invoke_props_dialog(self, width=500)
             return self.assets_to_library(context)
 
@@ -782,8 +845,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
                     check = True
 
         if check:
-            self.display_ids_to_handle = False
-            self.display_ids_to_rename = True
+            self.draw_enum.active = self.draw_enum.IDS_TO_RENAME
             return context.window_manager.invoke_props_dialog(self, width=500)
 
         return self.assets_to_library(context)
@@ -834,7 +896,7 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
     def check_ids_to_handle(self, context: Context):
         if self.ids_to_handle.ids:
-            self.display_ids_to_handle = True
+            self.draw_enum.active = self.draw_enum.IDS_TO_HANDLE
             return context.window_manager.invoke_popup(self, width=500)
         return self.assets_to_library(context)
 
@@ -969,15 +1031,19 @@ class AddAsAsset(scene.RenderThumbnailProps):
             print(f"An error occurred while refreshing the asset library: {e}")
 
     def finish(self, context: Context):
-        self.refresh_library(context)
-        bpy.app.timers.register(self.follow_up, first_interval=1)
         if self.collection and self.collection_created:
             bpy.data.collections.remove(self.collection)
+        if self.library == "NEW":
+            for area in context.screen.areas:
+                if polls.is_asset_browser(context):
+                    area.spaces.active.params.asset_library_reference = self.new_library_name
+        bpy.app.timers.register(self.follow_up, first_interval=1)
         return {"FINISHED"}
 
     def follow_up(self):
         self.prog.end()
         for area in bpy.context.screen.areas:
+            self.refresh_library(bpy.context)
             area.tag_redraw()
 
 
