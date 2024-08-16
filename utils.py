@@ -627,7 +627,7 @@ class CatalogsFile:
 
 # Context manager for opening and then saving the catalogs file
 @contextmanager
-def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
+def open_catalogs_file(path: Path, is_new=False) -> Generator[CatalogsFile, None, None]:
     a = CatalogsFile(path, is_new=is_new)
     yield a
     a.write_file()
@@ -658,7 +658,6 @@ class Asset:
         self.tags: list[str] = [tag.name for tag in asset.metadata.sh_tags.tags]
         self.bpy_tags: list[str] = [tag.name for tag in asset.metadata.tags]
         self.icon_path = None
-        # self.filepath = asset.metadata.sh_filepath
 
     def update_asset(self, blender_exe: str, debug: bool = False) -> None:
         """Open asset's blend file and update the asset's metadata."""
@@ -775,6 +774,44 @@ class Asset:
             subprocess.run(cmd)
             return None
 
+    def save_out_preview(self, directory: Path) -> None:
+        """Save out the preview image of the asset."""
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "save_out_previews.py"
+
+        args = [
+            bpy.app.binary_path,
+            "-b",
+            "--factory-startup",
+            str(self.orig_asset.full_library_path),
+            "-P",
+            str(python_file),
+            str(directory),
+            self.orig_asset.name,
+            ASSET_TYPES_TO_ID_TYPES.get(self.id_type),
+            "False",
+        ]
+
+        proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if proc.returncode > 1:
+            print(f"Error: {proc.stderr.decode()}")
+        print(f"Output: {proc.stdout.decode()}")
+
+    def to_dict(self, apply_changes=False) -> dict:
+        return {
+            "name": self.new_name if apply_changes else self.name,
+            "blend_path": self.blend_path,
+            "id_type": self.id_type,
+            "uuid": self.uuid,
+            "author": self.author if apply_changes else self.orig_asset.metadata.author,
+            "description": self.description if apply_changes else self.orig_asset.metadata.description,
+            "license": self.license if apply_changes else self.orig_asset.metadata.license,
+            "catalog_simple_name": self.catalog_simple_name
+            if apply_changes
+            else self.orig_asset.metadata.catalog_simple_name,
+            "catalog_id": self.catalog_id if apply_changes else self.orig_asset.metadata.catalog_id,
+            "tags": self.tags if apply_changes else self.bpy_tags,
+        }
+
 
 class Assets:
     def __init__(self, assets: list[AssetRepresentation]) -> None:
@@ -837,6 +874,7 @@ class AssetLibrary:
         self.library: UserAssetLibrary = library
         self.name = library.name
         self.path: Path = Path(library.path)
+        """The path to the library's directory"""
 
         self.assets: Assets = None
         self.catalogs: CatalogsFile = None
@@ -940,16 +978,29 @@ class AssetLibrary:
             "catalogs": self.catalogs.to_dict() if self.catalogs else [],
         }
 
-    def save_json(self) -> None:
-        json_path = self.path / "library.json"
+    def save_json(self, data: dict = None, directory: Path = None) -> Path:
+        """
+        Save the library data to a JSON file.
+
+        Args:
+            data (dict, optional): Dictionary to write. If None, defualts to running `to_dict`. Defaults to None.
+            directory (Path, optional): The directory to save the json file. Defaults to the library's path. Defaults to None.
+
+        Returns:
+            Path: The path to the saved JSON file.
+        """
+        json_path = (directory or self.path) / "library.json"
         if json_path.exists():
-            data = json.loads(json_path.read_text())
-            data["libaries"] = self.to_dict()
-        else:
+            orig_data = json.loads(json_path.read_text())
+            orig_data["libaries"] = data or self.to_dict()
+            data = orig_data
+        elif not data:
             data = self.to_dict()
 
         with open(json_path, "w") as file:
             json.dump(data, file, indent=4)
+
+        return json_path
 
 
 def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
