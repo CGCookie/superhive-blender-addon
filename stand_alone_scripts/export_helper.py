@@ -247,4 +247,7 @@ if __name__ == "__main__":
     for world in bpy.data.worlds:
         save_out_preview(world, d)
 
-    bpy.ops.wm.save_mainfile(filepath=str(d / blend_path.name), compress=True)
+    # Save the blend file
+    out_path = d / blend_path.name
+    bpy.ops.wm.save_mainfile(filepath=str(out_path), compress=True)
+    print(f"=out_path={out_path}")
