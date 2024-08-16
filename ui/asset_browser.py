@@ -81,6 +81,8 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
         elif scene_sets.export_library.show:
             scene_sets.export_library.draw(layout)
+        elif scene_sets.remove_assets_progress_bar.show:
+            scene_sets.remove_assets_progress_bar.draw(layout)
         elif not context.selected_assets:
             row = layout.row()
             row.alignment = "CENTER"

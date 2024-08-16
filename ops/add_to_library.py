@@ -331,7 +331,8 @@ class SH_OT_RemoveFromLibrary(Operator):
         utils.ensure_sidepanel_right_is_open(context.space_data)
 
         sets: "scene.SH_Scene" = context.scene.superhive
-        self.prog = sets.header_progress_bar
+        self.prog = sets.remove_assets_progress_bar
+        self.prog.label = "Removing Assets"
         self.prog.start()
 
         self._thread.start()
