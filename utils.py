@@ -1043,7 +1043,7 @@ def id_to_asset_id_type(id: ID) -> str:
 
 
 @contextmanager
-def display_all_assets_in_library(context: Context) -> None:
+def display_all_assets_in_library(context: Context) -> Generator[None, None, None]:
     """Makes all possible assets visible in the UI for the duration of the context manager. Assets are all selected so running `context.selected_assets` will return all assets."""
     # Gather Current State ##
     # Params
@@ -1544,6 +1544,18 @@ def export_helper(
         else:
             print(f"Could not find asset: '{item_name}' of type '{item_type}' in blend file: {blend_file}")
 
+    def handle_out_path(v: str) -> None:
+        for asset_dict in json_dict["assets"]:
+            if Path(asset_dict["blend_path"]) == blend_file:
+                path = Path(v)
+                if path.is_relative_to(destination_dir):
+                    path = path.relative_to(destination_dir)
+                    asset_dict["blend_path"] = str(path)
+                else:
+                    print(
+                        f"Out path is not relative to destination directory. Probably saved in wrong place!\n\t{path}"
+                    )
+
     if op:
         while True:
             line = proc.stdout.readline()
@@ -1563,6 +1575,8 @@ def export_helper(
                         op.movingfiles_sub_prog = float(value)
                     case "preview_path":
                         handle_preview_path(value)
+                    case "out_path":
+                        handle_out_path(value)
                     case _:
                         print("Unhandled Property:", prop, ", value:", value)
                 op.updated = True
@@ -1589,8 +1603,11 @@ def export_helper(
             elif line.startswith("="):
                 prop, value = line[1:].split("=")
                 value = value.replace("\n", "")
-                if prop == "preview_path":
-                    handle_preview_path(value)
+                match prop:
+                    case "preview_path":
+                        handle_preview_path(value)
+                    case "out_path":
+                        handle_out_path(value)
 
     if proc.returncode > 1:
         print()
