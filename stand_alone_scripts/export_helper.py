@@ -102,6 +102,7 @@ def save_out_preview(item: bpy.types.ID, directory: Path) -> None:
             pixels[::-1],
             save_path=fp,
         )
+        print(f"=preview_path={item.name}+,+{item.__class__.__name__.upper()}+,+{fp}")
 
 
 if __name__ == "__main__":

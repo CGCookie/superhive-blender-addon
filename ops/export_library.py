@@ -438,7 +438,7 @@ class SH_OT_ExportLibrary(Operator):
                 self.movingfiles_file_prog = 0
                 self.updated = True
 
-                utils.export_helper(p, tempdir, op=self)
+                utils.export_helper(p, tempdir, self.json_data, op=self)
 
                 self.movingfiles_main_prog = (i + 1) / (len(self.assets) + 1)
                 self.updated = True

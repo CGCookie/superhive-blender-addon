@@ -1514,6 +1514,7 @@ def clean_blend_file(
 def export_helper(
     blend_file: Path,
     destination_dir: Path,
+    json_dict: dict,
     op: "export_library.SH_OT_ExportLibrary" = None,
 ):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "export_helper.py"
@@ -1530,6 +1531,33 @@ def export_helper(
 
     proc = subprocess.Popen(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True)
     # proc = subprocess.Popen(args)
+
+    def handle_preview_path(v: str):
+        item_name, item_type, path = v.split("+,+")
+        item_dict = next(
+            (
+                asset_dict
+                for asset_dict in json_dict["assets"]
+                if (
+                    asset_dict["name"] == item_name
+                    and Path(asset_dict["blend_path"]) == blend_file
+                    and asset_dict["id_type"] == item_type
+                )
+            ),
+            None,
+        )
+
+        if item_dict:
+            path = Path(path)
+            if path.is_relative_to(destination_dir):
+                path = path.relative_to(destination_dir)
+                item_dict["preview_path"] = str(path)
+            else:
+                print(
+                    f"Preview path is not relative to destination directory. Probably saved in wrong place!\n\t{path}"
+                )
+        else:
+            print(f"Could not find asset: '{item_name}' of type '{item_type}' in blend file: {blend_file}")
 
     if op:
         while True:
@@ -1548,6 +1576,8 @@ def export_helper(
                         op.sub_label = value
                     case "sub_prog":
                         op.movingfiles_sub_prog = float(value)
+                    case "preview_path":
+                        handle_preview_path(value)
                     case _:
                         print("Unhandled Property:", prop, ", value:", value)
                 op.updated = True
@@ -1556,7 +1586,8 @@ def export_helper(
             line = proc.stdout.readline()
             if not line and proc.poll() is not None:
                 break
-            elif line and line[0] == "|":
+
+            if line and line[0] == "|":
                 if line == "|":
                     print()
                     continue
@@ -1570,6 +1601,11 @@ def export_helper(
                     text = line_split[0]
                     end = "\n"
                 print(text, end=end)
+            elif line.startswith("="):
+                prop, value = line[1:].split("=")
+                value = value.replace("\n", "")
+                if prop == "preview_path":
+                    handle_preview_path(value)
 
     if proc.returncode > 1:
         print()
