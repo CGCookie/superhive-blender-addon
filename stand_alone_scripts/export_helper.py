@@ -23,9 +23,7 @@ from OpenImageIO import ROI, ImageBuf, ImageSpec
 DST = sys.argv[6]
 
 
-def set_compression(
-    spec: ImageSpec, extension: str, quality: int = 100, quality_other: Any = None
-) -> None:
+def set_compression(spec: ImageSpec, extension: str, quality: int = 100, quality_other: Any = None) -> None:
     if extension == ".bmp":
         spec.attribute("compression", quality_other)  # "rle4" or "rle8"
     elif extension in {".jpg", ".jpeg", ".jpe", ".jif", ".jfif", ".jfi"}:
@@ -85,7 +83,8 @@ def numpy_to_image(
     return image
 
 
-def save_out_preview(item: bpy.types.ID, directory: Path):
+def save_out_preview(item: bpy.types.ID, directory: Path) -> None:
+    """Will save out the thumbnail of the item to the (assumed temporary) directory to be zipped."""
     if item.asset_data and item.preview:
         pixels = np.array(item.preview.image_pixels_float)
 
@@ -103,6 +102,7 @@ def save_out_preview(item: bpy.types.ID, directory: Path):
             pixels[::-1],
             save_path=fp,
         )
+        print(f"=preview_path={item.name}+,+{item.__class__.__name__.upper()}+,+{fp}")
 
 
 if __name__ == "__main__":
@@ -116,9 +116,7 @@ if __name__ == "__main__":
     def make_rel(path: Path) -> Path:
         return path.relative_to(d)
 
-    images_to_copy = [
-        img for img in bpy.data.images if not img.packed_file and not img.packed_files
-    ]
+    images_to_copy = [img for img in bpy.data.images if not img.packed_file and not img.packed_files]
     sounds_to_copy = [sound for sound in bpy.data.sounds if not sound.packed_file]
     volumes_to_copy = [volume for volume in bpy.data.volumes if not volume.packed_file]
 
@@ -145,16 +143,10 @@ if __name__ == "__main__":
             files_to_copy = [
                 f
                 for f in vol_dir.iterdir()
-                if f.is_file()
-                and f.name.startswith(name_base)
-                and f.suffix == base_filepath.suffix
+                if f.is_file() and f.name.startswith(name_base) and f.suffix == base_filepath.suffix
             ]
             for j, f in enumerate(files_to_copy):
-                if (
-                    f.is_file()
-                    and f.name.startswith(name_base)
-                    and f.suffix == base_filepath.suffix
-                ):
+                if f.is_file() and f.name.startswith(name_base) and f.suffix == base_filepath.suffix:
                     dst = d / f.name
                     dst.write_bytes(f.read_bytes())
                     sub_prog = j / len(files_to_copy)
@@ -216,18 +208,12 @@ if __name__ == "__main__":
             files_to_copy = [
                 f
                 for f in vol_dir.iterdir()
-                if f.is_file()
-                and f.name.startswith(name_base)
-                and f.suffix == base_filepath.suffix
+                if f.is_file() and f.name.startswith(name_base) and f.suffix == base_filepath.suffix
             ]
             seq_prog = "0.00"
             print("=sub_prog=0")
             for j, f in enumerate(files_to_copy):
-                if (
-                    f.is_file()
-                    and f.name.startswith(name_base)
-                    and f.suffix == base_filepath.suffix
-                ):
+                if f.is_file() and f.name.startswith(name_base) and f.suffix == base_filepath.suffix:
                     dst = d / f.name
                     dst.write_bytes(f.read_bytes())
                     sub_prog = j / len(files_to_copy)
@@ -261,4 +247,7 @@ if __name__ == "__main__":
     for world in bpy.data.worlds:
         save_out_preview(world, d)
 
-    bpy.ops.wm.save_mainfile(filepath=str(d / blend_path.name), compress=True)
+    # Save the blend file
+    out_path = d / blend_path.name
+    bpy.ops.wm.save_mainfile(filepath=str(out_path), compress=True)
+    print(f"=out_path={out_path}")

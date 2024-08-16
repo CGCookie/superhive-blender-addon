@@ -172,18 +172,10 @@ def does_support_thumbnails(ob: Object):
             and not (
                 isinstance(ob, bpy.types.Object)
                 and ob.type == "MESH"
-                and len(
-                    ob.evaluated_get(
-                        bpy.context.evaluated_depsgraph_get()
-                    ).data.polygons
-                )
-                < 1
+                and len(ob.evaluated_get(bpy.context.evaluated_depsgraph_get()).data.polygons) < 1
             )
         )
-        or (
-            isinstance(ob, bpy.types.NodeTree)
-            and [a for a in ob.interface.items_tree if a.in_out == "OUTPUT"]
-        )
+        or (isinstance(ob, bpy.types.NodeTree) and [a for a in ob.interface.items_tree if a.in_out == "OUTPUT"])
         # or SHADING != "Solid"
     )
 
@@ -197,9 +189,7 @@ def delete_object_with_data(obj: Object):
             bpy.data.meshes.remove(data)
 
 
-def get_bounding_box_of_collection(
-    col: Collection, objects_to_ignore: set[Object] = None
-) -> tuple[Vector, Vector]:
+def get_bounding_box_of_collection(col: Collection, objects_to_ignore: set[Object] = None) -> tuple[Vector, Vector]:
     corners = []
     if objects_to_ignore is None:
         objects_to_ignore = set()
@@ -243,9 +233,7 @@ def get_collections_from_scene(scene: Scene) -> list[Collection]:
 
 
 @contextmanager
-def store_and_restore_scene_parameters(
-    add_plane: bool, scene: Scene = None
-) -> Generator[Any | World, Any, None]:
+def store_and_restore_scene_parameters(add_plane: bool, scene: Scene = None) -> Generator[Any | World, Any, None]:
     if not scene:
         scene = bpy.context.scene
     file_format = scene.render.image_settings.file_format
@@ -351,9 +339,7 @@ def store_and_restore_scene_parameters(
 
     if backup_world != world:
         if world.node_tree.nodes.get("Environment Texture").image:
-            bpy.data.images.remove(
-                world.node_tree.nodes.get("Environment Texture").image
-            )
+            bpy.data.images.remove(world.node_tree.nodes.get("Environment Texture").image)
         bpy.data.worlds.remove(world)
 
     if camera_object:
@@ -365,9 +351,7 @@ def store_and_restore_scene_parameters(
         delete_object_with_data(ground_plane)
 
 
-def setup_scene(
-    scene: Scene, add_plane: bool = False
-) -> tuple[Area, Object, Object, Object]:
+def setup_scene(scene: Scene, add_plane: bool = False) -> tuple[Area, Object, Object, Object]:
     scene.render.film_transparent = True
     scene.render.resolution_x = 256
     scene.render.resolution_y = 256
@@ -395,11 +379,7 @@ def setup_scene(
 
     # RENDER AREA FOR MATERIAL #
     view_area = next(
-        (
-            area
-            for area in context.window_manager.windows[0].screen.areas
-            if area.type == "VIEW_3D"
-        ),
+        (area for area in context.window_manager.windows[0].screen.areas if area.type == "VIEW_3D"),
         None,
     )
 
@@ -429,16 +409,12 @@ def setup_scene(
     return view_area, camera_object, track_object, ground_plane
 
 
-def setup_camera_and_track(
-    min_bb: Vector, max_bb: Vector, camera_object: Object, track_object: Object
-) -> Constraint:
+def setup_camera_and_track(min_bb: Vector, max_bb: Vector, camera_object: Object, track_object: Object) -> Constraint:
     box_diag_vec = max_bb - min_bb
 
     # Calculate distance from camera to object
     # 0.44262946093977795 = 25.5 degrees in radians = 80mm lens
-    dist = box_diag_vec.magnitude / (
-        2 * math.tan((0.44262946093977795 * max(0.0001, CAMERA_OFFSET)) / 2)
-    )
+    dist = box_diag_vec.magnitude / (2 * math.tan((0.44262946093977795 * max(0.0001, CAMERA_OFFSET)) / 2))
 
     if "X" in CAMERA_ANGLE and "Y" in CAMERA_ANGLE:
         x = y = z = math.sqrt(dist**2 / 3)
@@ -448,13 +424,11 @@ def setup_camera_and_track(
 
     # Calculate camera position
     camera_object.location = (
-        Vector(
-            (
-                -x if "-X" in CAMERA_ANGLE else (x if "X" in CAMERA_ANGLE else 0),
-                -y if "-Y" in CAMERA_ANGLE else (y if "Y" in CAMERA_ANGLE else 0),
-                -z if "-Z" in CAMERA_ANGLE else z,
-            )
-        )
+        Vector((
+            -x if "-X" in CAMERA_ANGLE else (x if "X" in CAMERA_ANGLE else 0),
+            -y if "-Y" in CAMERA_ANGLE else (y if "Y" in CAMERA_ANGLE else 0),
+            -z if "-Z" in CAMERA_ANGLE else z,
+        ))
         + track_object.location
     )
 
@@ -475,16 +449,12 @@ def add_ground_plane(scene: Scene) -> Object:
         (-1000, 1000, 0),
     ]
     polyIndices = [(i, (i + 1) % (len(polycoords))) for i in range(0, len(polycoords))]
-    mesh_data.from_pydata(
-        polycoords, polyIndices, [[i for i in range(0, len(polycoords))]]
-    )
+    mesh_data.from_pydata(polycoords, polyIndices, [[i for i in range(0, len(polycoords))]])
     mesh_data.validate()
 
     ground_plane = bpy.data.objects.new("SH_Plane", mesh_data)
 
-    subsurf_mod: bpy.types.SubsurfModifier = ground_plane.modifiers.new(
-        type="SUBSURF", name="TA_SUBSURF"
-    )
+    subsurf_mod: bpy.types.SubsurfModifier = ground_plane.modifiers.new(type="SUBSURF", name="TA_SUBSURF")
     subsurf_mod.levels = 4
     subsurf_mod.render_levels = 4
     subsurf_mod.subdivision_type = "SIMPLE"
@@ -495,9 +465,7 @@ def add_ground_plane(scene: Scene) -> Object:
     return ground_plane
 
 
-def setup_scene_for_render(
-    scene: Scene, camera_object: Object, path: Path, path_id_name: str
-):
+def setup_scene_for_render(scene: Scene, camera_object: Object, path: Path, path_id_name: str):
     render_path = path / (bpy.path.clean_name(path_id_name + "_" + get_id(8)) + ".png")
 
     scene.render.filepath = str(render_path)
@@ -506,9 +474,7 @@ def setup_scene_for_render(
     return render_path
 
 
-def _setup_scene_for_render(
-    scene: Scene, camera_object: Object, path: Path, path_id_name: str
-):
+def _setup_scene_for_render(scene: Scene, camera_object: Object, path: Path, path_id_name: str):
     render_path = path / (bpy.path.clean_name(path_id_name + "_" + get_id(8)) + ".png")
 
     scene.render.filepath = str(render_path)
@@ -531,9 +497,7 @@ def render_image(
         if not DEBUG_SCENE and IS_RENDER:
             material_render_func()
     elif shading == "Eevee":
-        scene.render.engine = (
-            "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2) else "BLENDER_EEVEE"
-        )
+        scene.render.engine = "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2) else "BLENDER_EEVEE"
         if not DEBUG_SCENE and IS_RENDER:
             bpy.ops.render.render(write_still=True)
     else:  # Cycles
@@ -561,10 +525,7 @@ def calc_camera_position(obj: Object, camera_fov: float) -> Vector:
         max_z = max(max_z, v[2])
 
     # Calculate center of bounding box
-    center = (
-        Vector(((max_x + min_x) / 2, (max_y + min_y) / 2, (max_z + min_z) / 2))
-        + obj.location
-    )
+    center = Vector(((max_x + min_x) / 2, (max_y + min_y) / 2, (max_z + min_z) / 2)) + obj.location
 
     min_t = Vector((min_x, min_y, min_z))
     max_t = Vector((max_x, max_y, max_z))
@@ -585,17 +546,13 @@ def setup_engine(context: Context, shading: str, scene: Scene, view_area: Area):
         view_area.spaces[0].shading.type = "MATERIAL"
         view_area.spaces[0].overlay.show_overlays = False
     elif shading == "Eevee":
-        scene.render.engine = (
-            "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2) else "BLENDER_EEVEE"
-        )
+        scene.render.engine = "BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2) else "BLENDER_EEVEE"
     else:  # Cycles
         context.scene.cycles.samples = 64
         scene.render.engine = "CYCLES"
 
 
-def setup_scene_collection(
-    context: Context, col: bpy.types.Collection, shading="Material", add_plane=True
-):
+def setup_scene_collection(context: Context, col: bpy.types.Collection, shading="Material", add_plane=True):
     scene: Scene = context.scene
 
     if col not in get_collections_from_scene(scene):
@@ -605,9 +562,7 @@ def setup_scene_collection(
     selected_objects: list[Object] = set(col.all_objects)
 
     # // Put in function to share with single_id // #
-    view_area, camera_object, track_object, ground_plane = setup_scene(
-        scene, add_plane=add_plane
-    )
+    view_area, camera_object, track_object, ground_plane = setup_scene(scene, add_plane=add_plane)
 
     # bottom_left, top_right = get_bounding_box_of_collection(col, objects_to_ignore=set((ground_plane,)))
     min_bb, max_bb = get_bounding_box_of_collection(col)
@@ -640,9 +595,7 @@ def setup_scene_collection(
                 0.785398 - camera_object.rotation_euler.z,
             ]
 
-    unselected: list[Object] = [
-        a for a in scene.objects if a.name not in selected_objects and a.type != "LIGHT"
-    ]
+    unselected: list[Object] = [a for a in scene.objects if a.name not in selected_objects and a.type != "LIGHT"]
 
     for obj in unselected:
         obj.hide_render = True
@@ -683,9 +636,7 @@ def _capture_thumbnail_for_collection(
         if col not in get_collections_from_scene(scene):
             scene.collection.children.link(col)
 
-        bottom_left, top_right = get_bounding_box_of_collection(
-            col, objects_to_ignore=set((ground_plane,))
-        )
+        bottom_left, top_right = get_bounding_box_of_collection(col, objects_to_ignore=set((ground_plane,)))
         local_bbox_center = (bottom_left + top_right) / 2
 
         if add_plane and ground_plane:
@@ -734,9 +685,7 @@ def _capture_thumbnail_for_collection(
 
         hidden_render: list[Object] = []
         hidden_viewport: list[Object] = []
-        unselected: list[Object] = [
-            a for a in scene.objects if a.name not in col.all_objects
-        ]
+        unselected: list[Object] = [a for a in scene.objects if a.name not in col.all_objects]
 
         for obj in unselected:
             if obj.hide_render == False:
@@ -778,9 +727,7 @@ def setup_scene_single_id(
         context.view_layer.update()
 
     # // Put in function to share with single_id // #
-    view_area, camera_object, track_object, ground_plane = setup_scene(
-        scene, add_plane=add_plane
-    )
+    view_area, camera_object, track_object, ground_plane = setup_scene(scene, add_plane=add_plane)
 
     min_bb, max_bb = get_bounding_box_of_object(object)
 
@@ -832,9 +779,7 @@ def setup_scene_single_id(
                 0.785398 - camera_object.rotation_euler.z,
             ]
 
-    unselected: list[Object] = [
-        a for a in scene.objects if a.name not in selected_objects and a.type != "LIGHT"
-    ]
+    unselected: list[Object] = [a for a in scene.objects if a.name not in selected_objects and a.type != "LIGHT"]
 
     for obj in unselected:
         obj.hide_render = True
@@ -912,9 +857,7 @@ def _capture_thumbnail(
 
         hidden_render: list[Object] = []
         hidden_viewport: list[Object] = []
-        unselected: list[Object] = [
-            a for a in scene.objects if a != object and a != ground_plane
-        ]
+        unselected: list[Object] = [a for a in scene.objects if a != object and a != ground_plane]
 
         for obj in unselected:
             if obj.type != "LIGHT" and obj.hide_render == False:
@@ -944,7 +887,7 @@ def _capture_thumbnail(
 
 
 def setup_scene_for_thumbnail(context, ob, shading="Solid"):
-    thumbnail_path = Path(OBJECTS_PATH, "Thumbanils")
+    thumbnail_path = Path(OBJECTS_PATH, "Thumbnails")
     thumbnail_path.mkdir(parents=True, exist_ok=True)
 
     if shading != "Solid":
@@ -961,18 +904,14 @@ def setup_scene_for_thumbnail(context, ob, shading="Solid"):
 
 
 def _create_thumbnail(context, ob, shading="Solid"):
-    thumbnail_path = Path(OBJECTS_PATH, "Thumbanils")
+    thumbnail_path = Path(OBJECTS_PATH, "Thumbnails")
     thumbnail_path.mkdir(parents=True, exist_ok=True)
 
     if shading != "Solid":
         if isinstance(ob, bpy.types.Collection):
-            path = _capture_thumbnail_for_collection(
-                context, ob, thumbnail_path, shading, add_plane=ADD_PLANE
-            )
+            path = _capture_thumbnail_for_collection(context, ob, thumbnail_path, shading, add_plane=ADD_PLANE)
         else:
-            path = _capture_thumbnail(
-                context, ob, thumbnail_path, shading, add_plane=ADD_PLANE
-            )
+            path = _capture_thumbnail(context, ob, thumbnail_path, shading, add_plane=ADD_PLANE)
         # print(path)
         if os.path.isfile(path):
             with context.temp_override(id=ob):
@@ -983,11 +922,7 @@ def _create_thumbnail(context, ob, shading="Solid"):
 
 def check_if_volumetric(mat):
     if mat.use_nodes:
-        output_nodes = [
-            node
-            for node in mat.node_tree.nodes
-            if node.bl_idname == "ShaderNodeOutputMaterial"
-        ]
+        output_nodes = [node for node in mat.node_tree.nodes if node.bl_idname == "ShaderNodeOutputMaterial"]
         for node in output_nodes:
             if node.inputs[1].is_linked:
                 return True
@@ -1043,9 +978,7 @@ def apply_thumbnail():
                     "VOLUME",
                 } and does_support_thumbnails(ob):
                     with context.temp_override(id=ob):
-                        bpy.ops.ed.lib_id_load_custom_preview(
-                            filepath=str(thumbnail_path)
-                        )
+                        bpy.ops.ed.lib_id_load_custom_preview(filepath=str(thumbnail_path))
                         print("  - Thumbnail set")
                 else:
                     print(f"  - Object type '{ob.type}' not supported")
@@ -1144,9 +1077,7 @@ def setup_blend():
                     objects.append(ob)
                     setup_scene_for_thumbnail(bpy.context, ob, shading=SHADING)
                     p = Path(bpy.data.filepath)
-                    new_path = p.with_stem(
-                        f"{p.stem}=+={ob.name}=+=COLLECTION_thumbnail_copy"
-                    )
+                    new_path = p.with_stem(f"{p.stem}=+={ob.name}=+=COLLECTION_thumbnail_copy")
                     print("Saving as:", new_path)
                     bpy.ops.wm.save_as_mainfile(filepath=str(new_path), copy=True)
                     new_path.with_stem(new_path.stem + "_1").unlink(missing_ok=True)
@@ -1163,15 +1094,11 @@ def setup_blend():
                         ob.display_type = "TEXTURED"
                     if does_support_thumbnails(ob):
                         print(f"Is renderable Object: {ob.type}")
-                        print(
-                            f"     - {ob.type in supports_thumbnails} = {ob.type} in {supports_thumbnails}"
-                        )
+                        print(f"     - {ob.type in supports_thumbnails} = {ob.type} in {supports_thumbnails}")
                         objects.append(ob)
                         setup_scene_for_thumbnail(bpy.context, ob, shading=SHADING)
                         p = Path(bpy.data.filepath)
-                        new_path = p.with_stem(
-                            f"{p.stem}=+={ob.name}=+={id_type}_thumbnail_copy"
-                        )
+                        new_path = p.with_stem(f"{p.stem}=+={ob.name}=+={id_type}_thumbnail_copy")
                         print("Saving as:", new_path)
                         bpy.ops.wm.save_as_mainfile(filepath=str(new_path), copy=True)
                         new_path.with_stem(new_path.stem + "_1").unlink(missing_ok=True)
@@ -1180,9 +1107,7 @@ def setup_blend():
                         if hasattr(ob, "asset_generate_preview"):
                             print("  - Generating Preview: ob")
                             ob.asset_generate_preview()
-                        elif hasattr(ob, "data") and hasattr(
-                            ob.data, "asset_generate_preview"
-                        ):
+                        elif hasattr(ob, "data") and hasattr(ob.data, "asset_generate_preview"):
                             print("  - Generating Preview: ob.data")
                             ob.data.asset_generate_preview()
         # bpy.app.timers.register(
@@ -1223,9 +1148,7 @@ def _start_regenerating():
                     if does_support_thumbnails(ob):
                         objects.append(ob)
                         _create_thumbnail(bpy.context, ob, SHADING)
-        bpy.app.timers.register(
-            functools.partial(create_preview, objects), first_interval=0
-        )
+        bpy.app.timers.register(functools.partial(create_preview, objects), first_interval=0)
     except Exception as e:
         traceback.print_exc()
         print(e, "An Error Ocurred!")

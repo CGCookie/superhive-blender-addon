@@ -1,12 +1,13 @@
 # Utilities for interacting with the blender_assets.cats.txt file
 import functools
+import json
 import subprocess
 import threading
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from platform import system
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Generator, Union
 
 import bpy
 from bpy.types import ID, Area, AssetRepresentation, Context, UserAssetLibrary, Window
@@ -324,6 +325,15 @@ class Catalog:
                 if cat:
                     return cat
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "simple_name": self.simple_name,
+            "name": self.name,
+            "path": self.path,
+            "children": [child.to_dict() for child in self.children.values()],
+        }
+
 
 class CatalogsFile:
     def __init__(self, dir: Path, is_new=False) -> None:
@@ -365,9 +375,7 @@ class CatalogsFile:
                     self.path = dir / "blender_assets.cats.txt"
                     break
             if not found_new:
-                raise FileNotFoundError(
-                    f"Catalogs file not found in directory: {self.path.parent}"
-                )
+                raise FileNotFoundError(f"Catalogs file not found in directory: {self.path.parent}")
 
         self.load_catalogs()
 
@@ -420,9 +428,7 @@ class CatalogsFile:
         if self.exists():
             self.path.unlink()
 
-    def add_catalog(
-        self, name: str, id: str = None, path: str = None, auto_place=False
-    ) -> Catalog:
+    def add_catalog(self, name: str, id: str = None, path: str = None, auto_place=False) -> Catalog:
         """
         Add a catalog at the root level or under a parent catalog.
 
@@ -612,10 +618,16 @@ class CatalogsFile:
                 if cat:
                     return cat
 
+    def to_dict(self) -> dict:
+        return {
+            "path": str(self.path),
+            "catalogs": [cat.to_dict() for cat in self.catalogs.values()],
+        }
+
 
 # Context manager for opening and then saving the catalogs file
 @contextmanager
-def open_catalogs_file(path: Path, is_new=False) -> CatalogsFile:
+def open_catalogs_file(path: Path, is_new=False) -> Generator[CatalogsFile, None, None]:
     a = CatalogsFile(path, is_new=is_new)
     yield a
     a.write_file()
@@ -643,8 +655,8 @@ class Asset:
         self.catalog_simple_name = asset.metadata.catalog_simple_name
         """The original `catalog_simple_name` of the asset. Not a new one"""
         self.catalog_id = asset.metadata.sh_catalog
-        self.tags = [tag.name for tag in asset.metadata.sh_tags.tags]
-        self.bpy_tags = [tag.name for tag in asset.metadata.tags]
+        self.tags: list[str] = [tag.name for tag in asset.metadata.sh_tags.tags]
+        self.bpy_tags: list[str] = [tag.name for tag in asset.metadata.tags]
         self.icon_path = None
 
     def update_asset(self, blender_exe: str, debug: bool = False) -> None:
@@ -679,9 +691,7 @@ class Asset:
             print("".center(100, "-"))
             text = proc.stdout.decode()
             text.splitlines()
-            new_text = "\n".join(
-                line for line in text.splitlines() if line.startswith("|")
-            )
+            new_text = "\n".join(line for line in text.splitlines() if line.startswith("|"))
             print(new_text)
             print("".center(100, "-"))
             print()
@@ -727,9 +737,7 @@ class Asset:
             sh_tags.new_tag(tag.name, context)
         self.orig_asset.metadata.sh_is_dirty_tags = False
 
-    def rerender_thumbnail(
-        self, path, directory, objects, shading, angle="X", add_plane=False
-    ):
+    def rerender_thumbnail(self, path, directory, objects, shading, angle="X", add_plane=False):
         prefs = get_prefs()
         cmd = [bpy.app.binary_path]
         # cmd.append("--background")
@@ -738,11 +746,7 @@ class Asset:
         cmd.append("--python")
         # cmd.append(os.path.join(os.path.dirname(
         #     os.path.abspath(__file__)), "rerender_thumbnails.py"))
-        cmd.append(
-            str(
-                Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
-            )
-        )
+        cmd.append(str(Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"))
         cmd.append("--")
         cmd.append(":--separator--:".join(path))
         names = []
@@ -772,9 +776,7 @@ class Asset:
 
     def save_out_preview(self, directory: Path) -> None:
         """Save out the preview image of the asset."""
-        python_file = (
-            Path(__file__).parent / "stand_alone_scripts" / "save_out_previews.py"
-        )
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "save_out_previews.py"
 
         args = [
             bpy.app.binary_path,
@@ -794,6 +796,22 @@ class Asset:
             print(f"Error: {proc.stderr.decode()}")
         print(f"Output: {proc.stdout.decode()}")
 
+    def to_dict(self, apply_changes=False) -> dict:
+        return {
+            "name": self.new_name if apply_changes else self.name,
+            "blend_path": self.blend_path,
+            "id_type": self.id_type,
+            "uuid": self.uuid,
+            "author": self.author if apply_changes else self.orig_asset.metadata.author,
+            "description": self.description if apply_changes else self.orig_asset.metadata.description,
+            "license": self.license if apply_changes else self.orig_asset.metadata.license,
+            "catalog_simple_name": self.catalog_simple_name
+            if apply_changes
+            else self.orig_asset.metadata.catalog_simple_name,
+            "catalog_id": self.catalog_id if apply_changes else self.orig_asset.metadata.catalog_id,
+            "tags": self.tags if apply_changes else self.bpy_tags,
+        }
+
 
 class Assets:
     def __init__(self, assets: list[AssetRepresentation]) -> None:
@@ -804,6 +822,9 @@ class Assets:
             a = Asset(asset)
             self._dict[a.name] = a
             self._list.append(a)
+
+    def to_dict(self, apply_changes=False) -> list[dict]:
+        return [asset.to_dict(apply_changes=apply_changes) for asset in self._list]
 
     def __getitem__(self, key_or_index: str | int) -> Asset:
         if isinstance(key_or_index, str):
@@ -845,8 +866,7 @@ class AssetLibrary:
                     area
                     for window in context.window_manager.windows
                     for area in window.screen.areas
-                    if area.type == "FILE_BROWSER"
-                    and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+                    if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
                 ),
                 None,
             )
@@ -854,6 +874,7 @@ class AssetLibrary:
         self.library: UserAssetLibrary = library
         self.name = library.name
         self.path: Path = Path(library.path)
+        """The path to the library's directory"""
 
         self.assets: Assets = None
         self.catalogs: CatalogsFile = None
@@ -868,9 +889,7 @@ class AssetLibrary:
 
     def get_context(self) -> Context:
         if not self.context:
-            raise ValueError(
-                "Context not set. Please set `context` before calling this method."
-            )
+            raise ValueError("Context not set. Please set `context` before calling this method.")
         return self.context
 
     def load_catalogs(self):
@@ -887,7 +906,7 @@ class AssetLibrary:
         self.assets = Assets(self.get_possible_assets())
 
     @contextmanager
-    def open_catalogs_file(self) -> CatalogsFile:
+    def open_catalogs_file(self) -> Generator[CatalogsFile, None, None]:
         if not self.catalogs:
             yield None
         else:
@@ -897,9 +916,7 @@ class AssetLibrary:
     @classmethod
     def create_bpy_library(cls, name: str, path: str) -> UserAssetLibrary:
         """Create a new UserAssetLibrary in Blender."""
-        return bpy.context.preferences.filepaths.asset_libraries.new(
-            name=name, directory=path
-        )
+        return bpy.context.preferences.filepaths.asset_libraries.new(name=name, directory=path)
 
     @classmethod
     def create_new_library(
@@ -934,11 +951,7 @@ class AssetLibrary:
         if not prefs_blend.exists():
             return
 
-        python_file = (
-            Path(__file__).parent
-            / "stand_alone_scripts"
-            / "add_repository_to_userpref.py"
-        )
+        python_file = Path(__file__).parent / "stand_alone_scripts" / "add_repository_to_userpref.py"
 
         args = [
             bpy.app.binary_path,
@@ -953,18 +966,51 @@ class AssetLibrary:
 
         subprocess.run(args)
 
+    def to_dict(self, apply_changes=False) -> dict:
+        # modeled after https://projects.blender.org/blender/blender/issues/125597
+        return {
+            "name": self.name,
+            "schema_version": 1,
+            "asset_size_bytes": 0,  # TODO: Implement
+            "index_size_bytes": 0,  # TODO: Implement
+            "path": str(self.path),
+            "assets": (self.assets.to_dict(apply_changes=apply_changes) if self.assets else []),
+            "catalogs": self.catalogs.to_dict() if self.catalogs else [],
+        }
 
-def get_active_bpy_library_from_context(
-    context: Context, area: Area = None
-) -> UserAssetLibrary:
+    def save_json(self, data: dict = None, directory: Path = None) -> Path:
+        """
+        Save the library data to a JSON file.
+
+        Args:
+            data (dict, optional): Dictionary to write. If None, defualts to running `to_dict`. Defaults to None.
+            directory (Path, optional): The directory to save the json file. Defaults to the library's path. Defaults to None.
+
+        Returns:
+            Path: The path to the saved JSON file.
+        """
+        json_path = (directory or self.path) / "library.json"
+        if json_path.exists():
+            orig_data = json.loads(json_path.read_text())
+            orig_data["libaries"] = data or self.to_dict()
+            data = orig_data
+        elif not data:
+            data = self.to_dict()
+
+        with open(json_path, "w") as file:
+            json.dump(data, file, indent=4)
+
+        return json_path
+
+
+def get_active_bpy_library_from_context(context: Context, area: Area = None) -> UserAssetLibrary:
     if not area:
         area = next(
             (
                 area
                 for window in context.window_manager.windows
                 for area in window.screen.areas
-                if area.type == "FILE_BROWSER"
-                and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
+                if area.type == "FILE_BROWSER" and asset_utils.SpaceAssetInfo.is_asset_browser(area.spaces.active)
             ),
             None,
         )
@@ -976,21 +1022,15 @@ def get_active_bpy_library_from_context(
     return context.preferences.filepaths.asset_libraries.get(lib_name)
 
 
-def from_name(
-    name: str, context: Context = None, load_assets=False, load_catalogs=False
-) -> AssetLibrary:
+def from_name(name: str, context: Context = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
     """Gets a library by name and returns an AssetLibrary object."""
     lib = bpy.context.preferences.filepaths.asset_libraries.get(name)
     if not lib:
         raise ValueError(f"Library with name '{name}' not found.")
-    return AssetLibrary(
-        lib, context=context, load_assets=load_assets, load_catalogs=load_catalogs
-    )
+    return AssetLibrary(lib, context=context, load_assets=load_assets, load_catalogs=load_catalogs)
 
 
-def from_active(
-    context: Context, area: Area = None, load_assets=False, load_catalogs=False
-) -> AssetLibrary:
+def from_active(context: Context, area: Area = None, load_assets=False, load_catalogs=False) -> AssetLibrary:
     """Gets the active library from the UI context and returns an AssetLibrary object."""
     return AssetLibrary(
         get_active_bpy_library_from_context(context, area=area),
@@ -1022,7 +1062,7 @@ def id_to_asset_id_type(id: ID) -> str:
 
 
 @contextmanager
-def display_all_assets_in_library(context: Context) -> None:
+def display_all_assets_in_library(context: Context) -> Generator[None, None, None]:
     """Makes all possible assets visible in the UI for the duration of the context manager. Assets are all selected so running `context.selected_assets` will return all assets."""
     # Gather Current State ##
     # Params
@@ -1151,9 +1191,7 @@ def rerender_thumbnail(
         print("*" * 115)
         print("Thread Starting".center(100, "*"))
         print("*" * 115)
-    python_file = (
-        Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
-    )
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "rerender_thumbnails.py"
 
     names = []
     types = []
@@ -1247,14 +1285,8 @@ def rerender_thumbnail(
     for i, tbp in enumerate(thumbnail_blends):
         orig_stem = tbp.stem.split("=+=")[0]
         orig_blend_path = tbp.with_stem(orig_stem)
-        thumbnail_path = (
-            orig_blend_path.parent
-            / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
-        )
-        thumbnail_path_for_terminal = (
-            orig_blend_path.parent
-            / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
-        )
+        thumbnail_path = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_1.png"
+        thumbnail_path_for_terminal = orig_blend_path.parent / f"{tbp.stem.replace('_thumbnail_copy', '')}_thumbnail_#"
         args = [
             bpy.app.binary_path,
             "-b",
@@ -1274,9 +1306,7 @@ def rerender_thumbnail(
             print("   - exists", tbp.exists())
             print("CMD:", " ".join(args))
         try:
-            proc: subprocess.CompletedProcess = subprocess.run(
-                args, stdout=subprocess.PIPE, check=True
-            )
+            proc: subprocess.CompletedProcess = subprocess.run(args, stdout=subprocess.PIPE, check=True)
             proc.returncode
         except subprocess.CalledProcessError as e:
             print(f"- Error: {e}")
@@ -1422,10 +1452,7 @@ def mouse_in_window(window: Window, x, y) -> bool:
     Returns:
     bool: True if the mouse is within the window boundaries, False otherwise.
     """
-    return (
-        window.x <= x <= window.x + window.width
-        and window.y <= y <= window.y + window.height
-    )
+    return window.x <= x <= window.x + window.width and window.y <= y <= window.y + window.height
 
 
 def pack_files(blend_file: Path):
@@ -1487,6 +1514,7 @@ def clean_blend_file(
 def export_helper(
     blend_file: Path,
     destination_dir: Path,
+    json_dict: dict,
     op: "export_library.SH_OT_ExportLibrary" = None,
 ):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "export_helper.py"
@@ -1501,10 +1529,51 @@ def export_helper(
         str(destination_dir),
     ]
 
-    proc = subprocess.Popen(
-        args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True
-    )
+    proc = subprocess.Popen(args, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, text=True)
     # proc = subprocess.Popen(args)
+
+    def handle_preview_path(v: str):
+        item_name, item_type, path = v.split("+,+")
+
+        if "NODETREE" in item_type:
+            item_type = "NODETREE"
+
+        item_dict = next(
+            (
+                asset_dict
+                for asset_dict in json_dict["assets"]
+                if (
+                    asset_dict["name"] == item_name
+                    and Path(asset_dict["blend_path"]) == blend_file
+                    and asset_dict["id_type"] == item_type
+                )
+            ),
+            None,
+        )
+
+        if item_dict:
+            path = Path(path)
+            if path.is_relative_to(destination_dir):
+                path = path.relative_to(destination_dir)
+                item_dict["preview_path"] = str(path)
+            else:
+                print(
+                    f"Preview path is not relative to destination directory. Probably saved in wrong place!\n\t{path}"
+                )
+        else:
+            print(f"Could not find asset: '{item_name}' of type '{item_type}' in blend file: {blend_file}")
+
+    def handle_out_path(v: str) -> None:
+        for asset_dict in json_dict["assets"]:
+            if Path(asset_dict["blend_path"]) == blend_file:
+                path = Path(v)
+                if path.is_relative_to(destination_dir):
+                    path = path.relative_to(destination_dir)
+                    asset_dict["blend_path"] = str(path)
+                else:
+                    print(
+                        f"Out path is not relative to destination directory. Probably saved in wrong place!\n\t{path}"
+                    )
 
     if op:
         while True:
@@ -1523,6 +1592,10 @@ def export_helper(
                         op.sub_label = value
                     case "sub_prog":
                         op.movingfiles_sub_prog = float(value)
+                    case "preview_path":
+                        handle_preview_path(value)
+                    case "out_path":
+                        handle_out_path(value)
                     case _:
                         print("Unhandled Property:", prop, ", value:", value)
                 op.updated = True
@@ -1531,7 +1604,8 @@ def export_helper(
             line = proc.stdout.readline()
             if not line and proc.poll() is not None:
                 break
-            elif line and line[0] == "|":
+
+            if line and line[0] == "|":
                 if line == "|":
                     print()
                     continue
@@ -1545,6 +1619,14 @@ def export_helper(
                     text = line_split[0]
                     end = "\n"
                 print(text, end=end)
+            elif line.startswith("="):
+                prop, value = line[1:].split("=")
+                value = value.replace("\n", "")
+                match prop:
+                    case "preview_path":
+                        handle_preview_path(value)
+                    case "out_path":
+                        handle_out_path(value)
 
     if proc.returncode > 1:
         print()
@@ -1552,9 +1634,7 @@ def export_helper(
         print(f"Output: {proc.stdout.decode()}")
 
 
-def update_asset_browser_areas(
-    context: Context = None, tag_redraw=True, update_library=True
-):
+def update_asset_browser_areas(context: Context = None, tag_redraw=True, update_library=True):
     C = context or bpy.context
 
     for area in C.screen.areas:
@@ -1613,15 +1693,9 @@ def mark_assets_in_blend(
         Key: Blend File Path
         Value: Tuple of (Asset Name, Asset Type)
     """
-    python_file = (
-        Path(__file__).parent / "stand_alone_scripts" / "mark_assets_in_blend_file.py"
-    )
+    python_file = Path(__file__).parent / "stand_alone_scripts" / "mark_assets_in_blend_file.py"
 
-    blends = (
-        list(Path(directory).rglob("**/*.blend"))
-        if recursive
-        else list(Path(directory).glob("*.blend"))
-    )
+    blends = list(Path(directory).rglob("**/*.blend")) if recursive else list(Path(directory).glob("*.blend"))
 
     tags_to_add = []
     for tag_name, tag_bool in zip(hive_mind.TAGS_DICT.keys(), tags):

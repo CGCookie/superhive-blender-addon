@@ -33,8 +33,6 @@ class SH_OT_RemoveEmptyCatalogs(Operator):
             print("No catalogs used in library")
 
         with lib.open_catalogs_file() as cat_file:
-            cat_file: utils.CatalogsFile
-
             for cat in cat_file.get_catalogs():
                 if cat.id not in catalog_ids and not cat.has_child(catalog_ids):
                     cat.remove_self()
