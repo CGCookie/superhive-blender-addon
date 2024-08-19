@@ -13,6 +13,8 @@ This is a tool intended to be used by creators on [Superhive market](https://ble
 Documentation is updated regularly.
 
 ### Pages
-[Installation](https://github.com/CGCookie/superhive-blender-addon/wiki/Installation)
+* [Installation](https://github.com/CGCookie/superhive-blender-addon/wiki/Installation)
+* [Preferences](https://github.com/CGCookie/superhive-blender-addon/wiki/User-Preferences)
+* [Using BKeeper](https://github.com/CGCookie/superhive-blender-addon/wiki/Using-BKeeper)
 
 > This add-on is in active development by Autotroph and True VFX.
