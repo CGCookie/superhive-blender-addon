@@ -41,7 +41,10 @@ class SH_OT_AddToLibrary(Operator):
 
     def _get_library_items(self, context):
         asset_libs = context.preferences.filepaths.asset_libraries
-        items = [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+        items = [
+            (lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library")
+            for lib in asset_libs
+        ]
         items.append((
             "NEW",
             "New",
@@ -96,7 +99,7 @@ class SH_OT_AddToLibrary(Operator):
                 row.label(text=f"Library `{self.new_library_name}` already exists")
 
         layout.prop(self, "pack_file")
-        layout.prop(self, "keep_blend_files_as_is")
+        # layout.prop(self, "keep_blend_files_as_is")
         layout.prop(self, "copy_catalogs")
         layout.prop(self, "delete_after")
         if self.delete_after:
@@ -122,10 +125,15 @@ class SH_OT_AddToLibrary(Operator):
                 self.report({"ERROR"}, "Name not entered for new library")
                 return {"CANCELLED"}
             if self.new_library_name in context.preferences.filepaths.asset_libraries:
-                self.report({"ERROR"}, f"Library `{self.new_library_name}` already exists")
+                self.report(
+                    {"ERROR"}, f"Library `{self.new_library_name}` already exists"
+                )
                 return {"CANCELLED"}
 
-            dir: Path = Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
+            dir: Path = (
+                Path(utils.get_prefs().library_directory)
+                / self.new_library_name.replace(" ", "_").casefold()
+            )
             dir.mkdir(parents=True, exist_ok=True)
             lib = utils.AssetLibrary.create_new_library(
                 self.new_library_name, str(dir), context=context, load_catalogs=True
@@ -144,7 +152,9 @@ class SH_OT_AddToLibrary(Operator):
         self.updated = False
 
         if self.keep_blend_files_as_is:
-            self._thread = Thread(target=self.add_to_library_keep, args=(assets, lib.path))
+            self._thread = Thread(
+                target=self.add_to_library_keep, args=(assets, lib.path)
+            )
             # self.add_to_library_keep(assets, lib.path)
         else:
             self._thread = Thread(target=self.add_to_library_split, args=(assets, lib))
@@ -180,7 +190,9 @@ class SH_OT_AddToLibrary(Operator):
     def finished(self, context: Context):
         self._thread.join()
 
-        self.report({"INFO"}, f"Added {self.added_assets} of {self.total_assets} assets")
+        self.report(
+            {"INFO"}, f"Added {self.added_assets} of {self.total_assets} assets"
+        )
 
         # try:
         utils.update_asset_browser_areas(context)
@@ -194,7 +206,9 @@ class SH_OT_AddToLibrary(Operator):
         for area in bpy.context.screen.areas:
             area.tag_redraw()
 
-    def add_to_library_split(self, assets: list[AssetRepresentation], lib: utils.AssetLibrary):
+    def add_to_library_split(
+        self, assets: list[AssetRepresentation], lib: utils.AssetLibrary
+    ):
         """Add the selected assets to the library by splitting them into separate blend files.
 
         Parameters
@@ -214,7 +228,11 @@ class SH_OT_AddToLibrary(Operator):
                     data_to,
                 ):
                     asset_item = next(
-                        (item for item in getattr(data_from, data_type) if item == asset.name),
+                        (
+                            item
+                            for item in getattr(data_from, data_type)
+                            if item == asset.name
+                        ),
                         None,
                     )
 
@@ -223,9 +241,13 @@ class SH_OT_AddToLibrary(Operator):
 
                 if data := getattr(data_to, data_type):
                     if self.copy_catalogs:  # TODO: This doesn't work as expected
-                        asset_catfile = utils.CatalogsFile(Path(asset.full_library_path).parent)
+                        asset_catfile = utils.CatalogsFile(
+                            Path(asset.full_library_path).parent
+                        )
                         if not asset_catfile.catalogs:
-                            asset_catfile = utils.CatalogsFile(Path(asset.full_library_path).parent.parent)
+                            asset_catfile = utils.CatalogsFile(
+                                Path(asset.full_library_path).parent.parent
+                            )
                         cat = asset_catfile.find_catalog(asset.metadata.catalog_id)
                         if cat:
                             catalogs.append(cat)
@@ -270,21 +292,24 @@ class SH_OT_AddToLibrary(Operator):
                 blend_files[asset.full_library_path].append(asset)
 
         for blend_file, assets_in_file in blend_files.items():
-            src = Path(blend_file)
-            dst = dir / src.name
-            utils.move_blend_file(src, dst)
+            for asset in assets_in_file:
+                src = Path(blend_file)
+                dst = dir / src.with_stem(f"{src.stem}_{asset.name}").name
+                utils.move_blend_file(src, dst)
 
-            utils.clean_blend_file(
-                str(dst),
-                ids_to_keep=[asset.name for asset in assets_in_file],
-                types=[asset.id_type for asset in assets_in_file],
-            )
+                utils.clean_blend_file(
+                    str(dst),
+                    ids_to_keep=[asset.name],
+                    # ids_to_keep=[asset.name for asset in assets_in_file],
+                    types=[asset.id_type],
+                    # types=[asset.id_type for asset in assets_in_file],
+                )
 
-            if self.pack_file:
-                utils.pack_files(dst)
+                if self.pack_file:
+                    utils.pack_files(dst)
 
-            self.added_assets += 1
-            self.updated = True
+                self.added_assets += 1
+                self.updated = True
 
 
 class SH_OT_RemoveFromLibrary(Operator):
@@ -298,7 +323,9 @@ class SH_OT_RemoveFromLibrary(Operator):
         return polls.is_asset_browser(context, cls=cls)
 
     def invoke(self, context, event):
-        self.asset_data: dict[UserAssetLibrary, dict[Path, list[AssetRepresentation]]] = {}
+        self.asset_data: dict[
+            UserAssetLibrary, dict[Path, list[AssetRepresentation]]
+        ] = {}
 
         self.remove_from_blend = event.alt
 
@@ -309,7 +336,11 @@ class SH_OT_RemoveFromLibrary(Operator):
         for asset in context.selected_assets:
             lib_path = Path(asset.full_library_path).parent
             lib = next(
-                (lib for lib in bpy.context.preferences.filepaths.asset_libraries if lib.path == str(lib_path)),
+                (
+                    lib
+                    for lib in bpy.context.preferences.filepaths.asset_libraries
+                    if lib.path == str(lib_path)
+                ),
                 None,
             )
 
@@ -319,7 +350,9 @@ class SH_OT_RemoveFromLibrary(Operator):
 
             asset_data_lib_assets = asset_data_lib.get(Path(asset.full_library_path))
             if not asset_data_lib_assets:
-                asset_data_lib_assets = asset_data_lib[Path(asset.full_library_path)] = []
+                asset_data_lib_assets = asset_data_lib[
+                    Path(asset.full_library_path)
+                ] = []
 
             asset_data_lib_assets.append(asset)
 
@@ -385,7 +418,9 @@ class SH_OT_RemoveFromLibrary(Operator):
     def finished(self, context: Context):
         self._thread.join()
 
-        self.report({"INFO"}, f"Removed {self.removed_assets} of {self.total_assets} assets")
+        self.report(
+            {"INFO"}, f"Removed {self.removed_assets} of {self.total_assets} assets"
+        )
 
         utils.update_asset_browser_areas(context)
 
@@ -444,13 +479,17 @@ class IDsToHandle(PropertyGroup):
     ids: CollectionProperty(type=IDToHandle)
 
     def clear(self) -> None:
-        self.ids: bpy.types.CollectionProperty | list[IDToHandle] | dict[str, IDToHandle]
+        self.ids: (
+            bpy.types.CollectionProperty | list[IDToHandle] | dict[str, IDToHandle]
+        )
         self.ids.clear()
 
     def new(self, id: ID, lib_path: Path) -> IDToHandle:
         ith: IDToHandle = self.ids.add()
         ith.name = id.name
-        ith.new_name = f"{id.name}_{len(tuple(lib_path.glob(f'{id.name}_*.blend'))) + 1}"
+        ith.new_name = (
+            f"{id.name}_{len(tuple(lib_path.glob(f'{id.name}_*.blend'))) + 1}"
+        )
         ith.lib_path = str(lib_path)
 
         return ith
@@ -495,7 +534,10 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
     def _get_library_items(self, context):
         asset_libs = context.preferences.filepaths.asset_libraries
-        items = [(lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library") for lib in asset_libs]
+        items = [
+            (lib.name, lib.name, f"Add the asset(s) to the '{lib.name}' library")
+            for lib in asset_libs
+        ]
         items.append((
             "NEW",
             "New",
@@ -622,8 +664,12 @@ class AddAsAsset(scene.RenderThumbnailProps):
         lib_name = self.library if self.library != "NEW" else self.new_library_name
 
         use_s_text = "s" if self.is_multi else ""
-        coll_text = "as a collection " if self.is_multi and self.add_as_collection else ""
-        layout.label(text=f"Adding {len(self.ids)} item{use_s_text} {coll_text}to library '{lib_name}'")
+        coll_text = (
+            "as a collection " if self.is_multi and self.add_as_collection else ""
+        )
+        layout.label(
+            text=f"Adding {len(self.ids)} item{use_s_text} {coll_text}to library '{lib_name}'"
+        )
 
         if self.is_multi:
             layout.prop(self, "add_as_collection")
@@ -667,7 +713,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
         layout.separator(type="LINE")
 
-        layout.label(text="Some assets have the same name as other assets in the chosen library.")
+        layout.label(
+            text="Some assets have the same name as other assets in the chosen library."
+        )
 
         col = layout.column(align=True)
         col.label(text="Please choose what to do for each asset:")
@@ -679,7 +727,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
         layout.separator(type="LINE")
 
-        layout.label(text="Some assets still have the same name as other assets in the chosen library.")
+        layout.label(
+            text="Some assets still have the same name as other assets in the chosen library."
+        )
 
         col = layout.column(align=True)
         col.label(text="Please choose what to do for each asset:")
@@ -712,7 +762,11 @@ class AddAsAsset(scene.RenderThumbnailProps):
                 else (
                     "COLLECTION_COLOR_04"
                     if self.collection_name
-                    else ("COLLECTION_COLOR_01" if self.add_as_collection else "OUTLINER_COLLECTION")
+                    else (
+                        "COLLECTION_COLOR_01"
+                        if self.add_as_collection
+                        else "OUTLINER_COLLECTION"
+                    )
                 )
             ),
         )
@@ -783,7 +837,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
 
     def execute(self, context: Context):
         if self.lib is None:
-            if self.is_multi and self.add_as_collection:  # TODO: Use Popup Dialog to get correct collection name
+            if (
+                self.is_multi and self.add_as_collection
+            ):  # TODO: Use Popup Dialog to get correct collection name
                 if not self.collection_name:
                     self.draw_enum.active = self.draw_enum.COL_NAME
                     return context.window_manager.invoke_props_dialog(self, width=500)
@@ -791,16 +847,22 @@ class AddAsAsset(scene.RenderThumbnailProps):
                     self.draw_enum.active = self.draw_enum.COL_NAME_EXISTS
                     return context.window_manager.invoke_props_dialog(self, width=500)
 
-            if self.library == "NEW":  # TODO: Use Popup Dialog to get unique Library name
+            if (
+                self.library == "NEW"
+            ):  # TODO: Use Popup Dialog to get unique Library name
                 if not self.new_library_name:
                     self.draw_enum.active = self.draw_enum.LIB_NAME
                     return context.window_manager.invoke_props_dialog(self, width=500)
-                if self.new_library_name in context.preferences.filepaths.asset_libraries:
+                if (
+                    self.new_library_name
+                    in context.preferences.filepaths.asset_libraries
+                ):
                     self.draw_enum.active = self.draw_enum.LIB_NAME_EXISTS
                     return context.window_manager.invoke_props_dialog(self, width=500)
 
                 dir: Path = (
-                    Path(utils.get_prefs().library_directory) / self.new_library_name.replace(" ", "_").casefold()
+                    Path(utils.get_prefs().library_directory)
+                    / self.new_library_name.replace(" ", "_").casefold()
                 )
                 dir.mkdir(parents=True, exist_ok=True)
                 self.lib = utils.AssetLibrary.create_new_library(
@@ -808,7 +870,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
                 )
                 self.is_new_library = True
             else:
-                self.lib = utils.from_name(self.library, context=context, load_catalogs=True)
+                self.lib = utils.from_name(
+                    self.library, context=context, load_catalogs=True
+                )
                 self.is_new_library = False
 
             self.lib.path.mkdir(parents=True, exist_ok=True)
@@ -947,7 +1011,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
             if self.icon_source == "RENDER":
                 blend_data = blend_files.get(blend_path)
                 new_item = [(id_name, type(id).__name__.upper())]
-                blend_files[blend_path] = blend_data + new_item if blend_data else new_item
+                blend_files[blend_path] = (
+                    blend_data + new_item if blend_data else new_item
+                )
                 icon_path = None
             elif self.icon_source == "FILE":
                 icon_path = self.icon_file
@@ -957,11 +1023,15 @@ class AddAsAsset(scene.RenderThumbnailProps):
             self.metadata_progress = round((i + 1) / len(self.ids), 2)
 
         if self.icon_source == "RENDER":
-            self.render_icon(list(blend_files.keys()), lib_path, list(blend_files.values()))
+            self.render_icon(
+                list(blend_files.keys()), lib_path, list(blend_files.values())
+            )
 
         return {"FINISHED"}
 
-    def id_to_asset(self, context: Context, id: ID, path: str, icon_path: str = None) -> None:
+    def id_to_asset(
+        self, context: Context, id: ID, path: str, icon_path: str = None
+    ) -> None:
         already_asset = bool(id.asset_data)
         if not already_asset:
             id.asset_mark()
@@ -994,14 +1064,18 @@ class AddAsAsset(scene.RenderThumbnailProps):
         if not already_asset:
             id.asset_clear()
 
-    def render_icon(self, paths: list[str], lib_path: str, ids: list[tuple[str, str]]) -> None:
+    def render_icon(
+        self, paths: list[str], lib_path: str, ids: list[tuple[str, str]]
+    ) -> None:
         prefs = utils.get_prefs()
         utils.rerender_thumbnail(
             paths=paths,
             directory=lib_path,
             objects=ids,
             shading=self.shading,
-            angle=utils.resolve_angle(self.camera_angle, self.flip_x, self.flip_y, self.flip_z),
+            angle=utils.resolve_angle(
+                self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+            ),
             add_plane=prefs.add_ground_plane and not self.flip_z,
             world_name=self.scene_lighting,
             world_strength=self.world_strength,
@@ -1036,7 +1110,9 @@ class AddAsAsset(scene.RenderThumbnailProps):
         if self.library == "NEW":
             for area in context.screen.areas:
                 if polls.is_asset_browser(context):
-                    area.spaces.active.params.asset_library_reference = self.new_library_name
+                    area.spaces.active.params.asset_library_reference = (
+                        self.new_library_name
+                    )
         bpy.app.timers.register(self.follow_up, first_interval=1)
         return {"FINISHED"}
 
