@@ -7,6 +7,8 @@ from bpy_extras import asset_utils
 from .. import utils
 from ..ops import polls
 
+from ..icons import sh_icons
+
 if TYPE_CHECKING:
     from ..settings import scene
 
@@ -31,11 +33,39 @@ class SH_MT_AssetBrowserHeaderMenu(bpy.types.Menu):
 
     def draw(self, context: Context):
         layout: UILayout = self.layout
-        layout.operator("bkeeper.create_new_library", text="Create New Library", icon="ADD")
+        layout.operator(
+            "bkeeper.create_new_library", text="Create New Library", icon="ADD"
+        )
         layout.operator("bkeeper.add_categories_to_library")
         layout.operator("bkeeper.remove_empty_catalogs")
-        layout.operator("bkeeper.import_from_directory", text="Import from Directory", icon="IMPORT")
-        layout.operator("bkeeper.export_library", text="Export to Superhive", icon="EXPORT")
+
+        layout.separator()
+
+        layout.operator(
+            "bkeeper.import_from_directory",
+            text="Import from Directory",
+            icon_value=sh_icons.file_blend_icon.icon_id,
+        )
+        layout.operator(
+            "bkeeper.create_assets_from_directory_obj",
+            text="Import from OBJ",
+            icon_value=sh_icons.file_obj_icon.icon_id,
+        )
+        layout.operator(
+            "bkeeper.create_assets_from_directory_fbx",
+            text="Import from FBX",
+            icon_value=sh_icons.file_fbx_icon.icon_id,
+        )
+        layout.operator(
+            "bkeeper.create_assets_from_directory_usd",
+            text="Import from USD",
+            icon_value=sh_icons.file_usd_icon.icon_id,
+        )
+
+        layout.separator()
+        layout.operator(
+            "bkeeper.export_library", text="Export to Superhive", icon="EXPORT"
+        )
 
 
 def insert_into_header_menu(self, context: Context):
@@ -51,7 +81,10 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
     @classmethod
     def poll(cls, context: Context) -> bool:
-        return polls.is_asset_browser(context) and context.scene.superhive.library_mode == "BKEEPER"
+        return (
+            polls.is_asset_browser(context)
+            and context.scene.superhive.library_mode == "BKEEPER"
+        )
 
     def draw_header(self, context: Context) -> None:
         layout = self.layout
@@ -65,7 +98,9 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         if asset and asset.metadata.sh_is_dirty():
             row = layout.split(factor=0.8)
 
-            row.operator("bkeeper.update_asset", text="*Unsaved Changes", icon="FILE_TICK")
+            row.operator(
+                "bkeeper.update_asset", text="*Unsaved Changes", icon="FILE_TICK"
+            )
 
             r = row.row()
             r.alignment = "RIGHT"
@@ -137,12 +172,16 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
             row = layout.row(align=True)
             row.prop(asset.metadata, prop, text=text or set_is_dirty_text(orig_prop))
             if getattr(asset.metadata, f"sh_is_dirty_{orig_prop}"):
-                op = row.operator("bkeeper.reset_asset_metadata_property", icon="X", text="")
+                op = row.operator(
+                    "bkeeper.reset_asset_metadata_property", icon="X", text=""
+                )
                 op.property = prop
                 op.original_value = orig_value
 
         display_metadata(layout, asset, "sh_name", "name", asset.name)
-        display_metadata(layout, asset, "sh_description", "description", asset.metadata.description)
+        display_metadata(
+            layout, asset, "sh_description", "description", asset.metadata.description
+        )
         display_metadata(layout, asset, "sh_author", "author", asset.metadata.author)
         col = layout.column(align=True)
         display_metadata(col, asset, "sh_license", "license", asset.metadata.license)
@@ -165,12 +204,18 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
                 text=f"Custom Catalog{'*' if asset.metadata.sh_is_dirty_catalog_custom else ''}",
             )
             if asset.metadata.sh_is_dirty_catalog_custom:
-                op = row.operator("bkeeper.reset_asset_metadata_property", icon="X", text="")
+                op = row.operator(
+                    "bkeeper.reset_asset_metadata_property", icon="X", text=""
+                )
                 op.property = "sh_catalog_custom"
                 op.original_value = ""
-        display_metadata(layout, asset, "sh_copyright", "copyright", asset.metadata.copyright)
+        display_metadata(
+            layout, asset, "sh_copyright", "copyright", asset.metadata.copyright
+        )
 
-        layout.label(text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG")
+        layout.label(
+            text="Tags*:" if asset.metadata.sh_is_dirty_tags else "Tags:", icon="TAG"
+        )
         row = layout.row()
         row.template_list(
             "SH_UL_TagList",
@@ -218,7 +263,9 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         row = col.row(align=True)
         row.operator("bkeeper.batch_update_assets_from_scene")
-        row.prop(scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH")
+        row.prop(
+            scene_sets.metadata_update, "reset_settings", text="", icon="FILE_REFRESH"
+        )
 
 
 # class SH_PT_LibrarySettings(Panel):

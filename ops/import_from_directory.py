@@ -10,8 +10,15 @@ from bpy.props import (
     PointerProperty,
     StringProperty,
 )
-from bpy.types import Context, Event, Operator, OperatorFileListElement, PropertyGroup
+from bpy.types import (
+    Context,
+    Event,
+    Operator,
+    OperatorFileListElement,
+    PropertyGroup,
+)
 
+import functools
 from .. import hive_mind, utils
 from ..settings import scene
 from . import polls
@@ -260,9 +267,13 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             toggle=True,
         )
 
-        layout.prop(self, "mark_materials", text="Materials", icon="MATERIAL", toggle=True)
+        layout.prop(
+            self, "mark_materials", text="Materials", icon="MATERIAL", toggle=True
+        )
 
-        layout.prop(self, "mark_node_trees", text="Node Trees", icon="NODETREE", toggle=True)
+        layout.prop(
+            self, "mark_node_trees", text="Node Trees", icon="NODETREE", toggle=True
+        )
 
         header, body = layout.panel("mark_object_types")
         header.prop(self, "mark_objects", text="Objects", icon="OBJECT_DATAMODE")
@@ -284,9 +295,15 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 text="Cameras",
                 icon="CAMERA_DATA",
             )
-            grid.prop(self, "mark_obj_curves", toggle=True, text="Curves", icon="CURVE_DATA")
-            grid.prop(self, "mark_obj_empties", toggle=True, text="Empties", icon="EMPTY_DATA")
-            grid.prop(self, "mark_obj_fonts", toggle=True, text="Fonts", icon="FONT_DATA")
+            grid.prop(
+                self, "mark_obj_curves", toggle=True, text="Curves", icon="CURVE_DATA"
+            )
+            grid.prop(
+                self, "mark_obj_empties", toggle=True, text="Empties", icon="EMPTY_DATA"
+            )
+            grid.prop(
+                self, "mark_obj_fonts", toggle=True, text="Fonts", icon="FONT_DATA"
+            )
             grid.prop(
                 self,
                 "mark_obj_gpencils",
@@ -301,7 +318,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 text="Lattices",
                 icon="LATTICE_DATA",
             )
-            grid.prop(self, "mark_obj_lights", toggle=True, text="Lights", icon="LIGHT_DATA")
+            grid.prop(
+                self, "mark_obj_lights", toggle=True, text="Lights", icon="LIGHT_DATA"
+            )
             grid.prop(
                 self,
                 "mark_obj_light_probes",
@@ -309,8 +328,12 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 text="Light Probes",
                 icon="OUTLINER_OB_LIGHTPROBE",
             )
-            grid.prop(self, "mark_obj_meshes", toggle=True, text="Meshes", icon="MESH_DATA")
-            grid.prop(self, "mark_obj_metas", toggle=True, text="Metas", icon="META_DATA")
+            grid.prop(
+                self, "mark_obj_meshes", toggle=True, text="Meshes", icon="MESH_DATA"
+            )
+            grid.prop(
+                self, "mark_obj_metas", toggle=True, text="Metas", icon="META_DATA"
+            )
             grid.prop(
                 self,
                 "mark_obj_point_clouds",
@@ -397,7 +420,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
         catalogs = self.lib.catalogs.get_catalogs()
         catalogs = sorted(catalogs, key=lambda x: x.name.lower())
 
-        items = [(b.name, b.name, f"Add assets to the '{b.name}' catalog") for b in catalogs]
+        items = [
+            (b.name, b.name, f"Add assets to the '{b.name}' catalog") for b in catalogs
+        ]
 
         self.catalog_items.clear()
 
@@ -473,7 +498,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             context.window_manager.event_timer_remove(self._timer)
             bpy.app.timers.register(self.prog.end, first_interval=1)
             return {"FINISHED"}
-        elif event.value == "ESC" and utils.mouse_in_window(context.window, event.mouse_x, event.mouse_y):
+        elif event.value == "ESC" and utils.mouse_in_window(
+            context.window, event.mouse_x, event.mouse_y
+        ):
             self.prog.cancel = True
         elif self.prog.cancel:
             self._thread.join()
@@ -537,7 +564,9 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
                 directory=str(self.lib.path),
                 objects=[f for f in assets_marked.values()],
                 shading=self.shading,
-                angle=utils.resolve_angle(self.camera_angle, self.flip_x, self.flip_y, self.flip_z),
+                angle=utils.resolve_angle(
+                    self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                ),
                 add_plane=prefs.add_ground_plane and not self.flip_z,
                 world_name=self.scene_lighting,
                 world_strength=self.world_strength,
@@ -561,7 +590,575 @@ class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
             bpy.app.timers.register(self.prog.end, first_interval=2)
 
 
-classes = (Catalog, Catalogs, SH_OT_ImportFromDirectory)
+def get_all_files_with_extension(path: Path, ext: str) -> list[Path]:
+    return [
+        subdir
+        for subdir in path.rglob("*")
+        if subdir.is_file() and subdir.suffix.lower() == f".{ext.lower()}"
+    ]
+
+
+class SH_OT_USD_Assets_From_Directory(
+    bpy.types.Operator, utils.Create_Assets_From_USD_Props_Base
+):
+    bl_idname = "bkeeper.create_assets_from_directory_usd"
+    bl_label = "Create Assets From USD Files"
+    bl_description = "Create Assets from Directory"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def draw(self, context):
+        super().draw(self.layout)
+
+    def invoke(self, context, event):
+        self.thread = None
+
+        self.lib = utils.from_active(context, area=context.area)
+
+        context.window_manager.fileselect_add(self)
+
+        self.load_settings(utils.get_prefs().usd_import_settings)
+
+        self.active_library_name = utils.get_active_library_name(
+            context, area=context.area
+        )
+
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        prefs = utils.get_prefs()
+        dir_path = self.filepath
+        filters = []
+        filters.append("OBJECTS")
+        filters.append("MESH")
+
+        catalog = self.catalog if self.catalog != "NEW" else self.new_catalog_name
+        lib = utils.from_active(context, area=context.area)
+        # objects_lib_path, mats_lib_path, worlds_lib_path, node_groups_lib_path, _, _ = (
+        #     ensure_all_libraries()
+        # )
+
+        files = []
+        if self.files:
+            dir_path = Path(self.filepath).parent
+        else:
+            dir_path = Path(self.filepath)
+
+        if len(self.files) > 0 and all(
+            a.name and Path(dir_path, a.name).exists() for a in self.files
+        ):
+            files = [Path(dir_path, a.name) for a in self.files]
+        else:
+            files = get_all_files_with_extension(dir_path, "usd")
+            files.extend(get_all_files_with_extension(dir_path, "usdc"))
+            files.extend(get_all_files_with_extension(dir_path, "usda"))
+            files.extend(get_all_files_with_extension(dir_path, "usdz"))
+
+        args_dict = {
+            "scale": self.scale,
+            "set_frame_range": self.set_frame_range,
+            "import_cameras": self.import_cameras,
+            "import_curves": self.import_curves,
+            "import_lights": self.import_lights,
+            "import_materials": self.import_materials,
+            "import_meshes": self.import_meshes,
+            "import_volumes": self.import_volumes,
+            "import_subdiv": self.import_subdiv,
+            "import_instance_proxies": self.import_instance_proxies,
+            "import_visible_only": self.import_visible_only,
+            "create_collection": self.create_collection,
+            "read_mesh_uvs": self.read_mesh_uvs,
+            "read_mesh_colors": self.read_mesh_colors,
+            "prim_path_mask": self.prim_path_mask,
+            "import_guide": self.import_guide,
+            "import_proxy": self.import_proxy,
+            "import_render": self.import_render,
+            "import_usd_preview": self.import_usd_preview,
+            "set_material_blend": self.set_material_blend,
+            "light_intensity_scale": self.light_intensity_scale,
+            "mtl_name_collision_mode": self.mtl_name_collision_mode,
+            "import_all_materials": self.import_all_materials,
+            "import_textures_mode": self.import_textures_mode,
+            "import_textures_dir": self.import_textures_dir,
+            "tex_name_collision_mode": self.tex_name_collision_mode,
+        }
+
+        if filters and dir_path.is_dir() and lib:
+            if False:
+                t1 = Thread(
+                    target=functools.partial(
+                        files,
+                        files,
+                        lib.path,
+                        self.override,
+                        shading=self.shading,
+                        engine=self.engine,
+                        max_time=self.max_time,
+                        force_previews=self.force_previews,
+                        angle=utils.resolve_angle(
+                            self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                        ),
+                        catalog=catalog,
+                        add_plane=prefs.add_ground_plane and not self.flip_z,
+                        pack=self.pack,
+                        make_collection=self.make_collection == "Collection",
+                        **args_dict,
+                    )
+                )
+                t1.start()
+                self.thread = t1
+            else:
+                utils.create_usd_assets_from_path(
+                    files,
+                    lib.path,
+                    self.override,
+                    shading=self.shading,
+                    engine=self.engine,
+                    max_time=self.max_time,
+                    force_previews=self.force_previews,
+                    angle=utils.resolve_angle(
+                        self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                    ),
+                    catalog=catalog,
+                    add_plane=prefs.add_ground_plane and not self.flip_z,
+                    pack=self.pack,
+                    make_collection=self.make_collection == "Collection",
+                    **args_dict,
+                )
+        if False:
+            wm = context.window_manager
+            self.timer = wm.event_timer_add(0.2, window=context.window)
+            wm.modal_handler_add(self)
+            return {"RUNNING_MODAL"}
+        else:
+            utils.update_asset_browser_areas(context=context)
+            return {"FINISHED"}
+
+    # def modal(self, context, event):
+    #     if event.type == "TIMER":
+    #         # context.scene.ta_progress = "Creating Assets..."
+    #         if context.area:
+    #             context.area.tag_redraw()
+    #         if self.thread and not self.thread.is_alive():
+    #             self.report({"INFO"}, "Assets Creation Completed!")
+    #             # context.scene.ta_progress = ""
+    #             return {"FINISHED"}
+    #     else:
+    #         return {"PASS_THROUGH"}
+    #     return {"RUNNING_MODAL"}
+
+
+class SH_OT_FBX_Assets_From_Directory(
+    bpy.types.Operator, utils.Create_Assets_From_FBX_Props_Base
+):
+    bl_idname = "bkeeper.create_assets_from_directory_fbx"
+    bl_label = "Create Assets From FBX Files"
+    bl_description = "Create Assets from Directory"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def draw(self, context):
+        super().draw(self.layout)
+
+    def invoke(self, context, event):
+        self.thread = None
+
+        context.window_manager.fileselect_add(self)
+
+        self.load_settings(utils.get_prefs().fbx_import_settings)
+
+        self.active_library_name = utils.get_active_library_name(
+            context, area=context.area
+        )
+
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        prefs = utils.get_prefs()
+        dir_path = self.filepath
+        filters = []
+        filters.append("OBJECTS")
+        filters.append("MESH")
+
+        catalog = self.catalog if self.catalog != "NEW" else self.new_catalog_name
+        lib = utils.from_active(context, area=context.area)
+        # objects_lib_path, mats_lib_path, worlds_lib_path, node_groups_lib_path, _, _ = (
+        #     ensure_all_libraries()
+        # )
+        files = []
+        if self.files:
+            dir_path = Path(self.filepath).parent
+        else:
+            dir_path = Path(self.filepath)
+
+        if len(self.files) > 0 and all(
+            a.name and Path(dir_path, a.name).exists() for a in self.files
+        ):
+            files = [Path(dir_path, a.name) for a in self.files]
+        else:
+            files = get_all_files_with_extension(dir_path, "fbx")
+
+        if filters and dir_path.is_dir():
+            if False:
+                t1 = Thread(
+                    target=functools.partial(
+                        files,
+                        files,
+                        lib.path,
+                        self.override,
+                        shading=self.shading,
+                        engine=self.engine,
+                        max_time=self.max_time,
+                        force_previews=self.force_previews,
+                        angle=utils.resolve_angle(
+                            self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                        ),
+                        catalog=catalog,
+                        add_plane=prefs.add_ground_plane and not self.flip_z,
+                        use_auto_bone_orientation=self.use_auto_bone_orientation,
+                        my_calculate_roll=self.my_calculate_roll,
+                        my_bone_length=self.my_bone_length,
+                        my_leaf_bone=self.my_leaf_bone,
+                        use_fix_bone_poses=self.use_fix_bone_poses,
+                        use_fix_attributes=self.use_fix_attributes,
+                        use_only_deform_bones=self.use_only_deform_bones,
+                        use_vertex_animation=self.use_vertex_animation,
+                        use_animation=self.use_animation,
+                        my_animation_offset=self.my_animation_offset,
+                        use_animation_prefix=self.use_animation_prefix,
+                        use_triangulate=self.use_triangulate,
+                        my_import_normal=self.my_import_normal,
+                        use_auto_smooth=self.use_auto_smooth,
+                        my_angle=self.my_angle,
+                        my_shade_mode=self.my_shade_mode,
+                        my_scale=self.my_scale,
+                        use_optimize_for_blender=self.use_optimize_for_blender,
+                        use_reset_mesh_origin=self.use_reset_mesh_origin,
+                        use_edge_crease=self.use_edge_crease,
+                        my_edge_crease_scale=self.my_edge_crease_scale,
+                        my_edge_smoothing=self.my_edge_smoothing,
+                        use_import_materials=self.use_import_materials,
+                        use_rename_by_filename=self.use_rename_by_filename,
+                        my_rotation_mode=self.my_rotation_mode,
+                        use_manual_orientation=self.use_manual_orientation,
+                        global_scale=self.global_scale,
+                        bake_space_transform=self.bake_space_transform,
+                        use_custom_normals=self.use_custom_normals,
+                        use_image_search=self.use_image_search,
+                        use_alpha_decals=self.use_alpha_decals,
+                        decal_offset=self.decal_offset,
+                        use_anim=self.use_anim,
+                        anim_offset=self.anim_offset,
+                        use_subsurf=self.use_subsurf,
+                        use_custom_props=self.use_custom_props,
+                        use_custom_props_enum_as_string=self.use_custom_props_enum_as_string,
+                        ignore_leaf_bones=self.ignore_leaf_bones,
+                        force_connect_children=self.force_connect_children,
+                        automatic_bone_orientation=self.automatic_bone_orientation,
+                        primary_bone_axis=self.primary_bone_axis,
+                        secondary_bone_axis=self.secondary_bone_axis,
+                        use_prepost_rot=self.use_prepost_rot,
+                        axis_forward=self.axis_forward,
+                        axis_up=self.axis_up,
+                        importer=prefs.fbx_importer,
+                        pack=self.pack,
+                        single_file=self.single_file,
+                        make_collection=self.make_collection == "Collection",
+                    )
+                )
+                t1.start()
+                self.thread = t1
+            else:
+                utils.create_fbx_assets_from_path(
+                    files,
+                    lib.path,
+                    self.override,
+                    shading=self.shading,
+                    engine=self.engine,
+                    max_time=self.max_time,
+                    force_previews=self.force_previews,
+                    angle=utils.resolve_angle(
+                        self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                    ),
+                    catalog=catalog,
+                    add_plane=prefs.add_ground_plane and not self.flip_z,
+                    use_auto_bone_orientation=self.use_auto_bone_orientation,
+                    my_calculate_roll=self.my_calculate_roll,
+                    my_bone_length=self.my_bone_length,
+                    my_leaf_bone=self.my_leaf_bone,
+                    use_fix_bone_poses=self.use_fix_bone_poses,
+                    use_fix_attributes=self.use_fix_attributes,
+                    use_only_deform_bones=self.use_only_deform_bones,
+                    use_vertex_animation=self.use_vertex_animation,
+                    use_animation=self.use_animation,
+                    my_animation_offset=self.my_animation_offset,
+                    use_animation_prefix=self.use_animation_prefix,
+                    use_triangulate=self.use_triangulate,
+                    my_import_normal=self.my_import_normal,
+                    use_auto_smooth=self.use_auto_smooth,
+                    my_angle=self.my_angle,
+                    my_shade_mode=self.my_shade_mode,
+                    my_scale=self.my_scale,
+                    use_optimize_for_blender=self.use_optimize_for_blender,
+                    use_reset_mesh_origin=self.use_reset_mesh_origin,
+                    use_edge_crease=self.use_edge_crease,
+                    my_edge_crease_scale=self.my_edge_crease_scale,
+                    my_edge_smoothing=self.my_edge_smoothing,
+                    use_import_materials=self.use_import_materials,
+                    use_rename_by_filename=self.use_rename_by_filename,
+                    my_rotation_mode=self.my_rotation_mode,
+                    use_manual_orientation=self.use_manual_orientation,
+                    global_scale=self.global_scale,
+                    bake_space_transform=self.bake_space_transform,
+                    use_custom_normals=self.use_custom_normals,
+                    use_image_search=self.use_image_search,
+                    use_alpha_decals=self.use_alpha_decals,
+                    decal_offset=self.decal_offset,
+                    use_anim=self.use_anim,
+                    anim_offset=self.anim_offset,
+                    use_subsurf=self.use_subsurf,
+                    use_custom_props=self.use_custom_props,
+                    use_custom_props_enum_as_string=self.use_custom_props_enum_as_string,
+                    ignore_leaf_bones=self.ignore_leaf_bones,
+                    force_connect_children=self.force_connect_children,
+                    automatic_bone_orientation=self.automatic_bone_orientation,
+                    primary_bone_axis=self.primary_bone_axis,
+                    secondary_bone_axis=self.secondary_bone_axis,
+                    use_prepost_rot=self.use_prepost_rot,
+                    axis_forward=self.axis_forward,
+                    axis_up=self.axis_up,
+                    # importer=prefs.fbx_importer,
+                    importer="Blender",
+                    pack=self.pack,
+                    single_file=self.single_file,
+                    make_collection=self.make_collection == "Collection",
+                )
+        if False:
+            wm = context.window_manager
+            self.timer = wm.event_timer_add(0.2, window=context.window)
+            wm.modal_handler_add(self)
+            return {"RUNNING_MODAL"}
+        else:
+            utils.update_asset_browser_areas(context=context)
+            return {"FINISHED"}
+
+    # def modal(self, context, event):
+    #     if event.type == "TIMER":
+    #         # context.scene.ta_progress = "Creating Assets..."
+    #         if context.area:
+    #             context.area.tag_redraw()
+    #         if self.thread and not self.thread.is_alive():
+    #             self.report({"INFO"}, "Assets Creation Completed!")
+    #             # context.scene.ta_progress = ""
+    #             return {"FINISHED"}
+    #     else:
+    #         return {"PASS_THROUGH"}
+    #     return {"RUNNING_MODAL"}
+
+
+class SH_OT_OBJ_Assets_From_Directory(
+    utils.Create_Assets_From_OBJ_Props_Base, bpy.types.Operator
+):
+    bl_idname = "bkeeper.create_assets_from_directory_obj"
+    bl_label = "Create Assets From OBJ Files"
+    bl_description = "Create Assets from Directory"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def draw(self, context):
+        super().draw(self.layout)
+
+    def invoke(self, context, event):
+        self.thread = None
+
+        context.window_manager.fileselect_add(self)
+
+        self.load_settings(utils.get_prefs().obj_import_settings)
+
+        self.active_library_name = utils.get_active_library_name(
+            context, area=context.area
+        )
+
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        prefs = utils.get_prefs()
+        dir_path = self.filepath
+        filters = []
+        filters.append("OBJECTS")
+        filters.append("MESH")
+
+        catalog = self.catalog if self.catalog != "NEW" else self.new_catalog_name
+        lib = utils.from_active(context, area=context.area)
+        # objects_lib_path, mats_lib_path, worlds_lib_path, node_groups_lib_path, _, _ = (
+        #     ensure_all_libraries()
+        # )
+
+        files = []
+        dir_path = self.filepath
+        if self.files:
+            dir_path = Path(self.filepath).parent
+        else:
+            dir_path = Path(self.filepath)
+
+        if len(self.files) > 0 and all(
+            a.name and Path(dir_path, a.name).exists() for a in self.files
+        ):
+            files = [Path(dir_path, a.name) for a in self.files]
+        else:
+            files = get_all_files_with_extension(dir_path, "obj")
+
+        if filters and dir_path.is_dir() and lib:
+            if False:
+                t1 = Thread(
+                    target=functools.partial(
+                        files,
+                        files,
+                        lib.path,
+                        self.override,
+                        shading=self.shading,
+                        engine=self.engine,
+                        max_time=self.max_time,
+                        force_previews=self.force_previews,
+                        angle=utils.resolve_angle(
+                            self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                        ),
+                        catalog=catalog,
+                        add_plane=prefs.add_ground_plane and not self.flip_z,
+                        use_auto_bone_orientation=self.use_auto_bone_orientation,
+                        my_calculate_roll=self.my_calculate_roll,
+                        my_bone_length=self.my_bone_length,
+                        my_leaf_bone=self.my_leaf_bone,
+                        use_fix_bone_poses=self.use_fix_bone_poses,
+                        use_fix_attributes=self.use_fix_attributes,
+                        use_only_deform_bones=self.use_only_deform_bones,
+                        use_vertex_animation=self.use_vertex_animation,
+                        use_animation=self.use_animation,
+                        my_animation_offset=self.my_animation_offset,
+                        use_animation_prefix=self.use_animation_prefix,
+                        use_triangulate=self.use_triangulate,
+                        my_import_normal=self.my_import_normal,
+                        use_auto_smooth=self.use_auto_smooth,
+                        my_angle=self.my_angle,
+                        my_shade_mode=self.my_shade_mode,
+                        my_scale=self.my_scale,
+                        use_optimize_for_blender=self.use_optimize_for_blender,
+                        use_reset_mesh_origin=self.use_reset_mesh_origin,
+                        use_edge_crease=self.use_edge_crease,
+                        my_edge_crease_scale=self.my_edge_crease_scale,
+                        my_edge_smoothing=self.my_edge_smoothing,
+                        use_import_materials=self.use_import_materials,
+                        use_rename_by_filename=self.use_rename_by_filename,
+                        my_rotation_mode=self.my_rotation_mode,
+                        use_edges=self.use_edges,
+                        use_smooth_groups=self.use_smooth_groups,
+                        use_split_objects=self.use_split_objects,
+                        use_split_groups=self.use_split_groups,
+                        use_groups_as_vgroups=self.use_groups_as_vgroups,
+                        use_image_search=self.use_image_search,
+                        split_mode=self.split_mode,
+                        global_clamp_size=self.global_clamp_size,
+                        clamp_size=self.clamp_size,
+                        global_scale=self.global_scale,
+                        import_vertex_groups=self.import_vertex_groups,
+                        validate_meshes=self.validate_meshes,
+                        axis_forward=self.axis_forward,
+                        axis_up=self.axis_up,
+                        importer=prefs.fbx_importer,
+                        pack=self.pack,
+                        single_file=self.single_file,
+                        make_collection=self.make_collection == "Collection",
+                    )
+                )
+                t1.start()
+                self.thread = t1
+            else:
+                utils.create_obj_assets_from_path(
+                    files,
+                    lib.path,
+                    self.override,
+                    shading=self.shading,
+                    engine=self.engine,
+                    max_time=self.max_time,
+                    force_previews=self.force_previews,
+                    angle=utils.resolve_angle(
+                        self.camera_angle, self.flip_x, self.flip_y, self.flip_z
+                    ),
+                    catalog=catalog,
+                    add_plane=prefs.add_ground_plane and not self.flip_z,
+                    use_auto_bone_orientation=self.use_auto_bone_orientation,
+                    my_calculate_roll=self.my_calculate_roll,
+                    my_bone_length=self.my_bone_length,
+                    my_leaf_bone=self.my_leaf_bone,
+                    use_fix_bone_poses=self.use_fix_bone_poses,
+                    use_fix_attributes=self.use_fix_attributes,
+                    use_only_deform_bones=self.use_only_deform_bones,
+                    use_vertex_animation=self.use_vertex_animation,
+                    use_animation=self.use_animation,
+                    my_animation_offset=self.my_animation_offset,
+                    use_animation_prefix=self.use_animation_prefix,
+                    use_triangulate=self.use_triangulate,
+                    my_import_normal=self.my_import_normal,
+                    use_auto_smooth=self.use_auto_smooth,
+                    my_angle=self.my_angle,
+                    my_shade_mode=self.my_shade_mode,
+                    my_scale=self.my_scale,
+                    use_optimize_for_blender=self.use_optimize_for_blender,
+                    use_reset_mesh_origin=self.use_reset_mesh_origin,
+                    use_edge_crease=self.use_edge_crease,
+                    my_edge_crease_scale=self.my_edge_crease_scale,
+                    my_edge_smoothing=self.my_edge_smoothing,
+                    use_import_materials=self.use_import_materials,
+                    use_rename_by_filename=self.use_rename_by_filename,
+                    my_rotation_mode=self.my_rotation_mode,
+                    use_edges=self.use_edges,
+                    use_smooth_groups=self.use_smooth_groups,
+                    use_split_objects=self.use_split_objects,
+                    use_split_groups=self.use_split_groups,
+                    use_groups_as_vgroups=self.use_groups_as_vgroups,
+                    use_image_search=self.use_image_search,
+                    split_mode=self.split_mode,
+                    global_clamp_size=self.global_clamp_size,
+                    clamp_size=self.clamp_size,
+                    global_scale=self.global_scale,
+                    import_vertex_groups=self.import_vertex_groups,
+                    validate_meshes=self.validate_meshes,
+                    axis_forward=self.axis_forward,
+                    axis_up=self.axis_up,
+                    # importer=prefs.fbx_importer,
+                    importer="Blender",
+                    pack=self.pack,
+                    single_file=self.single_file,
+                    make_collection=self.make_collection == "Collection",
+                )
+        if False:
+            wm = context.window_manager
+            self.timer = wm.event_timer_add(0.2, window=context.window)
+            wm.modal_handler_add(self)
+            return {"RUNNING_MODAL"}
+        else:
+            utils.update_asset_browser_areas(context=context)
+            return {"FINISHED"}
+
+    # def modal(self, context, event):
+    #     if event.type == "TIMER":
+    #         # context.scene.ta_progress = f"Creating Assets..."
+    #         if context.area:
+    #             context.area.tag_redraw()
+    #         if self.thread and not self.thread.is_alive():
+    #             self.report({"INFO"}, "Assets Creation Completed!")
+    #             # context.scene.ta_progress = ""
+    #             return {"FINISHED"}
+    #     else:
+    #         return {"PASS_THROUGH"}
+    #     return {"RUNNING_MODAL"}
+
+
+classes = (
+    Catalog,
+    Catalogs,
+    SH_OT_ImportFromDirectory,
+    SH_OT_OBJ_Assets_From_Directory,
+    SH_OT_FBX_Assets_From_Directory,
+    SH_OT_USD_Assets_From_Directory,
+)
 
 
 def register():

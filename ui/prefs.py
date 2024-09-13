@@ -7,6 +7,7 @@ from bpy.props import (
     CollectionProperty,
     EnumProperty,
     IntProperty,
+    PointerProperty,
     StringProperty,
 )
 from bpy.types import AddonPreferences, PropertyGroup, UILayout, UIList
@@ -71,10 +72,25 @@ class SH_BlenderVersion(PropertyGroup):
         return utils.get_prefs()
 
 
+class Create_Assets_From_OBJ_Props(
+    PropertyGroup, utils.Create_Assets_From_OBJ_Props_Base
+): ...
+
+
+class Create_Assets_From_FBX_Props(
+    PropertyGroup, utils.Create_Assets_From_FBX_Props_Base
+): ...
+
+
+class Create_Assets_From_USD_Props(
+    PropertyGroup, utils.Create_Assets_From_USD_Props_Base
+): ...
+
+
 class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
     bl_idname = base_package
 
-    display_extras: bpy.props.BoolProperty(
+    display_extras: BoolProperty(
         name="Display Extras",
         description="Display extra information",
         default=False,
@@ -117,8 +133,25 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         default=True,
     )
 
+    # def get_available_importers(self, context):
+    #     importers=["Blender"]
+    #     # if "better_fbx" in context.preferences.addons.keys() or next((True for addon in context.preferences.addons.keys() if addon.endswith("better_fbx")), False):
+    #     #     importers.append("Better FBX")
+    #     return ((a,a,a) for a in importers)
+
+    # fbx_importer: EnumProperty(items=get_available_importers, name="Importer to use")
+
+    obj_import_settings: PointerProperty(type=Create_Assets_From_OBJ_Props)
+
+    fbx_import_settings: PointerProperty(type=Create_Assets_From_FBX_Props)
+
+    usd_import_settings: PointerProperty(type=Create_Assets_From_USD_Props)
+
     @property
     def active_blender_version(self) -> SH_BlenderVersion:
+        self.obj_import_settings: Create_Assets_From_OBJ_Props
+        self.fbx_import_settings: Create_Assets_From_FBX_Props
+        self.usd_import_settings: Create_Assets_From_USD_Props
         return self.blender_versions[self.active_blender_version_index]
 
     @property
@@ -261,8 +294,53 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
             icon="UNLOCKED" if self.display_extras else "LOCKED",
         )
 
+        layout.separator(type="LINE")
+
+        header, body = layout.panel("obj_importer_defaults", default_closed=True)
+        row = header.row()
+        row.alignment = "CENTER"
+        row.label(text="OBJ Importer Defaults", icon="IMPORT")
+        if body:
+            split = body.split(factor=0.2)
+            split.separator()
+            mid = split.split(factor=0.8)
+            mid.separator(type="LINE")
+            mid.separator()
+            self.obj_import_settings.draw(body, is_prefs=True)
+
+        layout.separator(type="LINE")
+
+        header, body = layout.panel("fbx_importer_defaults", default_closed=True)
+        row = header.row()
+        row.alignment = "CENTER"
+        row.label(text="FBX Importer Defaults", icon="IMPORT")
+        if body:
+            split = body.split(factor=0.2)
+            split.separator()
+            mid = split.split(factor=0.8)
+            mid.separator(type="LINE")
+            mid.separator()
+            self.fbx_import_settings.draw(body, is_prefs=True)
+
+        layout.separator(type="LINE")
+
+        header, body = layout.panel("usd_importer_defaults", default_closed=True)
+        row = header.row()
+        row.alignment = "CENTER"
+        row.label(text="USD Importer Defaults", icon="IMPORT")
+        if body:
+            split = body.split(factor=0.2)
+            split.separator()
+            mid = split.split(factor=0.8)
+            mid.separator(type="LINE")
+            mid.separator()
+            self.usd_import_settings.draw(body, is_prefs=True)
+
 
 classes = (
+    Create_Assets_From_OBJ_Props,
+    Create_Assets_From_FBX_Props,
+    Create_Assets_From_USD_Props,
     SH_UL_BlenderVersions,
     SH_BlenderVersion,
     SH_AddonPreferences,
