@@ -662,12 +662,18 @@ class SH_OT_USD_Assets_From_Directory(
             "import_materials": self.import_materials,
             "import_meshes": self.import_meshes,
             "import_volumes": self.import_volumes,
+            "import_shapes": self.import_shapes,
+            "import_skeletons": self.import_skeletons,
+            "import_blendshapes": self.import_blendshapes,
+            "import_points": self.import_points,
             "import_subdiv": self.import_subdiv,
-            "import_instance_proxies": self.import_instance_proxies,
+            # "import_instance_proxies": self.import_instance_proxies,
+            "support_scene_instancing": self.support_scene_instancing,
             "import_visible_only": self.import_visible_only,
             "create_collection": self.create_collection,
             "read_mesh_uvs": self.read_mesh_uvs,
             "read_mesh_colors": self.read_mesh_colors,
+            "read_mesh_attributes": self.read_mesh_attributes,
             "prim_path_mask": self.prim_path_mask,
             "import_guide": self.import_guide,
             "import_proxy": self.import_proxy,
@@ -677,9 +683,12 @@ class SH_OT_USD_Assets_From_Directory(
             "light_intensity_scale": self.light_intensity_scale,
             "mtl_name_collision_mode": self.mtl_name_collision_mode,
             "import_all_materials": self.import_all_materials,
-            "import_textures_mode": self.import_textures_mode,
             "import_textures_dir": self.import_textures_dir,
+            "import_textures_mode": self.import_textures_mode,
             "tex_name_collision_mode": self.tex_name_collision_mode,
+            "attr_import_mode": self.attr_import_mode,
+            "create_world_material": self.create_world_material,
+            "import_defined_only": self.import_defined_only,
         }
 
         if filters and dir_path.is_dir() and lib:
@@ -842,6 +851,7 @@ class SH_OT_FBX_Assets_From_Directory(
                         global_scale=self.global_scale,
                         bake_space_transform=self.bake_space_transform,
                         use_custom_normals=self.use_custom_normals,
+                        colors_type=self.colors_type,
                         use_image_search=self.use_image_search,
                         use_alpha_decals=self.use_alpha_decals,
                         decal_offset=self.decal_offset,
@@ -909,6 +919,7 @@ class SH_OT_FBX_Assets_From_Directory(
                     global_scale=self.global_scale,
                     bake_space_transform=self.bake_space_transform,
                     use_custom_normals=self.use_custom_normals,
+                    colors_type=self.colors_type,
                     use_image_search=self.use_image_search,
                     use_alpha_decals=self.use_alpha_decals,
                     decal_offset=self.decal_offset,
@@ -967,6 +978,14 @@ class SH_OT_OBJ_Assets_From_Directory(
 
     def invoke(self, context, event):
         self.thread = None
+
+        # Delete this!
+        p = Path(
+            "T:/Autotroph/Superhive Blender Addon/import_from_file_format_help/objs/"
+        )
+        if p.exists():
+            self.filepath = str(p)
+            self.directory = str(p.parent)
 
         context.window_manager.fileselect_add(self)
 
@@ -1059,6 +1078,7 @@ class SH_OT_OBJ_Assets_From_Directory(
                         global_scale=self.global_scale,
                         import_vertex_groups=self.import_vertex_groups,
                         validate_meshes=self.validate_meshes,
+                        collection_separator=self.collection_separator,
                         axis_forward=self.axis_forward,
                         axis_up=self.axis_up,
                         importer=prefs.fbx_importer,
@@ -1120,6 +1140,7 @@ class SH_OT_OBJ_Assets_From_Directory(
                     global_scale=self.global_scale,
                     import_vertex_groups=self.import_vertex_groups,
                     validate_meshes=self.validate_meshes,
+                    collection_separator=self.collection_separator,
                     axis_forward=self.axis_forward,
                     axis_up=self.axis_up,
                     # importer=prefs.fbx_importer,

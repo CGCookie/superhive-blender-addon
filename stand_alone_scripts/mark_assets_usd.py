@@ -30,28 +30,165 @@ IMPORT_LIGHTS = argv[15] == "True"
 IMPORT_MATERIALS = argv[16] == "True"
 IMPORT_MESHES = argv[17] == "True"
 IMPORT_VOLUMES = argv[18] == "True"
-IMPORT_SUBDIV = argv[19] == "True"
-IMPORT_INSTANCE_PROXIES = argv[20] == "True"
-IMPORT_VISIBLE_ONLY = argv[21] == "True"
-CREATE_COLLECTION = argv[22] == "True"
-READ_MESH_UVS = argv[23] == "True"
-READ_MESH_COLORS = argv[24] == "True"
-PRIM_PATH_MASK = argv[25]
-IMPORT_GUIDE = argv[26] == "True"
-IMPORT_PROXY = argv[27] == "True"
-IMPORT_RENDER = argv[28] == "True"
-IMPORT_USD_PREVIEW = argv[29] == "True"
-SET_MATERIAL_BLEND = argv[30] == "True"
-LIGHT_INTENSITY_SCALE = float(argv[31])
-MTL_NAME_COLLISION_MODE = argv[32]
-IMPORT_ALL_MATERIALS = argv[33] == "True"
-IMPORT_TEXTURES_MODE = argv[34]
-IMPORT_TEXTURES_DIR = argv[35]
-TEX_NAME_COLLISION_MODE = argv[36]
-PACK = argv[37] == "True"
-MAKE_COLLECTION = argv[38] == "True"
+IMPORT_SHAPES = argv[19] == "True"
+IMPORT_SKELETONS = argv[20] == "True"
+IMPORT_BLENDSHAPES = argv[21] == "True"
+IMPORT_POINTS = argv[22] == "True"
+IMPORT_SUBDIV = argv[23] == "True"
+# IMPORT_INSTANCE_PROXIES = argv[24] == "True"
+SUPPORT_SCENE_INSTANCING = argv[24] == "True"
+IMPORT_VISIBLE_ONLY = argv[25] == "True"
+CREATE_COLLECTION = argv[26] == "True"
+READ_MESH_UVS = argv[27] == "True"
+READ_MESH_COLORS = argv[28] == "True"
+READ_MESH_ATTRIBUTES = argv[29] == "True"
+PRIM_PATH_MASK = argv[30]
+IMPORT_GUIDE = argv[31] == "True"
+IMPORT_PROXY = argv[32] == "True"
+IMPORT_RENDER = argv[33] == "True"
+IMPORT_USD_PREVIEW = argv[34] == "True"
+SET_MATERIAL_BLEND = argv[35] == "True"
+LIGHT_INTENSITY_SCALE = float(argv[36])
+MTL_NAME_COLLISION_MODE = argv[37]
+IMPORT_ALL_MATERIALS = argv[38] == "True"
+IMPORT_TEXTURES_MODE = argv[39]
+IMPORT_TEXTURES_DIR = argv[40]
+TEX_NAME_COLLISION_MODE = argv[41]
+ATTR_IMPORT_MODE = argv[42]
+CREATE_WORLD_MATERIAL = argv[43] == "True"
+IMPORT_DEFINED_ONLY = argv[44] == "True"
+PACK = argv[45] == "True"
+MAKE_COLLECTION = argv[46] == "True"
+RENDER_DEVICE = argv[47]
+
+# Assert statements to ensure correct type
+assert isinstance(FILEPATHS, list), f"Expected list, got {type(FILEPATHS).__name__}"
+assert all(
+    isinstance(path, str) for path in FILEPATHS
+), "All elements in FILEPATHS should be strings"
+assert isinstance(OBJECTS_PATH, str), f"Expected str, got {type(OBJECTS_PATH).__name__}"
+assert isinstance(OVERRIDE, str), f"Expected str, got {type(OVERRIDE).__name__}"
+assert isinstance(SHADING, str), f"Expected str, got {type(SHADING).__name__}"
+assert isinstance(ENGINE, str), f"Expected str, got {type(ENGINE).__name__}"
+assert isinstance(MAX_TIME, float), f"Expected float, got {type(MAX_TIME).__name__}"
+assert isinstance(
+    FORCE_PREVIEWS, bool
+), f"Expected bool, got {type(FORCE_PREVIEWS).__name__}"
+assert isinstance(CAMERA_ANGLE, str), f"Expected str, got {type(CAMERA_ANGLE).__name__}"
+assert isinstance(CATALOG, str), f"Expected str, got {type(CATALOG).__name__}"
+assert isinstance(ADD_PLANE, bool), f"Expected bool, got {type(ADD_PLANE).__name__}"
+assert isinstance(
+    WORLD_STRENGTH, float
+), f"Expected float, got {type(WORLD_STRENGTH).__name__}"
+assert isinstance(SCALE, float), f"Expected float, got {type(SCALE).__name__}"
+assert isinstance(
+    SET_FRAME_RANGE, bool
+), f"Expected bool, got {type(SET_FRAME_RANGE).__name__}"
+assert isinstance(
+    IMPORT_CAMERAS, bool
+), f"Expected bool, got {type(IMPORT_CAMERAS).__name__}"
+assert isinstance(
+    IMPORT_CURVES, bool
+), f"Expected bool, got {type(IMPORT_CURVES).__name__}"
+assert isinstance(
+    IMPORT_LIGHTS, bool
+), f"Expected bool, got {type(IMPORT_LIGHTS).__name__}"
+assert isinstance(
+    IMPORT_MATERIALS, bool
+), f"Expected bool, got {type(IMPORT_MATERIALS).__name__}"
+assert isinstance(
+    IMPORT_MESHES, bool
+), f"Expected bool, got {type(IMPORT_MESHES).__name__}"
+assert isinstance(
+    IMPORT_VOLUMES, bool
+), f"Expected bool, got {type(IMPORT_VOLUMES).__name__}"
+assert isinstance(
+    IMPORT_SHAPES, bool
+), f"Expected bool, got {type(IMPORT_SHAPES).__name__}"
+assert isinstance(
+    IMPORT_SKELETONS, bool
+), f"Expected bool, got {type(IMPORT_SKELETONS).__name__}"
+assert isinstance(
+    IMPORT_BLENDSHAPES, bool
+), f"Expected bool, got {type(IMPORT_BLENDSHAPES).__name__}"
+assert isinstance(
+    IMPORT_POINTS, bool
+), f"Expected bool, got {type(IMPORT_POINTS).__name__}"
+assert isinstance(
+    IMPORT_SUBDIV, bool
+), f"Expected bool, got {type(IMPORT_SUBDIV).__name__}"
+assert isinstance(
+    SUPPORT_SCENE_INSTANCING, bool
+), f"Expected bool, got {type(SUPPORT_SCENE_INSTANCING).__name__}"
+assert isinstance(
+    IMPORT_VISIBLE_ONLY, bool
+), f"Expected bool, got {type(IMPORT_VISIBLE_ONLY).__name__}"
+assert isinstance(
+    CREATE_COLLECTION, bool
+), f"Expected bool, got {type(CREATE_COLLECTION).__name__}"
+assert isinstance(
+    READ_MESH_UVS, bool
+), f"Expected bool, got {type(READ_MESH_UVS).__name__}"
+assert isinstance(
+    READ_MESH_COLORS, bool
+), f"Expected bool, got {type(READ_MESH_COLORS).__name__}"
+assert isinstance(
+    READ_MESH_ATTRIBUTES, bool
+), f"Expected bool, got {type(READ_MESH_ATTRIBUTES).__name__}"
+assert isinstance(
+    PRIM_PATH_MASK, str
+), f"Expected str, got {type(PRIM_PATH_MASK).__name__}"
+assert isinstance(
+    IMPORT_GUIDE, bool
+), f"Expected bool, got {type(IMPORT_GUIDE).__name__}"
+assert isinstance(
+    IMPORT_PROXY, bool
+), f"Expected bool, got {type(IMPORT_PROXY).__name__}"
+assert isinstance(
+    IMPORT_RENDER, bool
+), f"Expected bool, got {type(IMPORT_RENDER).__name__}"
+assert isinstance(
+    IMPORT_USD_PREVIEW, bool
+), f"Expected bool, got {type(IMPORT_USD_PREVIEW).__name__}"
+assert isinstance(
+    SET_MATERIAL_BLEND, bool
+), f"Expected bool, got {type(SET_MATERIAL_BLEND).__name__}"
+assert isinstance(
+    LIGHT_INTENSITY_SCALE, float
+), f"Expected float, got {type(LIGHT_INTENSITY_SCALE).__name__}"
+assert isinstance(
+    MTL_NAME_COLLISION_MODE, str
+), f"Expected str, got {type(MTL_NAME_COLLISION_MODE).__name__}"
+assert isinstance(
+    IMPORT_ALL_MATERIALS, bool
+), f"Expected bool, got {type(IMPORT_ALL_MATERIALS).__name__}"
+assert isinstance(
+    IMPORT_TEXTURES_MODE, str
+), f"Expected str, got {type(IMPORT_TEXTURES_MODE).__name__}"
+assert isinstance(
+    IMPORT_TEXTURES_DIR, str
+), f"Expected str, got {type(IMPORT_TEXTURES_DIR).__name__}"
+assert isinstance(
+    TEX_NAME_COLLISION_MODE, str
+), f"Expected str, got {type(TEX_NAME_COLLISION_MODE).__name__}"
+assert isinstance(
+    ATTR_IMPORT_MODE, str
+), f"Expected str, got {type(ATTR_IMPORT_MODE).__name__}"
+assert isinstance(
+    CREATE_WORLD_MATERIAL, bool
+), f"Expected bool, got {type(CREATE_WORLD_MATERIAL).__name__}"
+assert isinstance(
+    IMPORT_DEFINED_ONLY, bool
+), f"Expected bool, got {type(IMPORT_DEFINED_ONLY).__name__}"
+assert isinstance(PACK, bool), f"Expected bool, got {type(PACK).__name__}"
+assert isinstance(
+    MAKE_COLLECTION, bool
+), f"Expected bool, got {type(MAKE_COLLECTION).__name__}"
+assert isinstance(
+    RENDER_DEVICE, str
+), f"Expected str, got {type(MAKE_COLLECTION).__name__}"
+
 FILEPATH = FILEPATHS.pop(0)
-RENDER_DEVICE = argv[39]
 supports_thumbnails = ["MESH", "LIGHT"]
 context = bpy.context
 scene = context.scene
@@ -1033,12 +1170,18 @@ def create_preview(type, objects, objects_to_check_previews):
                     import_materials=IMPORT_MATERIALS,
                     import_meshes=IMPORT_MESHES,
                     import_volumes=IMPORT_VOLUMES,
+                    import_shapes=IMPORT_SHAPES,
+                    import_skeletons=IMPORT_SKELETONS,
+                    import_blendshapes=IMPORT_BLENDSHAPES,
+                    import_points=IMPORT_POINTS,
                     import_subdiv=IMPORT_SUBDIV,
                     # import_instance_proxies=IMPORT_INSTANCE_PROXIES,
+                    support_scene_instancing=SUPPORT_SCENE_INSTANCING,
                     import_visible_only=IMPORT_VISIBLE_ONLY,
                     create_collection=CREATE_COLLECTION,
                     read_mesh_uvs=READ_MESH_UVS,
                     read_mesh_colors=READ_MESH_COLORS,
+                    read_mesh_attributes=READ_MESH_ATTRIBUTES,
                     prim_path_mask=PRIM_PATH_MASK,
                     import_guide=IMPORT_GUIDE,
                     import_proxy=IMPORT_PROXY,
@@ -1051,6 +1194,9 @@ def create_preview(type, objects, objects_to_check_previews):
                     import_textures_mode=IMPORT_TEXTURES_MODE,
                     import_textures_dir=IMPORT_TEXTURES_DIR,
                     tex_name_collision_mode=TEX_NAME_COLLISION_MODE,
+                    attr_import_mode=ATTR_IMPORT_MODE,
+                    create_world_material=CREATE_WORLD_MATERIAL,
+                    import_defined_only=IMPORT_DEFINED_ONLY,
                 )
 
             if PACK:
@@ -1249,12 +1395,18 @@ with context.temp_override(**override):
         import_materials=IMPORT_MATERIALS,
         import_meshes=IMPORT_MESHES,
         import_volumes=IMPORT_VOLUMES,
+        import_shapes=IMPORT_SHAPES,
+        import_skeletons=IMPORT_SKELETONS,
+        import_blendshapes=IMPORT_BLENDSHAPES,
+        import_points=IMPORT_POINTS,
         import_subdiv=IMPORT_SUBDIV,
         # import_instance_proxies=IMPORT_INSTANCE_PROXIES,
+        support_scene_instancing=SUPPORT_SCENE_INSTANCING,
         import_visible_only=IMPORT_VISIBLE_ONLY,
         create_collection=CREATE_COLLECTION,
         read_mesh_uvs=READ_MESH_UVS,
         read_mesh_colors=READ_MESH_COLORS,
+        read_mesh_attributes=READ_MESH_ATTRIBUTES,
         prim_path_mask=PRIM_PATH_MASK,
         import_guide=IMPORT_GUIDE,
         import_proxy=IMPORT_PROXY,
@@ -1267,6 +1419,9 @@ with context.temp_override(**override):
         import_textures_mode=IMPORT_TEXTURES_MODE,
         import_textures_dir=IMPORT_TEXTURES_DIR,
         tex_name_collision_mode=TEX_NAME_COLLISION_MODE,
+        attr_import_mode=ATTR_IMPORT_MODE,
+        create_world_material=CREATE_WORLD_MATERIAL,
+        import_defined_only=IMPORT_DEFINED_ONLY,
     )
 for a in os.listdir(os.path.dirname(FILEPATH)):
     if a.endswith("mdl") and os.path.splitext(a)[0] in [

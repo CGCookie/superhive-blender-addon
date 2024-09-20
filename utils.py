@@ -1085,7 +1085,7 @@ class Filters:
         description="Materials should have atleast this many nodes",
     )
 
-    shading: EnumProperty(name="Thumbnail Shading", default=0, items=get_shading_enum)
+    shading: EnumProperty(name="Thumbnail Shading", default=2, items=get_shading_enum)
 
     engine: EnumProperty(
         name="NodeGroup Render Engine",
@@ -1451,8 +1451,7 @@ class Create_Assets_From_FBX_Props_Base(Filters):
     bake_space_transform: BoolProperty(
         name="Apply Transform",
         description="Bake space transform into object data, avoids getting unwanted rotations to objects when "
-        "target space is not aligned with Blender's space "
-        "(WARNING! experimental option, use at own risks, known broken with armatures/animations)",
+        "target space is not aligned with Blender's space ",
         default=False,
     )
 
@@ -1460,6 +1459,17 @@ class Create_Assets_From_FBX_Props_Base(Filters):
         name="Custom Normals",
         description="Import custom normals, if available (otherwise Blender will recompute them)",
         default=True,
+    )
+
+    colors_type: EnumProperty(
+        name="Vertex Colors",
+        items=(
+            ("NONE", "None", "Do not import color attributes"),
+            ("SRGB", "sRGB", "Expect file colors in sRGB color space"),
+            ("LINEAR", "Linear", "Expect file colors in linear color space"),
+        ),
+        description="Import vertex color attributes",
+        default="SRGB",
     )
 
     use_image_search: BoolProperty(
@@ -1610,132 +1620,94 @@ class Create_Assets_From_FBX_Props_Base(Filters):
         layout.row().prop(self, "override", expand=True)
         layout.prop(self, "max_time")
 
-        box = layout.box()
-        header, main_body = box.panel("importer_settings")
+        # box = layout.box()
+        header, main_body = layout.panel("importer_settings")
         header.scale_y = 1.25
         row = header.row()
         row.alignment = "CENTER"
         row.label(text="Importer Settings", icon="SETTINGS")
         if main_body:
-            # if prefs.fbx_importer == "Better FBX":
-            if False:
-                box = layout.box()
-                box.label(text="Basic Options:")
-                box.prop(self, "my_rotation_mode")
-                box.prop(self, "my_import_normal")
-                box.prop(self, "use_auto_smooth")
-                box.prop(self, "my_angle")
-                box.prop(self, "my_shade_mode")
-                box.prop(self, "my_scale")
+            main_body.use_property_split = True
+            main_body.use_property_decorate = False  # No animation.
 
-                box = layout.box()
-                box.label(text="Blender Options: (Experimental)")
-                box.prop(self, "use_optimize_for_blender")
-                box.prop(self, "use_reset_mesh_origin")
+            header, body = main_body.panel("data_types")
+            header.scale_y = 1.25
+            row = header.row()
+            row.label(text="Include")
+            if body:
+                body.prop(self, "use_custom_normals")
+                body.prop(self, "use_subsurf")
+                body.prop(self, "use_custom_props")
+                sub = body.row()
+                sub.enabled = self.use_custom_props
+                sub.prop(self, "use_custom_props_enum_as_string")
+                body.prop(self, "use_image_search")
+                body.prop(self, "colors_type")
 
-                box = layout.box()
-                box.label(text="Bone Options:")
-                box.prop(self, "use_auto_bone_orientation")
-                box.prop(self, "my_calculate_roll")
-                box.prop(self, "my_bone_length")
-                box.prop(self, "my_leaf_bone")
-                box.prop(self, "use_fix_bone_poses")
-                box.prop(self, "use_fix_attributes")
-                box.prop(self, "use_only_deform_bones")
+            main_body.separator(type="LINE")
 
-                box = layout.box()
-                box.label(text="Animation Options:")
-                box.prop(self, "use_animation")
-                box.prop(self, "my_animation_offset")
-                box.prop(self, "use_animation_prefix")
+            header, body = main_body.panel("transform")
+            header.scale_y = 1.25
+            row = header.row()
+            row.label(text="Transform", icon="OBJECT_DATA")
+            if body:
+                body.prop(self, "global_scale")
+                body.prop(self, "decal_offset")
+                row = body.row()
+                row.prop(self, "bake_space_transform")
+                row.operator(
+                    "bkeeper.icon_with_description",
+                    text="",
+                    icon="ERROR",
+                    emboss=False,
+                ).text = "(WARNING! experimental option, use at own risks, known broken with armatures/animations)"
+                body.prop(self, "use_prepost_rot")
 
-                box = layout.box()
-                box.label(text="Vertex Animation Options:")
-                box.prop(self, "use_vertex_animation")
-
-                box = layout.box()
-                box.label(text="Mesh Options:")
-                box.prop(self, "use_triangulate")
-                box.prop(self, "use_import_materials")
-                box.prop(self, "use_rename_by_filename")
-
-                box = layout.box()
-                box.label(text="Edge Options:")
-                box.prop(self, "my_edge_smoothing")
-                box.prop(self, "use_edge_crease")
-                box.prop(self, "my_edge_crease_scale")
-            else:
-                main_body.use_property_split = True
-                main_body.use_property_decorate = False  # No animation.
-
-                header, body = main_body.panel("data_types")
+                header, sbody = body.panel(
+                    "orientation", default_closed=self.use_manual_orientation
+                )
+                header.use_property_split = False
                 header.scale_y = 1.25
-                row = header.row()
-                row.label(text="Include")
-                if body:
-                    body.prop(self, "use_custom_normals")
-                    body.prop(self, "use_subsurf")
-                    body.prop(self, "use_custom_props")
-                    sub = body.row()
-                    sub.enabled = self.use_custom_props
-                    sub.prop(self, "use_custom_props_enum_as_string")
-                    body.prop(self, "use_image_search")
+                header.alignment = "LEFT"
+                header.prop(self, "use_manual_orientation", text="Manual Orientation")
+                if sbody:
+                    sbody.enabled = self.use_manual_orientation
+                    sbody.prop(self, "axis_forward")
+                    sbody.prop(self, "axis_up")
 
-                main_body.separator(type="LINE")
+            main_body.separator(type="LINE")
 
-                header, body = main_body.panel("transform")
-                header.scale_y = 1.25
-                row = header.row()
-                row.label(text="Transform", icon="OBJECT_DATA")
-                if body:
-                    body.prop(self, "global_scale")
-                    body.prop(self, "decal_offset")
-                    row = body.row()
-                    row.prop(self, "bake_space_transform")
-                    row.label(text="", icon="ERROR")
-                    body.prop(self, "use_prepost_rot")
-                    body.prop(
-                        self, "use_manual_orientation", text="Use Manual Orientation"
-                    )
+            header, body = main_body.panel("animation")
+            header.use_property_split = False
+            header.scale_y = 1.25
+            header.alignment = "LEFT"
+            header.prop(self, "use_anim", text="Animation")
+            if body:
+                body.enabled = self.use_anim
+                body.prop(self, "anim_offset")
 
-                    if self.use_manual_orientation:
-                        body.enabled = self.use_manual_orientation
-                        body.prop(self, "axis_forward")
-                        body.prop(self, "axis_up")
+            main_body.separator(type="LINE")
 
-                main_body.separator(type="LINE")
+            header, sbody = main_body.column().panel("armature")
+            header.scale_y = 1.25
+            row = header.row()
+            row.label(text="Armature", icon="ARMATURE_DATA")
+            if sbody:
+                sbody.prop(self, "ignore_leaf_bones")
+                (sbody.prop(self, "force_connect_children"),)
+                (sbody.prop(self, "automatic_bone_orientation"),)
+                sub = sbody.column()
+                sub.enabled = not self.automatic_bone_orientation
+                sub.prop(self, "primary_bone_axis")
+                sub.prop(self, "secondary_bone_axis")
 
-                header, body = main_body.panel("animation")
-                header.scale_y = 1.25
-                row = header.row()
-                row.label(text="Animation", icon="DECORATE_ANIMATE")
-                if body:
-                    body.prop(self, "use_anim", text="Use Animation")
-                    row = body.row()
-                    row.enabled = self.use_anim
-                    row.prop(self, "anim_offset")
-
-                    split = body.split(factor=0.1)
-
-                    split.separator()
-
-                    header, sbody = split.column().panel("armature")
-                    header.scale_y = 1.25
-                    row = header.row()
-                    row.label(text="Armature", icon="ARMATURE_DATA")
-                    if sbody:
-                        sbody.prop(self, "ignore_leaf_bones")
-                        (sbody.prop(self, "force_connect_children"),)
-                        (sbody.prop(self, "automatic_bone_orientation"),)
-                        sub = sbody.column()
-                        sub.enabled = not self.automatic_bone_orientation
-                        sub.prop(self, "primary_bone_axis")
-                        sub.prop(self, "secondary_bone_axis")
+            main_body.separator(type="LINE")
 
 
 @io_utils.orientation_helper(axis_forward="-Z", axis_up="Y")
 class Create_Assets_From_OBJ_Props_Base(Filters):
     filepath: StringProperty(subtype="DIR_PATH")
+    directory: StringProperty(subtype="DIR_PATH")
 
     files: CollectionProperty(
         name="File Path",
@@ -2030,17 +2002,6 @@ class Create_Assets_From_OBJ_Props_Base(Filters):
         default=True,
     )
 
-    use_split_objects: BoolProperty(
-        name="Object",
-        description="Import OBJ Objects into Blender Objects",
-        default=True,
-    )
-    use_split_groups: BoolProperty(
-        name="Group",
-        description="Import OBJ Groups into Blender Objects",
-        default=False,
-    )
-
     use_groups_as_vgroups: BoolProperty(
         name="Poly Groups",
         description="Import OBJ groups as vertex groups",
@@ -2072,17 +2033,79 @@ class Create_Assets_From_OBJ_Props_Base(Filters):
         default=0.0,
     )
 
-    clamp_size: FloatProperty(name="Clamp Bounding Box", default=0.0, min=0.0, max=1000)
-
+    # Blender Importer
     global_scale: FloatProperty(
-        name="Scale", description="Scale all data", default=1.0, min=0.0001, max=10000.0
+        name="Scale",
+        description="Value by which to enlarge or shrink the objects with respect to the world's origin",
+        default=1.0,
+        min=0.0001,
+        max=10000.0,
+    )
+
+    clamp_size: FloatProperty(
+        name="Clamp Bounding Box",
+        description="Resize the objects to keep bounding box under this value. Value 0 disables clamping",
+        default=0.0,
+        min=0.0,
+        max=1000.0,
+    )
+
+    forward_axis: EnumProperty(
+        name="Forward Axis",
+        items=(
+            ("X", "X", "Positive X axis"),
+            ("Y", "Y", "Positive Y axis"),
+            ("Z", "Z", "Positive Z axis"),
+            ("NEGATIVE_X", "-X", "Negative X axis"),
+            ("NEGATIVE_Y", "-Y", "Negative Y axis"),
+            ("NEGATIVE_Z", "-Z", "Negative Z axis"),
+        ),
+        default="NEGATIVE_Z",
+    )
+
+    up_axis: EnumProperty(
+        name="Up Axis",
+        items=(
+            ("X", "X", "Positive X axis"),
+            ("Y", "Y", "Positive Y axis"),
+            ("Z", "Z", "Positive Z axis"),
+            ("NEGATIVE_X", "-X", "Negative X axis"),
+            ("NEGATIVE_Y", "-Y", "Negative Y axis"),
+            ("NEGATIVE_Z", "-Z", "Negative Z axis"),
+        ),
+        default="Y",
+    )
+
+    use_split_objects: BoolProperty(
+        name="Split By Object",
+        description="Import each OBJ 'o' as a separate object",
+        default=True,
+    )
+
+    use_split_groups: BoolProperty(
+        name="Split By Group",
+        description="Import each OBJ 'g' as a separate object",
+        default=False,
+    )
+
+    import_vertex_groups: BoolProperty(
+        name="Vertex Groups",
+        description="Import OBJ groups as vertex groups",
+        default=False,
     )
 
     validate_meshes: BoolProperty(
-        name="Validate Meshes", description="Validate mesh data", default=False
+        name="Validate Meshes",
+        description="Ensure the data is valid (when disabled, data may be imported which causes crashes displaying or editing)",
+        default=True,
     )
 
-    import_vertex_groups: BoolProperty(name="Vertex Groups", default=False)
+    collection_separator: StringProperty(
+        name="Path Separator",
+        description="Character used to separate objects name into hierarchical structure",
+        maxlen=2,
+        default="",
+    )
 
     def load_settings(self, property_group: PropertyGroup) -> None:
         """
@@ -2131,8 +2154,7 @@ class Create_Assets_From_OBJ_Props_Base(Filters):
         layout.row().prop(self, "override", expand=True)
         layout.prop(self, "max_time")
 
-        box = layout.box()
-        header, main_body = box.panel("importer_settings")
+        header, main_body = layout.panel("importer_settings")
         header.scale_y = 1.25
         row = header.row()
         row.alignment = "CENTER"
@@ -2186,61 +2208,31 @@ class Create_Assets_From_OBJ_Props_Base(Filters):
                 box.prop(self, "use_edge_crease")
                 box.prop(self, "my_edge_crease_scale")
             else:
-                if bpy.app.version >= (3, 5, 0):
-                    main_body.use_property_split = True
-                    main_body.use_property_decorate = False  # No animation.
+                main_body.use_property_split = True
+                main_body.use_property_decorate = False
 
-                    header, body = main_body.panel("transform")
-                    header.scale_y = 1.25
-                    row = header.row()
-                    # row.label(text="Transform", icon="EMPTY_AXIS")
-                    row.label(text="Transform", icon="OBJECT_DATA")
-                    if body:
-                        # body.label(text="Transform", icon="OBJECT_DATA")
-                        body.prop(self, "global_scale")
-                        body.prop(self, "clamp_size")
-                        body.prop(self, "axis_forward")
-                        body.prop(self, "axis_up")
+                header, body = main_body.panel("transform")
+                header.scale_y = 1.25
+                row = header.row()
+                row.label(text="Transform", icon="OBJECT_DATA")
+                if body:
+                    body.prop(self, "global_scale")
+                    body.prop(self, "clamp_size")
+                    body.prop(self, "axis_forward")
+                    body.prop(self, "axis_up")
 
-                    main_body.separator(type="LINE")
+                main_body.separator(type="LINE")
 
-                    header, body = main_body.panel("options")
-                    header.scale_y = 1.25
-                    row = header.row()
-                    # row.label(text="Transform", icon="EMPTY_AXIS")
-                    row.label(text="Options", icon="EXPORT")
-                    if body:
-                        body.prop(self, "use_split_objects", text="Split by Object")
-                        body.prop(self, "use_split_groups", text="Split by Group")
-                        body.prop(self, "import_vertex_groups")
-                        body.prop(self, "validate_meshes")
-                else:
-                    main_body.label(text="Include:")
-                    main_body.use_property_split = True
-                    main_body.use_property_decorate = False  # No animation.
-
-                    main_body.prop(self, "use_image_search")
-                    main_body.prop(self, "use_smooth_groups")
-                    main_body.prop(self, "use_edges")
-                    main_body.label(text="Transform:")
-                    main_body.use_property_split = True
-                    main_body.use_property_decorate = False  # No animation.
-
-                    main_body.prop(self, "global_clamp_size")
-                    main_body.prop(self, "axis_forward")
-                    main_body.prop(self, "axis_up")
-                    main_body.label(text="Geometry")
-                    main_body.row().prop(self, "split_mode", expand=True)
-
-                    main_body.use_property_split = True
-                    main_body.use_property_decorate = False  # No animation.
-
-                    col = main_body.column()
-                    if self.split_mode == "ON":
-                        col.prop(self, "use_split_objects", text="Split by Object")
-                        col.prop(self, "use_split_groups", text="Split by Group")
-                    else:
-                        col.prop(self, "use_groups_as_vgroups")
+                header, body = main_body.panel("options")
+                header.scale_y = 1.25
+                row = header.row()
+                row.label(text="Options", icon="EXPORT")
+                if body:
+                    body.prop(self, "use_split_objects", text="Split by Object")
+                    body.prop(self, "use_split_groups", text="Split by Group")
+                    body.prop(self, "import_vertex_groups")
+                    body.prop(self, "validate_meshes")
+                    body.prop(self, "collection_separator")
 
 
 class Create_Assets_From_USD_Props_Base(Filters):
@@ -2296,9 +2288,17 @@ class Create_Assets_From_USD_Props_Base(Filters):
         default=False,
     )
 
-    scale: FloatProperty(name="Scale", default=1.0)
+    scale: FloatProperty(
+        name="Scale",
+        default=1.0,
+        description="Value by which to enlarge or shrink the objects with respect to the world's origin",
+    )
 
-    set_frame_range: BoolProperty(name="Set frame range", default=True)
+    set_frame_range: BoolProperty(
+        name="Set Frame Range",
+        default=True,
+        description="Update the scene's start and end frame to match those of the USD archive",
+    )
 
     import_cameras: BoolProperty(name="Cameras", default=True)
 
@@ -2312,66 +2312,196 @@ class Create_Assets_From_USD_Props_Base(Filters):
 
     import_volumes: BoolProperty(name="Volumes", default=True)
 
-    import_subdiv: BoolProperty(name="Subdivision", default=False)
+    import_shapes: BoolProperty(
+        name="USD Shapes",
+        default=True,
+    )
 
-    import_instance_proxies: BoolProperty(name="Import Instance Proxies", default=True)
+    import_skeletons: BoolProperty(
+        name="Armatures",
+        default=True,
+    )
 
-    import_visible_only: BoolProperty(name="Visible Primitives Only", default=True)
+    import_blendshapes: BoolProperty(
+        name="Shape Keys",
+        default=True,
+    )
 
-    create_collection: BoolProperty(name="Create Collection", default=False)
+    import_points: BoolProperty(
+        name="Point Clouds",
+        default=True,
+    )
 
-    read_mesh_uvs: BoolProperty(name="UV Coordinates", default=True)
+    import_subdiv: BoolProperty(
+        name="Subdivision",
+        default=False,
+        description="Create subdivision surface modifiers based on the USD SubdivisionScheme attribute",
+    )
 
-    read_mesh_colors: BoolProperty(name="Color Attributes", default=False)
-
-    prim_path_mask: StringProperty(name="Path Mask", default="")
-
-    import_guide: BoolProperty(name="Guide", default=False)
-
-    import_proxy: BoolProperty(name="Proxy", default=True)
-
-    import_render: BoolProperty(name="Render", default=True)
+    # import_instance_proxies: BoolProperty(name="Import Instance Proxies", default=True) # No longer exists
 
     relative_path: BoolProperty(name="Relative Path", default=False)
 
-    import_usd_preview: BoolProperty(name="Import USD Preview", default=True)
+    support_scene_instancing: BoolProperty(
+        name="Scene Instancing",
+        default=True,
+        description="Import USD scene graph instances as collection instances",
+    )
 
-    set_material_blend: BoolProperty(name="Set Material Blend", default=True)
+    import_visible_only: BoolProperty(
+        name="Visible Primitives Only",
+        default=True,
+        description="Do not import invisible USD primitives. Only applies to primitives with a non-animated visibility attribute. Primitives with animated visibility will always be imported",
+    )
 
-    light_intensity_scale: FloatProperty(name="Light Intensity Scale", default=1.0)
+    create_collection: BoolProperty(
+        name="Create Collection",
+        default=False,
+        description="Add all imported objects to a new collection",
+    )
+
+    read_mesh_uvs: BoolProperty(
+        name="UV Coordinates", default=True, description="Read mesh UV coordinates"
+    )
+
+    read_mesh_colors: BoolProperty(
+        name="Color Attributes", default=True, description="Read mesh color attributes"
+    )
+
+    read_mesh_attributes: BoolProperty(
+        name="Mesh Attributes",
+        default=True,
+        description="Read USD Primvars as mesh attributes",
+    )
+
+    prim_path_mask: StringProperty(
+        name="Path Mask",
+        default="",
+        description="Import only the primitive at the given path and its descendants. Multiple paths may be specified in a list delimited by commas or semicolons",
+    )
+
+    import_guide: BoolProperty(
+        name="Guide", default=False, description="Import guide geometry"
+    )
+
+    import_proxy: BoolProperty(
+        name="Proxy", default=False, description="Import proxy geometry"
+    )
+
+    import_render: BoolProperty(
+        name="Render", default=True, description="Import final render geometry"
+    )
+
+    import_all_materials: BoolProperty(
+        name="Import All Materials",
+        default=False,
+        description="Also import materials that are not used by any geometry. Note that when this option is false, materials referenced by geometry will still be imported",
+    )
+
+    import_usd_preview: BoolProperty(
+        name="Import USD Preview",
+        default=True,
+        description="Convert UsdPreviewSurface shaders to Principled BSDF shader networks",
+    )
+
+    set_material_blend: BoolProperty(
+        name="Set Material Blend",
+        default=True,
+        description="If the Import USD Preview option is enabled, the material blend method will automatically be set based on the shader's opacity and opacityThreshold inputs",
+    )
+
+    light_intensity_scale: FloatProperty(
+        name="Light Intensity Scale",
+        default=1.0,
+        min=0.0001,
+        max=10000.0,
+        description="Scale for the intensity of imported lights",
+    )
 
     mtl_name_collision_mode: EnumProperty(
         name="Material Name Collision",
-        default="MAKE_UNIQUE",
         items=(
-            ("MAKE_UNIQUE", "Make Unique", "Make Unique"),
-            ("REFERENCE_EXISTING", "Reference Existing", "Reference Existing"),
+            (
+                "MAKE_UNIQUE",
+                "Make Unique",
+                "Import each USD material as a unique Blender material",
+            ),
+            (
+                "REFERENCE_EXISTING",
+                "Reference Existing",
+                "If a material with the same name already exists, reference that instead of importing",
+            ),
         ),
+        default="MAKE_UNIQUE",
+        description="Behavior when the name of an imported material conflicts with an existing material",
     )
-
-    import_all_materials: BoolProperty(name="Import All Materials", default=False)
 
     import_textures_mode: EnumProperty(
         name="Import Textures",
-        default="IMPORT_PACK",
         items=(
-            ("IMPORT_NONE", "None", "None"),
-            ("IMPORT_COPY", "Copy", "Copy"),
-            ("IMPORT_PACK", "Packed", "Packed"),
+            ("IMPORT_NONE", "None", "Don't import textures"),
+            ("IMPORT_PACK", "Packed", "Import textures as packed data"),
+            ("IMPORT_COPY", "Copy", "Copy files to textures directory"),
         ),
+        default="IMPORT_PACK",
+        description="Behavior when importing textures from a USDZ archive",
     )
 
     import_textures_dir: StringProperty(
-        name="Textures Directory", default="//textures/"
+        name="Textures Directory",
+        default="//textures/",
+        description="Path to the directory where imported textures will be copied",
     )
 
     tex_name_collision_mode: EnumProperty(
         name="File Name Collision",
+        items=(
+            (
+                "USE_EXISTING",
+                "Use Existing",
+                "If a file with the same name already exists, use that instead of copying",
+            ),
+            ("OVERWRITE", "Overwrite", "Overwrite existing files"),
+        ),
         default="USE_EXISTING",
-        items=[
-            ("USE_EXISTING", "Use Existing", "Use Existing"),
-            ("OVERWRITE", "Overwrite", "Overwrite"),
-        ],
+        description="Behavior when the name of an imported texture file conflicts with an existing file",
+    )
+
+    attr_import_mode: EnumProperty(
+        name="Custom Properties",
+        items=(
+            ("NONE", "None", "Do not import USD custom attributes"),
+            (
+                "USER",
+                "User",
+                "Import USD attributes in the 'userProperties' namespace as Blender custom properties. The namespace will be stripped from the property names",
+            ),
+            (
+                "ALL",
+                "All Custom",
+                "Import all USD custom attributes as Blender custom properties. Namespaces will be retained in the property names",
+            ),
+        ),
+        default="ALL",
+        description="Behavior when importing USD attributes as Blender custom properties",
+    )
+
+    validate_meshes: BoolProperty(
+        name="Validate Meshes",
+        default=False,
+        description="Ensure the data is valid (when disabled, data may be imported which causes crashes displaying or editing)",
+    )
+
+    create_world_material: BoolProperty(
+        name="Create World Material",
+        default=True,
+        description="Convert the first discovered USD dome light to a world background shader",
+    )
+
+    import_defined_only: BoolProperty(
+        name="Defined Primitives Only",
+        default=True,
+        description="Import only defined USD primitives. When disabled this allows importing USD primitives which are not defined, such as those with an override specifier",
     )
 
     def draw(self, layout: UILayout, is_prefs: bool = False):
@@ -2415,92 +2545,114 @@ class Create_Assets_From_USD_Props_Base(Filters):
             main_body.use_property_split = True
             main_body.use_property_decorate = False
 
+            header, body = main_body.panel("general")
+            header.scale_y = 1.25
+            row = header.row()
+            row.label(text="General")
+            if body:
+                body.prop(self, "prim_path_mask", icon="MOD_MASK")
+
+                col = body.column(align=True, heading="Include")
+                col.prop(self, "import_visible_only")
+                col.prop(self, "import_defined_only")
+
+                col.separator()
+
+                col.prop(self, property="set_frame_range")
+                col.prop(self, "create_collection")
+                col.prop(self, "relative_path")
+
+                body.prop(self, "scale", icon="EMPTY_AXIS")
+                body.prop(self, "light_intensity_scale", icon="LIGHT_SUN")
+                body.prop(self, "attr_import_mode")
+
             header, body = main_body.panel("data_types")
             header.scale_y = 1.25
             row = header.row()
-            row.label(text="Data Types", icon="OBJECT_DATA")
+            row.label(text="Object Types", icon="OBJECT_DATA")
             if body:
-                grid = body.grid_flow(
-                    row_major=True, columns=2, even_columns=True, align=True
-                )
-                grid.use_property_split = False
-                grid.prop(self, "import_cameras", icon="CAMERA_DATA")
-                grid.prop(self, "import_curves", icon="CURVE_DATA")
-                grid.prop(self, "import_lights", icon="LIGHT_DATA")
-                grid.prop(self, "import_materials", icon="MATERIAL_DATA")
-                grid.prop(self, "import_meshes", icon="MESH_DATA")
-                grid.prop(self, "import_volumes", icon="VOLUME_DATA")
+                col = body.column(align=True)
+                col.prop(self, "import_cameras")
+                col.prop(self, "import_curves")
+                col.prop(self, "import_lights")
+                col.prop(self, "import_materials")
+                col.prop(self, "import_meshes")
+                col.prop(self, "import_volumes")
+                col.prop(self, "import_points")
+                col.prop(self, "import_shapes")
 
-                body.prop(self, "prim_path_mask", icon="MOD_MASK")
-                body.prop(self, "scale", icon="EMPTY_AXIS")
+                col = body.column(align=True, heading="USD Purpose")
+                col.prop(self, "import_render")
+                col.prop(self, "import_proxy")
+                col.prop(self, "import_guide")
 
             main_body.separator(type="LINE")
 
             header, body = main_body.panel("mesh_data")
             header.scale_y = 1.25
             row = header.row()
-            row.label(text="Mesh Data", icon="OUTLINER_OB_MESH")
+            row.label(text="Geometry", icon="OUTLINER_OB_MESH")
             if body:
-                body.prop(self, "read_mesh_uvs", icon="GROUP_UVS")
-                body.prop(self, "read_mesh_colors", icon="RESTRICT_COLOR_ON")
+                col = body.column(align=True)
+                col.prop(self, "read_mesh_uvs")
+                col.prop(self, "read_mesh_colors")
+                col.prop(self, "read_mesh_attributes")
+                col.prop(self, "import_subdiv", text="Subdivision")
+
+                body.prop(self, "validate_meshes")
 
             main_body.separator(type="LINE")
 
-            header, body = main_body.panel("include")
+            # Rigging Panel
+            header, body = main_body.panel("USD_import_rigging")
             header.scale_y = 1.25
             row = header.row()
-            row.label(text="Include")
+            row.label(text="Rigging")
             if body:
-                body.prop(self, "import_subdiv", icon="MOD_SUBSURF")
-                body.prop(self, "import_instance_proxies", icon="MOD_PARTICLE_INSTANCE")
-                body.prop(self, "import_visible_only", icon="HIDE_OFF")
-                body.prop(self, "import_guide", icon="CON_FOLLOWPATH")
-                body.prop(self, "import_proxy", icon="ALIASED")
-                body.prop(self, "import_render", icon="RESTRICT_RENDER_OFF")
+                body.prop(self, "import_blendshapes")
+                body.prop(self, "import_skeletons")
 
             main_body.separator(type="LINE")
 
-            header, body = main_body.panel("options")
+            header, body = main_body.panel("material")
             header.scale_y = 1.25
             row = header.row()
-            row.label(text="Options")
+            row.label(text="Material")
             if body:
-                body.prop(self, "set_frame_range", icon="DECORATE_KEYFRAME")
-                body.prop(self, "relative_path", icon="FILE")
-                body.prop(self, "create_collection", icon="COLLECTION_NEW")
-                body.prop(self, "light_intensity_scale", icon="LIGHT_SUN")
+                col = body.column(align=True)
+                col.prop(self, "import_all_materials")
+                col.prop(self, "import_usd_preview")
+                col.prop(self, "create_world_material")
+                row = col.row()
+                row.active = self.import_usd_preview
+                ### Making stuff more like the Blender UI. Missing a lot of the options though.
+                row.prop(self, "set_material_blend")
+                body.prop(self, "mtl_name_collision_mode")
+                if not self.import_usd_preview:
+                    row.enabled = False
 
-                split = body.split(factor=0.1)
+            main_body.separator(type="LINE")
 
-                split.separator()
+            header, body = main_body.panel("textures")
+            header.scale_y = 1.25
+            row = header.row()
+            row.label(text="Textures")
+            if body:
+                body.prop(self, "import_textures_mode")
+                scol = body.column()
+                scol.active = self.import_textures_mode != "IMPORT_PACK"
+                scol.prop(self, "import_textures_dir")
+                scol.prop(self, "tex_name_collision_mode")
 
-                options_col = split.column()
+            main_body.separator(type="LINE")
 
-                options_col.separator(type="LINE")
-
-                header, sbody = options_col.panel("material")
-                header.scale_y = 1.25
-                row = header.row()
-                row.label(text="Material")
-                if sbody:
-                    sbody.prop(self, "import_all_materials")
-                    sbody.prop(self, "import_usd_preview")
-                    row = sbody.row()
-                    row.prop(self, "set_material_blend")
-                    sbody.prop(self, "mtl_name_collision_mode")
-                    if not self.import_usd_preview:
-                        row.enabled = False
-
-                options_col.separator(type="LINE")
-
-                header, sbody = options_col.panel("textures")
-                header.scale_y = 1.25
-                row = header.row()
-                row.label(text="Textures")
-                if sbody:
-                    sbody.prop(self, "import_textures_mode")
-                    sbody.prop(self, "import_textures_dir")
-                    sbody.prop(self, "tex_name_collision_mode")
+            # Instancing Panel
+            header, body = main_body.panel("USD_import_instancing")
+            header.scale_y = 1.25
+            row = header.row()
+            row.label(text="Particles and Instancing")
+            if body:
+                body.prop(self, "support_scene_instancing")
 
     def load_settings(self, property_group: PropertyGroup) -> None:
         """
@@ -3400,11 +3552,17 @@ def create_usd_assets_from_path(
     import_meshes: bool = None,
     import_volumes: bool = None,
     import_subdiv: bool = None,
-    import_instance_proxies: bool = None,
+    import_shapes: bool = None,
+    import_skeletons: bool = None,
+    import_blendshapes: bool = None,
+    import_points: bool = None,
+    # import_instance_proxies: bool = None,
+    support_scene_instancing: bool = None,
     import_visible_only: bool = None,
     create_collection: bool = None,
     read_mesh_uvs: bool = None,
     read_mesh_colors: bool = None,
+    read_mesh_attributes: bool = None,
     prim_path_mask: bool = None,
     import_guide: bool = None,
     import_proxy: bool = None,
@@ -3417,6 +3575,9 @@ def create_usd_assets_from_path(
     import_textures_dir: str = "",
     import_textures_mode: str = "IMPORT_PACK",
     tex_name_collision_mode: str = "USE_EXISTING",
+    attr_import_mode: str = "ALL",
+    create_world_material: bool = None,
+    import_defined_only: bool = None,
     pack: bool = False,
     make_collection: bool = True,
 ):
@@ -3433,48 +3594,58 @@ def create_usd_assets_from_path(
         "-P",
         python_file,
         "--",
-        ":-path-:".join(str(p) for p in paths),
-        str(lib_path),
-        override,
-        shading,
-        engine,
-        str(max_time),
-        str(force_previews),
-        angle,
-        catalog,
-        str(add_plane),
-        str(prefs.world_strength),
-        str(scale),
-        str(set_frame_range),
-        str(import_cameras),
-        str(import_curves),
-        str(import_lights),
-        str(import_materials),
-        str(import_meshes),
-        str(import_volumes),
-        str(import_subdiv),
-        str(import_instance_proxies),  # No longer supported
-        str(import_visible_only),
-        str(create_collection),
-        str(read_mesh_uvs),
-        str(read_mesh_colors),
-        str(prim_path_mask),
-        str(import_guide),
-        str(import_proxy),
-        str(import_render),
-        str(import_usd_preview),
-        str(set_material_blend),
-        str(light_intensity_scale),
-        str(mtl_name_collision_mode),
-        str(import_all_materials),
-        str(import_textures_mode),
-        str(import_textures_dir),
-        str(tex_name_collision_mode),
-        str(pack),
-        str(make_collection),
+        ":-path-:".join(str(p) for p in paths),  # 0
+        str(lib_path),  # 1
+        override,  # 2
+        shading,  # 3
+        engine,  # 4
+        str(max_time),  # 5
+        str(force_previews),  # 6
+        angle,  # 7
+        catalog,  # 8
+        str(add_plane),  # 9
+        str(prefs.world_strength),  # 10
+        # USD Settings
+        str(scale),  # 11
+        str(set_frame_range),  # 12
+        str(import_cameras),  # 13
+        str(import_curves),  # 14
+        str(import_lights),  # 15
+        str(import_materials),  # 16
+        str(import_meshes),  # 17
+        str(import_volumes),  # 18
+        str(import_shapes),  # 19
+        str(import_skeletons),  # 20
+        str(import_blendshapes),  # 21
+        str(import_points),  # 22
+        str(import_subdiv),  # 23
+        # str(import_instance_proxies),  # No longer supported
+        str(support_scene_instancing),  # 24
+        str(import_visible_only),  # 25
+        str(create_collection),  # 26
+        str(read_mesh_uvs),  # 27
+        str(read_mesh_colors),  # 28
+        str(read_mesh_attributes),  # 29
+        str(prim_path_mask),  # 30
+        str(import_guide),  # 31
+        str(import_proxy),  # 32
+        str(import_render),  # 33
+        str(import_usd_preview),  # 34
+        str(set_material_blend),  # 35
+        str(light_intensity_scale),  # 36
+        str(mtl_name_collision_mode),  # 37
+        str(import_all_materials),  # 38
+        import_textures_mode,  # 39
+        import_textures_dir,  # 40
+        tex_name_collision_mode,  # 41
+        attr_import_mode,  # 42
+        str(create_world_material),  # 43
+        str(import_defined_only),  # 44
+        str(pack),  # 45
+        str(make_collection),  # 46
         bpy.context.preferences.addons["cycles"].preferences.compute_device_type
         if "cycles" in bpy.context.preferences.addons.keys()
-        else "NONE",
+        else "NONE",  # 47
     )
     # t1=threading.Thread(target=functools.partial(run,cmd))
     # t1.start()
@@ -3534,6 +3705,7 @@ def create_fbx_assets_from_path(
     global_scale: float = None,
     bake_space_transform: bool = None,
     use_custom_normals: bool = None,
+    colors_type: str = None,
     use_image_search: bool = None,
     use_alpha_decals: bool = None,
     decal_offset: float = None,
@@ -3569,71 +3741,72 @@ def create_fbx_assets_from_path(
 
     args += (
         "-P",
-        python_file,
+        str(python_file),
         "--",
-        ":-path-:".join(str(p) for p in paths),
-        lib_path,
-        override,
-        shading,
-        engine,
-        str(max_time),
-        str(force_previews),
-        angle,
-        catalog,
-        str(add_plane),
-        str(prefs.world_strength),
-        str(use_auto_bone_orientation),
-        str(my_calculate_roll),
-        str(my_bone_length),
-        str(my_leaf_bone),
-        str(use_fix_bone_poses),
-        str(use_fix_attributes),
-        str(use_only_deform_bones),
-        str(use_vertex_animation),
-        str(use_animation),
-        str(my_animation_offset),
-        str(use_animation_prefix),
-        str(use_triangulate),
-        str(my_import_normal),
-        str(use_auto_smooth),
-        str(my_angle),
-        str(my_shade_mode),
-        str(my_scale),
-        str(use_optimize_for_blender),
-        str(use_reset_mesh_origin),
-        str(use_edge_crease),
-        str(my_edge_crease_scale),
-        str(my_edge_smoothing),
-        str(use_import_materials),
-        str(use_rename_by_filename),
-        str(my_rotation_mode),
-        str(use_manual_orientation),
-        str(global_scale),
-        str(bake_space_transform),
-        str(use_custom_normals),
-        str(use_image_search),
-        str(use_alpha_decals),
-        str(decal_offset),
-        str(use_anim),
-        str(anim_offset),
-        str(use_subsurf),
-        str(use_custom_props),
-        str(use_custom_props_enum_as_string),
-        str(ignore_leaf_bones),
-        str(force_connect_children),
-        str(automatic_bone_orientation),
-        str(primary_bone_axis),
-        str(secondary_bone_axis),
-        str(use_prepost_rot),
-        str(axis_forward),
-        str(axis_up),
-        str(importer),
-        str(pack),
-        str(single_file),
-        str(make_collection),
+        ":-path-:".join(str(p) for p in paths),  # 0
+        str(lib_path),  # 1
+        str(override),  # 2
+        str(shading),  # 3
+        str(engine),  # 4
+        str(max_time),  # 5
+        str(force_previews),  # 6
+        str(angle),  # 7
+        str(catalog),  # 8
+        str(add_plane),  # 9
+        str(prefs.world_strength),  # 10
+        str(use_auto_bone_orientation),  # 11
+        str(my_calculate_roll),  # 12
+        str(my_bone_length),  # 13
+        str(my_leaf_bone),  # 14
+        str(use_fix_bone_poses),  # 15
+        str(use_fix_attributes),  # 16
+        str(use_only_deform_bones),  # 17
+        str(use_vertex_animation),  # 18
+        str(use_animation),  # 19
+        str(my_animation_offset),  # 20
+        str(use_animation_prefix),  # 21
+        str(use_triangulate),  # 22
+        str(my_import_normal),  # 23
+        str(use_auto_smooth),  # 24
+        str(my_angle),  # 25
+        str(my_shade_mode),  # 26
+        str(my_scale),  # 27
+        str(use_optimize_for_blender),  # 28
+        str(use_reset_mesh_origin),  # 29
+        str(use_edge_crease),  # 30
+        str(my_edge_crease_scale),  # 31
+        str(my_edge_smoothing),  # 32
+        str(use_import_materials),  # 33
+        str(use_rename_by_filename),  # 34
+        str(my_rotation_mode),  # 35
+        str(use_manual_orientation),  # 36
+        str(global_scale),  # 37
+        str(bake_space_transform),  # 38
+        str(use_custom_normals),  # 39
+        str(colors_type),  # 40
+        str(use_image_search),  # 41
+        str(use_alpha_decals),  # 42
+        str(decal_offset),  # 43
+        str(use_anim),  # 44
+        str(anim_offset),  # 45
+        str(use_subsurf),  # 46
+        str(use_custom_props),  # 47
+        str(use_custom_props_enum_as_string),  # 48
+        str(ignore_leaf_bones),  # 49
+        str(force_connect_children),  # 50
+        str(automatic_bone_orientation),  # 51
+        str(primary_bone_axis),  # 52
+        str(secondary_bone_axis),  # 53
+        str(use_prepost_rot),  # 54
+        str(axis_forward),  # 55
+        str(axis_up),  # 56
+        str(importer),  # 57
+        str(pack),  # 58
+        str(single_file),  # 59
+        str(make_collection),  # 60
         bpy.context.preferences.addons["cycles"].preferences.compute_device_type
         if "cycles" in bpy.context.preferences.addons.keys()
-        else "NONE",
+        else "NONE",  # 61
     )
     # t1=threading.Thread(target=functools.partial(run,cmd))
     # t1.start()
@@ -3700,12 +3873,14 @@ def create_obj_assets_from_path(
     global_scale: float = 1.0,
     import_vertex_groups: bool = False,
     validate_meshes: bool = False,
+    collection_separator: str = "",
     axis_forward: str = "-Z",
     axis_up: str = "Y",
     importer: str = "Blender",
     pack: bool = False,
     single_file: bool = False,
     make_collection: bool = True,
+    op: "import_from_directory.SH_OT_OBJ_Assets_From_Directory" = None,
 ):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "mark_assets_obj.py"
     prefs = get_prefs()
@@ -3724,63 +3899,64 @@ def create_obj_assets_from_path(
         "-P",
         python_file,
         "--",
-        ":-path-:".join(str(p) for p in paths),
-        str(lib_path),
-        override,
-        shading,
-        engine,
-        str(max_time),
-        str(force_previews),
-        angle,
-        catalog,
-        str(add_plane),
-        str(prefs.world_strength),
-        str(use_auto_bone_orientation),
-        str(my_calculate_roll),
-        str(my_bone_length),
-        str(my_leaf_bone),
-        str(use_fix_bone_poses),
-        str(use_fix_attributes),
-        str(use_only_deform_bones),
-        str(use_vertex_animation),
-        str(use_animation),
-        str(my_animation_offset),
-        str(use_animation_prefix),
-        str(use_triangulate),
-        str(my_import_normal),
-        str(use_auto_smooth),
-        str(my_angle),
-        str(my_shade_mode),
-        str(my_scale),
-        str(use_optimize_for_blender),
-        str(use_reset_mesh_origin),
-        str(use_edge_crease),
-        str(my_edge_crease_scale),
-        str(my_edge_smoothing),
-        str(use_import_materials),
-        str(use_rename_by_filename),
-        str(my_rotation_mode),
-        str(use_edges),
-        str(use_smooth_groups),
-        str(use_split_objects),
-        str(use_split_groups),
-        str(use_groups_as_vgroups),
-        str(use_image_search),
-        str(split_mode),
-        str(global_clamp_size),
-        str(global_scale),
-        str(clamp_size),
-        str(import_vertex_groups),
-        str(validate_meshes),
-        str(axis_forward),
-        str(axis_up),
-        str(importer),
-        str(pack),
-        str(single_file),
-        str(make_collection),
+        ":-path-:".join(str(p) for p in paths),  # 0
+        str(lib_path),  # 1
+        override,  # 2
+        shading,  # 3
+        engine,  # 4
+        str(max_time),  # 5
+        str(force_previews),  # 6
+        angle,  # 7
+        catalog,  # 8
+        str(add_plane),  # 9
+        str(prefs.world_strength),  # 10
+        str(use_auto_bone_orientation),  # 11
+        str(my_calculate_roll),  # 12
+        str(my_bone_length),  # 13
+        str(my_leaf_bone),  # 14
+        str(use_fix_bone_poses),  # 15
+        str(use_fix_attributes),  # 16
+        str(use_only_deform_bones),  # 17
+        str(use_vertex_animation),  # 18
+        str(use_animation),  # 19
+        str(my_animation_offset),  # 20
+        str(use_animation_prefix),  # 21
+        str(use_triangulate),  # 22
+        str(my_import_normal),  # 23
+        str(use_auto_smooth),  # 24
+        str(my_angle),  # 25
+        str(my_shade_mode),  # 26
+        str(my_scale),  # 27
+        str(use_optimize_for_blender),  # 28
+        str(use_reset_mesh_origin),  # 29
+        str(use_edge_crease),  # 30
+        str(my_edge_crease_scale),  # 31
+        str(my_edge_smoothing),  # 32
+        str(use_import_materials),  # 33
+        str(use_rename_by_filename),  # 34
+        str(my_rotation_mode),  # 35
+        str(use_edges),  # 36
+        str(use_smooth_groups),  # 37
+        str(use_split_objects),  # 38
+        str(use_split_groups),  # 39
+        str(use_groups_as_vgroups),  # 40
+        str(use_image_search),  # 41
+        str(split_mode),  # 42
+        str(global_clamp_size),  # 43
+        str(global_scale),  # 44
+        str(clamp_size),  # 45
+        str(import_vertex_groups),  # 46
+        str(validate_meshes),  # 47
+        str(collection_separator),  # 48
+        str(axis_forward),  # 49
+        str(axis_up),  # 50
+        str(importer),  # 51
+        str(pack),  # 52
+        str(single_file),  # 53
+        str(make_collection),  # 54
         bpy.context.preferences.addons["cycles"].preferences.compute_device_type
         if "cycles" in bpy.context.preferences.addons.keys()
-        else "NONE",
+        else "NONE",  # 55
     )
     # t1=threading.Thread(target=functools.partial(run,cmd))
     # t1.start()

@@ -23,55 +23,121 @@ CATALOG = argv[8]
 ADD_PLANE = argv[9] == "True"
 WORLD_STRENGTH = float(argv[10])
 
-USE_AUTO_BONE_ORIENTATION = argv[11] == "True"
-MY_CALCULATE_ROLL = argv[12]
-MY_BONE_LENGTH = float(argv[13])
-MY_LEAF_BONE = argv[14]
+USE_AUTO_BONE_ORIENTATION = argv[11] == "True"  # Better FBX
+MY_CALCULATE_ROLL = argv[12]  # Better FBX
+MY_BONE_LENGTH = float(argv[13])  # Better FBX
+MY_LEAF_BONE = argv[14]  # Better FBX
 USE_FIX_BONE_POSES = argv[15] == "True"
 USE_FIX_ATTRIBUTES = argv[16] == "True"
 USE_ONLY_DEFORM_BONES = argv[17] == "True"
 USE_VERTEX_ANIMATION = argv[18] == "True"
 USE_ANIMATION = argv[19] == "True"
-MY_ANIMATION_OFFSET = float(argv[20])
+MY_ANIMATION_OFFSET = float(argv[20])  # Better FBX
 USE_ANIMATION_PREFIX = argv[21] == "True"
 USE_TRIANGULATE = argv[22] == "True"
-MY_IMPORT_NORMAL = argv[23]
+MY_IMPORT_NORMAL = argv[23]  # Better FBX
 USE_AUTO_SMOOTH = argv[24] == "True"
-MY_ANGLE = float(argv[25])
-MY_SHADE_MODE = argv[26]
-MY_SCALE = float(argv[27])
+MY_ANGLE = float(argv[25])  # Better FBX
+MY_SHADE_MODE = argv[26]  # Better FBX
+MY_SCALE = float(argv[27])  # Better FBX
 USE_OPTIMIZE_FOR_BLENDER = argv[28] == "True"
 USE_RESET_MESH_ORIGIN = argv[29] == "True"
 USE_EDGE_CREASE = argv[30] == "True"
-MY_EDGE_CREASE_SCALE = float(argv[31])
-MY_EDGE_SMOOTHING = argv[32]
+MY_EDGE_CREASE_SCALE = float(argv[31])  # Better FBX
+MY_EDGE_SMOOTHING = argv[32]  # Better FBX
 USE_IMPORT_MATERIALS = argv[33] == "True"
 USE_RENAME_BY_FILENAME = argv[34] == "True"
-MY_ROTATION_MODE = argv[35]
+MY_ROTATION_MODE = argv[35]  # Better FBX
 USE_MANUAL_ORIENTATION = argv[36] == "True"
 GLOBAL_SCALE = float(argv[37])
 BAKE_SPACE_TRANSFORM = argv[38] == "True"
 USE_CUSTOM_NORMALS = argv[39] == "True"
-USE_IMAGE_SEARCH = argv[40] == "True"
-USE_ALPHA_DECALS = argv[41] == "True"
-DECAL_OFFSET = float(argv[42])
-USE_ANIM = argv[43] == "True"
-ANIM_OFFSET = float(argv[44])
-USE_SUBSURF = argv[45] == "True"
-USE_CUSTOM_PROPS = argv[46] == "True"
-USE_CUSTOM_PROPS_ENUM_AS_STRING = argv[47] == "True"
-IGNORE_LEAF_BONES = argv[48] == "True"
-FORCE_CONNECT_CHILDREN = argv[49] == "True"
-AUTOMATIC_BONE_ORIENTATION = argv[50] == "True"
-PRIMARY_BONE_AXIS = argv[51]
-SECONDARY_BONE_AXIS = argv[52]
-USE_PREPOST_ROT = argv[53] == "True"
-AXIS_FORWARD = argv[54]
-AXIS_UP = argv[55]
-IMPORTER = argv[56]
-PACK = argv[57] == "True"
-SINGLE_FILE = argv[58] == "True"
-MAKE_COLLECTION = argv[59] == "True"
+COLORS_TYPE = argv[40]
+USE_IMAGE_SEARCH = argv[41] == "True"
+USE_ALPHA_DECALS = argv[42] == "True"
+DECAL_OFFSET = float(argv[43])
+USE_ANIM = argv[44] == "True"
+ANIM_OFFSET = float(argv[45])
+USE_SUBSURF = argv[46] == "True"
+USE_CUSTOM_PROPS = argv[47] == "True"
+USE_CUSTOM_PROPS_ENUM_AS_STRING = argv[48] == "True"
+IGNORE_LEAF_BONES = argv[49] == "True"
+FORCE_CONNECT_CHILDREN = argv[50] == "True"
+AUTOMATIC_BONE_ORIENTATION = argv[51] == "True"
+PRIMARY_BONE_AXIS = argv[52]
+SECONDARY_BONE_AXIS = argv[53]
+USE_PREPOST_ROT = argv[54] == "True"
+AXIS_FORWARD = argv[55]
+AXIS_UP = argv[56]
+IMPORTER = argv[57]
+PACK = argv[58] == "True"
+SINGLE_FILE = argv[59] == "True"
+MAKE_COLLECTION = argv[60] == "True"
+
+# Assert statements to ensure correct types
+assert isinstance(FILEPATHS, list)
+assert all(isinstance(path, str) for path in FILEPATHS)
+assert isinstance(OBJECTS_PATH, str)
+assert isinstance(OVERRIDE, str)
+assert isinstance(SHADING, str)
+assert isinstance(ENGINE, str)
+assert isinstance(MAX_TIME, float)
+assert isinstance(FORCE_PREVIEWS, bool)
+assert isinstance(CAMERA_ANGLE, str)
+assert isinstance(CATALOG, str)
+assert isinstance(ADD_PLANE, bool)
+assert isinstance(WORLD_STRENGTH, float)
+
+assert isinstance(USE_AUTO_BONE_ORIENTATION, bool)
+assert isinstance(MY_CALCULATE_ROLL, str)
+assert isinstance(MY_BONE_LENGTH, float)
+assert isinstance(MY_LEAF_BONE, str)
+assert isinstance(USE_FIX_BONE_POSES, bool)
+assert isinstance(USE_FIX_ATTRIBUTES, bool)
+assert isinstance(USE_ONLY_DEFORM_BONES, bool)
+assert isinstance(USE_VERTEX_ANIMATION, bool)
+assert isinstance(USE_ANIMATION, bool)
+assert isinstance(MY_ANIMATION_OFFSET, float)
+assert isinstance(USE_ANIMATION_PREFIX, bool)
+assert isinstance(USE_TRIANGULATE, bool)
+assert isinstance(MY_IMPORT_NORMAL, str)
+assert isinstance(USE_AUTO_SMOOTH, bool)
+assert isinstance(MY_ANGLE, float)
+assert isinstance(MY_SHADE_MODE, str)
+assert isinstance(MY_SCALE, float)
+assert isinstance(USE_OPTIMIZE_FOR_BLENDER, bool)
+assert isinstance(USE_RESET_MESH_ORIGIN, bool)
+assert isinstance(USE_EDGE_CREASE, bool)
+assert isinstance(MY_EDGE_CREASE_SCALE, float)
+assert isinstance(MY_EDGE_SMOOTHING, str)
+assert isinstance(USE_IMPORT_MATERIALS, bool)
+assert isinstance(USE_RENAME_BY_FILENAME, bool)
+assert isinstance(MY_ROTATION_MODE, str)
+assert isinstance(USE_MANUAL_ORIENTATION, bool)
+assert isinstance(GLOBAL_SCALE, float)
+assert isinstance(BAKE_SPACE_TRANSFORM, bool)
+assert isinstance(USE_CUSTOM_NORMALS, bool)
+assert isinstance(COLORS_TYPE, str)
+assert isinstance(USE_IMAGE_SEARCH, bool)
+assert isinstance(USE_ALPHA_DECALS, bool)
+assert isinstance(DECAL_OFFSET, float)
+assert isinstance(USE_ANIM, bool)
+assert isinstance(ANIM_OFFSET, float)
+assert isinstance(USE_SUBSURF, bool)
+assert isinstance(USE_CUSTOM_PROPS, bool)
+assert isinstance(USE_CUSTOM_PROPS_ENUM_AS_STRING, bool)
+assert isinstance(IGNORE_LEAF_BONES, bool)
+assert isinstance(FORCE_CONNECT_CHILDREN, bool)
+assert isinstance(AUTOMATIC_BONE_ORIENTATION, bool)
+assert isinstance(PRIMARY_BONE_AXIS, str)
+assert isinstance(SECONDARY_BONE_AXIS, str)
+assert isinstance(USE_PREPOST_ROT, bool)
+assert isinstance(AXIS_FORWARD, str)
+assert isinstance(AXIS_UP, str)
+assert isinstance(IMPORTER, str)
+assert isinstance(PACK, bool)
+assert isinstance(SINGLE_FILE, bool)
+assert isinstance(MAKE_COLLECTION, bool)
 
 # FILEPATH=FILEPATHS.pop(0)
 supports_thumbnails = ["MESH", "LIGHT"]
@@ -85,7 +151,7 @@ bpy.context.preferences.system.texture_time_out = 5
 for o in bpy.data.objects:
     bpy.data.objects.remove(o)
 random_id_source = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-RENDER_DEVICE = argv[60]
+RENDER_DEVICE = argv[61]
 
 
 def enable_gpus(device_type, use_cpus=False):
@@ -782,6 +848,7 @@ def create_preview(type, objects, objects_to_check_previews):
                     global_scale=GLOBAL_SCALE,
                     bake_space_transform=BAKE_SPACE_TRANSFORM,
                     use_custom_normals=USE_CUSTOM_NORMALS,
+                    colors_type=COLORS_TYPE,
                     use_image_search=USE_IMAGE_SEARCH,
                     use_alpha_decals=USE_ALPHA_DECALS,
                     decal_offset=DECAL_OFFSET,
@@ -1036,7 +1103,7 @@ else:
         FILEPATH = FILEPATHS.pop(0)
         init_objs = bpy.data.objects[:]
         print(
-            f"OUTER ::: bpy.ops.import_scene.fbx(filepath='{FILEPATH}',ui_tab='MAIN',use_manual_orientation={USE_MANUAL_ORIENTATION},global_scale={GLOBAL_SCALE},bake_space_transform={BAKE_SPACE_TRANSFORM},use_custom_normals={USE_CUSTOM_NORMALS},use_image_search={USE_IMAGE_SEARCH},use_alpha_decals={USE_ALPHA_DECALS},decal_offset={DECAL_OFFSET},use_anim={USE_ANIM},anim_offset={ANIM_OFFSET},use_subsurf={USE_SUBSURF},use_custom_props={USE_CUSTOM_PROPS},use_custom_props_enum_as_string={USE_CUSTOM_PROPS_ENUM_AS_STRING},ignore_leaf_bones={IGNORE_LEAF_BONES},force_connect_children={FORCE_CONNECT_CHILDREN},automatic_bone_orientation={AUTOMATIC_BONE_ORIENTATION},primary_bone_axis='{PRIMARY_BONE_AXIS}',secondary_bone_axis='{SECONDARY_BONE_AXIS}',use_prepost_rot={USE_PREPOST_ROT},axis_forward='{AXIS_FORWARD}',axis_up='{AXIS_UP}')"
+            f"OUTER ::: bpy.ops.import_scene.fbx(\n\tfilepath='{FILEPATH}',\n\tui_tab='MAIN',\n\tuse_manual_orientation={USE_MANUAL_ORIENTATION},\n\tglobal_scale={GLOBAL_SCALE},\n\tbake_space_transform={BAKE_SPACE_TRANSFORM},\n\tuse_custom_normals={USE_CUSTOM_NORMALS},\n\tcolors_type='{COLORS_TYPE}',\n\tuse_image_search={USE_IMAGE_SEARCH},\n\tuse_alpha_decals={USE_ALPHA_DECALS},\n\tdecal_offset={DECAL_OFFSET},\n\tuse_anim={USE_ANIM},\n\tanim_offset={ANIM_OFFSET},\n\tuse_subsurf={USE_SUBSURF},\n\tuse_custom_props={USE_CUSTOM_PROPS},\n\tuse_custom_props_enum_as_string={USE_CUSTOM_PROPS_ENUM_AS_STRING},\n\tignore_leaf_bones={IGNORE_LEAF_BONES},\n\tforce_connect_children={FORCE_CONNECT_CHILDREN},\n\tautomatic_bone_orientation={AUTOMATIC_BONE_ORIENTATION},\n\tprimary_bone_axis='{PRIMARY_BONE_AXIS}',\n\tsecondary_bone_axis='{SECONDARY_BONE_AXIS}',\n\tuse_prepost_rot={USE_PREPOST_ROT},\n\taxis_forward='{AXIS_FORWARD}',\n\taxis_up='{AXIS_UP}'\n)"
         )
         bpy.ops.import_scene.fbx(
             filepath=FILEPATH,
@@ -1045,6 +1112,7 @@ else:
             global_scale=GLOBAL_SCALE,
             bake_space_transform=BAKE_SPACE_TRANSFORM,
             use_custom_normals=USE_CUSTOM_NORMALS,
+            colors_type=COLORS_TYPE,
             use_image_search=USE_IMAGE_SEARCH,
             use_alpha_decals=USE_ALPHA_DECALS,
             decal_offset=DECAL_OFFSET,

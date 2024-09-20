@@ -59,12 +59,147 @@ GLOBAL_SCALE = float(argv[44])
 CLAMP_SIZE = float(argv[45])
 IMPORT_VERTEX_GROUPS = argv[46] == "True"
 VALIDATE_MESHES = argv[47] == "True"
-AXIS_FORWARD = argv[48].replace("-", "NEGATIVE_")
-AXIS_UP = argv[49]
-IMPORTER = argv[50]
-PACK = argv[51] == "True"
-SINGLE_FILE = argv[52] == "True"
-MAKE_COLLECTION = argv[53] == "True"
+COLLECTION_SEPARATOR = argv[48]
+AXIS_FORWARD = argv[49].replace("-", "NEGATIVE_")
+AXIS_UP = argv[50]
+IMPORTER = argv[51]
+PACK = argv[52] == "True"
+SINGLE_FILE = argv[53] == "True"
+MAKE_COLLECTION = argv[54] == "True"
+RENDER_DEVICE = argv[55]
+
+# Assert statements to check types
+assert isinstance(FILEPATHS, list), f"Expected list, got {type(FILEPATHS).__name__}"
+assert all(
+    isinstance(path, str) for path in FILEPATHS
+), "All elements in FILEPATHS should be strings"
+assert isinstance(OBJECTS_PATH, str), f"Expected str, got {type(OBJECTS_PATH).__name__}"
+assert isinstance(OVERRIDE, str), f"Expected str, got {type(OVERRIDE).__name__}"
+assert isinstance(SHADING, str), f"Expected str, got {type(SHADING).__name__}"
+assert isinstance(ENGINE, str), f"Expected str, got {type(ENGINE).__name__}"
+assert isinstance(MAX_TIME, float), f"Expected float, got {type(MAX_TIME).__name__}"
+assert isinstance(
+    FORCE_PREVIEWS, bool
+), f"Expected bool, got {type(FORCE_PREVIEWS).__name__}"
+assert isinstance(CAMERA_ANGLE, str), f"Expected str, got {type(CAMERA_ANGLE).__name__}"
+assert isinstance(CATALOG, str), f"Expected str, got {type(CATALOG).__name__}"
+assert isinstance(ADD_PLANE, bool), f"Expected bool, got {type(ADD_PLANE).__name__}"
+assert isinstance(
+    WORLD_STRENGTH, float
+), f"Expected float, got {type(WORLD_STRENGTH).__name__}"
+assert isinstance(
+    USE_AUTO_BONE_ORIENTATION, bool
+), f"Expected bool, got {type(USE_AUTO_BONE_ORIENTATION).__name__}"
+assert isinstance(
+    MY_CALCULATE_ROLL, str
+), f"Expected str, got {type(MY_CALCULATE_ROLL).__name__}"
+assert isinstance(
+    MY_BONE_LENGTH, float
+), f"Expected float, got {type(MY_BONE_LENGTH).__name__}"
+assert isinstance(MY_LEAF_BONE, str), f"Expected str, got {type(MY_LEAF_BONE).__name__}"
+assert isinstance(
+    USE_FIX_BONE_POSES, bool
+), f"Expected bool, got {type(USE_FIX_BONE_POSES).__name__}"
+assert isinstance(
+    USE_FIX_ATTRIBUTES, bool
+), f"Expected bool, got {type(USE_FIX_ATTRIBUTES).__name__}"
+assert isinstance(
+    USE_ONLY_DEFORM_BONES, bool
+), f"Expected bool, got {type(USE_ONLY_DEFORM_BONES).__name__}"
+assert isinstance(
+    USE_VERTEX_ANIMATION, bool
+), f"Expected bool, got {type(USE_VERTEX_ANIMATION).__name__}"
+assert isinstance(
+    USE_ANIMATION, bool
+), f"Expected bool, got {type(USE_ANIMATION).__name__}"
+assert isinstance(
+    MY_ANIMATION_OFFSET, float
+), f"Expected float, got {type(MY_ANIMATION_OFFSET).__name__}"
+assert isinstance(
+    USE_ANIMATION_PREFIX, bool
+), f"Expected bool, got {type(USE_ANIMATION_PREFIX).__name__}"
+assert isinstance(
+    USE_TRIANGULATE, bool
+), f"Expected bool, got {type(USE_TRIANGULATE).__name__}"
+assert isinstance(
+    MY_IMPORT_NORMAL, str
+), f"Expected str, got {type(MY_IMPORT_NORMAL).__name__}"
+assert isinstance(
+    USE_AUTO_SMOOTH, bool
+), f"Expected bool, got {type(USE_AUTO_SMOOTH).__name__}"
+assert isinstance(MY_ANGLE, float), f"Expected float, got {type(MY_ANGLE).__name__}"
+assert isinstance(
+    MY_SHADE_MODE, str
+), f"Expected str, got {type(MY_SHADE_MODE).__name__}"
+assert isinstance(MY_SCALE, float), f"Expected float, got {type(MY_SCALE).__name__}"
+assert isinstance(
+    USE_OPTIMIZE_FOR_BLENDER, bool
+), f"Expected bool, got {type(USE_OPTIMIZE_FOR_BLENDER).__name__}"
+assert isinstance(
+    USE_RESET_MESH_ORIGIN, bool
+), f"Expected bool, got {type(USE_RESET_MESH_ORIGIN).__name__}"
+assert isinstance(
+    USE_EDGE_CREASE, bool
+), f"Expected bool, got {type(USE_EDGE_CREASE).__name__}"
+assert isinstance(
+    MY_EDGE_CREASE_SCALE, float
+), f"Expected float, got {type(MY_EDGE_CREASE_SCALE).__name__}"
+assert isinstance(
+    MY_EDGE_SMOOTHING, str
+), f"Expected str, got {type(MY_EDGE_SMOOTHING).__name__}"
+assert isinstance(
+    USE_IMPORT_MATERIALS, bool
+), f"Expected bool, got {type(USE_IMPORT_MATERIALS).__name__}"
+assert isinstance(
+    USE_RENAME_BY_FILENAME, bool
+), f"Expected bool, got {type(USE_RENAME_BY_FILENAME).__name__}"
+assert isinstance(
+    MY_ROTATION_MODE, str
+), f"Expected str, got {type(MY_ROTATION_MODE).__name__}"
+assert isinstance(USE_EDGES, bool), f"Expected bool, got {type(USE_EDGES).__name__}"
+assert isinstance(
+    USE_SMOOTH_GROUPS, bool
+), f"Expected bool, got {type(USE_SMOOTH_GROUPS).__name__}"
+assert isinstance(
+    USE_SPLIT_OBJECTS, bool
+), f"Expected bool, got {type(USE_SPLIT_OBJECTS).__name__}"
+assert isinstance(
+    USE_SPLIT_GROUPS, bool
+), f"Expected bool, got {type(USE_SPLIT_GROUPS).__name__}"
+assert isinstance(
+    USE_GROUPS_AS_VGROUPS, bool
+), f"Expected bool, got {type(USE_GROUPS_AS_VGROUPS).__name__}"
+assert isinstance(
+    USE_IMAGE_SEARCH, bool
+), f"Expected bool, got {type(USE_IMAGE_SEARCH).__name__}"
+assert isinstance(SPLIT_MODE, str), f"Expected str, got {type(SPLIT_MODE).__name__}"
+assert isinstance(
+    GLOBAL_CLAMP_SIZE, float
+), f"Expected float, got {type(GLOBAL_CLAMP_SIZE).__name__}"
+assert isinstance(
+    GLOBAL_SCALE, float
+), f"Expected float, got {type(GLOBAL_SCALE).__name__}"
+assert isinstance(CLAMP_SIZE, float), f"Expected float, got {type(CLAMP_SIZE).__name__}"
+assert isinstance(
+    IMPORT_VERTEX_GROUPS, bool
+), f"Expected bool, got {type(IMPORT_VERTEX_GROUPS).__name__}"
+assert isinstance(
+    VALIDATE_MESHES, bool
+), f"Expected bool, got {type(VALIDATE_MESHES).__name__}"
+assert isinstance(
+    COLLECTION_SEPARATOR, str
+), f"Expected str, got {type(COLLECTION_SEPARATOR).__name__}"
+assert isinstance(AXIS_FORWARD, str), f"Expected str, got {type(AXIS_FORWARD).__name__}"
+assert isinstance(AXIS_UP, str), f"Expected str, got {type(AXIS_UP).__name__}"
+assert isinstance(IMPORTER, str), f"Expected str, got {type(IMPORTER).__name__}"
+assert isinstance(PACK, bool), f"Expected bool, got {type(PACK).__name__}"
+assert isinstance(SINGLE_FILE, bool), f"Expected bool, got {type(SINGLE_FILE).__name__}"
+assert isinstance(
+    MAKE_COLLECTION, bool
+), f"Expected bool, got {type(MAKE_COLLECTION).__name__}"
+assert isinstance(
+    RENDER_DEVICE, str
+), f"Expected str, got {type(RENDER_DEVICE).__name__}"
 
 # FILEPATH=FILEPATHS.pop(0)
 supports_thumbnails = ["MESH", "LIGHT"]
@@ -77,7 +212,6 @@ bpy.context.preferences.system.texture_time_out = 5
 for o in bpy.data.objects:
     bpy.data.objects.remove(o)
 random_id_source = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-RENDER_DEVICE = argv[54]
 
 
 def enable_gpus(device_type, use_cpus=False):
@@ -783,6 +917,7 @@ def create_preview(type, objects, objects_to_check_previews):
                             use_split_groups=USE_SPLIT_GROUPS,
                             import_vertex_groups=IMPORT_VERTEX_GROUPS,
                             validate_meshes=VALIDATE_MESHES,
+                            collection_separator=COLLECTION_SEPARATOR,
                         )
                 else:
                     print(
@@ -850,34 +985,42 @@ def Create_Collection_Assets():
         OVERRIDE != "SKIP"
         or not os.path.isfile(os.path.join(OBJECTS_PATH, os.path.basename(FILEPATH)))
     ):
-        for scene in bpy.data.scenes:
-            for ob in [c for c in bpy.data.collections if scene.user_of_id(c)]:
-                if (
-                    not ob.hide_viewport
-                    and ob not in data_used
-                    and [a for a in ob.all_objects if a.type != "EMPTY"]
-                ):
-                    data_used.append(ob)
-                    if not SINGLE_FILE:
-                        ob.name = os.path.splitext(os.path.basename(FILEPATH))[0]
-                    ob.asset_mark()
-                    ob.asset_data.tags.new(ob.name)
-                    if CATALOG != "NONE":
-                        ob.asset_data.catalog_id = create_new_catalog(
-                            OBJECTS_PATH,
-                            ob.name
-                            if SINGLE_FILE and CATALOG == "Filename"
-                            else decode_catalog_name(CATALOG),
-                        )
-                    objects.append(ob)
-                    objects_to_check_previews.append(ob)
-                    if (
-                        not (ob.preview and any(ob.preview.image_pixels[:]))
-                        or FORCE_PREVIEWS
-                    ):
-                        create_thumbnail(context, ob, SHADING)
+        objects = [
+            ob
+            for scene in bpy.data.scenes
+            for ob in [c for c in bpy.data.collections if scene.user_of_id(c)]
+            if (
+                not ob.hide_viewport
+                and ob not in data_used
+                and [a for a in ob.all_objects if a.type != "EMPTY"]
+            )
+        ]
+        # for scene in bpy.data.scenes:
+        #     for ob in [c for c in bpy.data.collections if scene.user_of_id(c)]:
+        #         if (
+        #             not ob.hide_viewport
+        #             and ob not in data_used
+        #             and [a for a in ob.all_objects if a.type != "EMPTY"]
+        #         ):
+        for i, ob in enumerate(objects):
+            data_used.append(ob)
+            if not SINGLE_FILE:
+                ob.name = os.path.splitext(os.path.basename(FILEPATH))[0]
+            ob.asset_mark()
+            ob.asset_data.tags.new(ob.name)
+            if CATALOG != "NONE":
+                ob.asset_data.catalog_id = create_new_catalog(
+                    OBJECTS_PATH,
+                    ob.name
+                    if SINGLE_FILE and CATALOG == "Filename"
+                    else decode_catalog_name(CATALOG),
+                )
+            objects.append(ob)
+            objects_to_check_previews.append(ob)
+            if not (ob.preview and any(ob.preview.image_pixels[:])) or FORCE_PREVIEWS:
+                create_thumbnail(context, ob, SHADING)
 
-                    # ob.asset_generate_preview()
+            # ob.asset_generate_preview()
     if SHADING == "Solid":
         bpy.app.timers.register(
             functools.partial(
@@ -1043,33 +1186,20 @@ if __name__ == "__main__":
                 print(
                     f"OUTER ::: bpy.ops.wm.obj_import(filepath='{FILEPATH}', global_scale={GLOBAL_SCALE}, clamp_size={CLAMP_SIZE}, forward_axis='{AXIS_FORWARD}', up_axis='{AXIS_UP}', use_split_objects={USE_SPLIT_OBJECTS}, use_split_groups={USE_SPLIT_GROUPS}, import_vertex_groups={IMPORT_VERTEX_GROUPS}, validate_meshes={VALIDATE_MESHES})"
                 )
-                with context.temp_override(**override):
-                    bpy.ops.wm.obj_import(
-                        filepath=FILEPATH,
-                        global_scale=GLOBAL_SCALE,
-                        clamp_size=CLAMP_SIZE,
-                        forward_axis=AXIS_FORWARD,
-                        up_axis=AXIS_UP,
-                        use_split_objects=USE_SPLIT_OBJECTS,
-                        use_split_groups=USE_SPLIT_GROUPS,
-                        import_vertex_groups=IMPORT_VERTEX_GROUPS,
-                        validate_meshes=VALIDATE_MESHES,
-                    )
-            else:
-                print(
-                    f"OUTER ::: bpy.ops.import_scene.obj(filepath='{FILEPATH}', use_edges={USE_EDGES}, use_smooth_groups={USE_SMOOTH_GROUPS}, use_split_objects={USE_SPLIT_OBJECTS}, use_split_groups={USE_SPLIT_GROUPS}, use_groups_as_vgroups={USE_GROUPS_AS_VGROUPS}, use_image_search={USE_IMAGE_SEARCH}, split_mode='{SPLIT_MODE}', global_clamp_size={GLOBAL_CLAMP_SIZE})"
-                )
-                bpy.ops.import_scene.obj(
+            with context.temp_override(**override):
+                bpy.ops.wm.obj_import(
                     filepath=FILEPATH,
-                    use_edges=USE_EDGES,
-                    use_smooth_groups=USE_SMOOTH_GROUPS,
+                    global_scale=GLOBAL_SCALE,
+                    clamp_size=CLAMP_SIZE,
+                    forward_axis=AXIS_FORWARD,
+                    up_axis=AXIS_UP,
                     use_split_objects=USE_SPLIT_OBJECTS,
                     use_split_groups=USE_SPLIT_GROUPS,
-                    use_groups_as_vgroups=USE_GROUPS_AS_VGROUPS,
-                    use_image_search=USE_IMAGE_SEARCH,
-                    split_mode=SPLIT_MODE,
-                    global_clamp_size=GLOBAL_CLAMP_SIZE,
+                    import_vertex_groups=IMPORT_VERTEX_GROUPS,
+                    validate_meshes=VALIDATE_MESHES,
+                    collection_separator=COLLECTION_SEPARATOR,
                 )
+
             if (
                 os.path.splitext(os.path.basename(FILEPATH))[0]
                 not in bpy.data.collections
