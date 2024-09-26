@@ -27,6 +27,34 @@ def draw_assetbrowser_header(self, context: Context):
     layout.label(text=context.scene.sh_progress_t)
 
 
+class SH_MT_ImportFromDirectory(bpy.types.Menu):
+    bl_label = "Import From Directory"
+    bl_idname = "SH_MT_ImportFromDirectory"
+
+    def draw(self, context: Context):
+        layout: UILayout = self.layout
+        layout.operator(
+            "bkeeper.import_from_directory",
+            text="Import Blends",
+            icon_value=sh_icons.file_blend_icon.icon_id,
+        )
+        layout.operator(
+            "bkeeper.create_assets_from_directory_obj",
+            text="Import OBJs",
+            icon_value=sh_icons.file_obj_icon.icon_id,
+        )
+        layout.operator(
+            "bkeeper.create_assets_from_directory_fbx",
+            text="Import FBXs",
+            icon_value=sh_icons.file_fbx_icon.icon_id,
+        )
+        layout.operator(
+            "bkeeper.create_assets_from_directory_usd",
+            text="Import USDs",
+            icon_value=sh_icons.file_usd_icon.icon_id,
+        )
+
+
 class SH_MT_AssetBrowserHeaderMenu(bpy.types.Menu):
     bl_label = "Bkeeper"
     bl_idname = "SH_MT_AssetBrowserHeaderMenu"
@@ -41,28 +69,10 @@ class SH_MT_AssetBrowserHeaderMenu(bpy.types.Menu):
 
         layout.separator()
 
-        layout.operator(
-            "bkeeper.import_from_directory",
-            text="Import from Directory",
-            icon_value=sh_icons.file_blend_icon.icon_id,
-        )
-        layout.operator(
-            "bkeeper.create_assets_from_directory_obj",
-            text="Import from OBJ",
-            icon_value=sh_icons.file_obj_icon.icon_id,
-        )
-        layout.operator(
-            "bkeeper.create_assets_from_directory_fbx",
-            text="Import from FBX",
-            icon_value=sh_icons.file_fbx_icon.icon_id,
-        )
-        layout.operator(
-            "bkeeper.create_assets_from_directory_usd",
-            text="Import from USD",
-            icon_value=sh_icons.file_usd_icon.icon_id,
-        )
+        layout.menu("SH_MT_ImportFromDirectory", text="Import From Directory")
 
         layout.separator()
+
         layout.operator(
             "bkeeper.export_library", text="Export to Superhive", icon="EXPORT"
         )
@@ -297,6 +307,7 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
 
 classes = (
+    SH_MT_ImportFromDirectory,
     SH_PT_AssetSettings,
     # SH_PT_LibrarySettings,
     SH_MT_AssetBrowserHeaderMenu,

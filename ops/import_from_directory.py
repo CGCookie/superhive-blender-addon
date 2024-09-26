@@ -48,8 +48,8 @@ class Catalogs(PropertyGroup):
 
 class SH_OT_ImportFromDirectory(Operator, scene.RenderThumbnailProps):
     bl_idname = "bkeeper.import_from_directory"
-    bl_label = "Import From Directory"
-    bl_description = "Opens file selector, after executes"
+    bl_label = "Create Assets From Blender Files"
+    bl_description = "Creates assets from the blend files in the directory"
     bl_options = {"REGISTER"}
 
     update = False
@@ -603,7 +603,7 @@ class SH_OT_USD_Assets_From_Directory(
 ):
     bl_idname = "bkeeper.create_assets_from_directory_usd"
     bl_label = "Create Assets From USD Files"
-    bl_description = "Create Assets from Directory"
+    bl_description = "Create assets from USD files in the directory"
     bl_options = {"REGISTER", "UNDO"}
 
     updated = False
@@ -803,7 +803,7 @@ class SH_OT_FBX_Assets_From_Directory(
 ):
     bl_idname = "bkeeper.create_assets_from_directory_fbx"
     bl_label = "Create Assets From FBX Files"
-    bl_description = "Create Assets from Directory"
+    bl_description = "Create assets from the FBX files in the directory"
     bl_options = {"REGISTER", "UNDO"}
 
     updated = False
@@ -1008,7 +1008,7 @@ class SH_OT_OBJ_Assets_From_Directory(
 ):
     bl_idname = "bkeeper.create_assets_from_directory_obj"
     bl_label = "Create Assets From OBJ Files"
-    bl_description = "Create Assets from Directory"
+    bl_description = "Create assets from the OBJ files in the directory"
     bl_options = {"REGISTER", "UNDO"}
 
     updated = False
