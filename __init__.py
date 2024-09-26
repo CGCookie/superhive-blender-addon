@@ -17,6 +17,14 @@ Created by Zach Eastin, Richard Traynor, Superhive (formerly Blender Market)
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+try:
+    import colored_traceback.auto  # noqa F401
+
+    print("Colored traceback enabled")
+except ImportError:
+    print("Colored traceback disabled")
+    pass
+
 print()
 print()
 print(f"Loading {__package__.split('.')[-1].replace('_', ' ').title()}".center(80, "-"))
