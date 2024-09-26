@@ -1047,110 +1047,150 @@ def Create_Mesh_Assets(collection_objects):
         )
 
 
-TOTAL_FILES = len(FILEPATHS)
-if IMPORTER == "Better FBX":
-    for i in range(TOTAL_FILES):
-        FILEPATH = FILEPATHS.pop(0)
-        init_objs = bpy.data.objects[:]
-        bpy.ops.better_import.fbx(
-            filepath=FILEPATH,
-            use_auto_bone_orientation=USE_AUTO_BONE_ORIENTATION,
-            my_calculate_roll=MY_CALCULATE_ROLL,
-            my_bone_length=MY_BONE_LENGTH,
-            my_leaf_bone=MY_LEAF_BONE,
-            use_fix_bone_poses=USE_FIX_BONE_POSES,
-            use_fix_attributes=USE_FIX_ATTRIBUTES,
-            use_only_deform_bones=USE_ONLY_DEFORM_BONES,
-            use_vertex_animation=USE_VERTEX_ANIMATION,
-            use_animation=USE_ANIMATION,
-            my_animation_offset=MY_ANIMATION_OFFSET,
-            use_animation_prefix=USE_ANIMATION_PREFIX,
-            use_triangulate=USE_TRIANGULATE,
-            my_import_normal=MY_IMPORT_NORMAL,
-            use_auto_smooth=USE_AUTO_SMOOTH,
-            my_angle=MY_ANGLE,
-            my_shade_mode=MY_SHADE_MODE,
-            my_scale=MY_SCALE,
-            use_optimize_for_blender=USE_OPTIMIZE_FOR_BLENDER,
-            use_reset_mesh_origin=USE_RESET_MESH_ORIGIN,
-            use_edge_crease=USE_EDGE_CREASE,
-            my_edge_crease_scale=MY_EDGE_CREASE_SCALE,
-            my_edge_smoothing=MY_EDGE_SMOOTHING,
-            use_import_materials=USE_IMPORT_MATERIALS,
-            use_rename_by_filename=USE_RENAME_BY_FILENAME,
-            my_rotation_mode=MY_ROTATION_MODE,
-        )
-        # if i!=0:
-        if os.path.splitext(os.path.basename(FILEPATH))[0] not in bpy.data.collections:
-            col = bpy.data.collections.new(
-                name=os.path.splitext(os.path.basename(FILEPATH))[0]
-            )
-            bpy.context.scene.collection.children.link(col)
-        for obj in bpy.data.objects:
-            if obj not in init_objs:
-                for c in obj.users_collection:
-                    c.name = os.path.splitext(os.path.basename(FILEPATH))[0]
-                    try:
-                        c.objects.unlink(obj)
-                    except Exception:
-                        pass
-
-                col.objects.link(obj)
-        if not SINGLE_FILE:
-            break
-else:
-    for i in range(TOTAL_FILES):
-        FILEPATH = FILEPATHS.pop(0)
-        init_objs = bpy.data.objects[:]
-        print(
-            f"OUTER ::: bpy.ops.import_scene.fbx(\n\tfilepath='{FILEPATH}',\n\tui_tab='MAIN',\n\tuse_manual_orientation={USE_MANUAL_ORIENTATION},\n\tglobal_scale={GLOBAL_SCALE},\n\tbake_space_transform={BAKE_SPACE_TRANSFORM},\n\tuse_custom_normals={USE_CUSTOM_NORMALS},\n\tcolors_type='{COLORS_TYPE}',\n\tuse_image_search={USE_IMAGE_SEARCH},\n\tuse_alpha_decals={USE_ALPHA_DECALS},\n\tdecal_offset={DECAL_OFFSET},\n\tuse_anim={USE_ANIM},\n\tanim_offset={ANIM_OFFSET},\n\tuse_subsurf={USE_SUBSURF},\n\tuse_custom_props={USE_CUSTOM_PROPS},\n\tuse_custom_props_enum_as_string={USE_CUSTOM_PROPS_ENUM_AS_STRING},\n\tignore_leaf_bones={IGNORE_LEAF_BONES},\n\tforce_connect_children={FORCE_CONNECT_CHILDREN},\n\tautomatic_bone_orientation={AUTOMATIC_BONE_ORIENTATION},\n\tprimary_bone_axis='{PRIMARY_BONE_AXIS}',\n\tsecondary_bone_axis='{SECONDARY_BONE_AXIS}',\n\tuse_prepost_rot={USE_PREPOST_ROT},\n\taxis_forward='{AXIS_FORWARD}',\n\taxis_up='{AXIS_UP}'\n)"
-        )
-        bpy.ops.import_scene.fbx(
-            filepath=FILEPATH,
-            ui_tab="MAIN",
-            use_manual_orientation=USE_MANUAL_ORIENTATION,
-            global_scale=GLOBAL_SCALE,
-            bake_space_transform=BAKE_SPACE_TRANSFORM,
-            use_custom_normals=USE_CUSTOM_NORMALS,
-            colors_type=COLORS_TYPE,
-            use_image_search=USE_IMAGE_SEARCH,
-            use_alpha_decals=USE_ALPHA_DECALS,
-            decal_offset=DECAL_OFFSET,
-            use_anim=USE_ANIM,
-            anim_offset=ANIM_OFFSET,
-            use_subsurf=USE_SUBSURF,
-            use_custom_props=USE_CUSTOM_PROPS,
-            use_custom_props_enum_as_string=USE_CUSTOM_PROPS_ENUM_AS_STRING,
-            ignore_leaf_bones=IGNORE_LEAF_BONES,
-            force_connect_children=FORCE_CONNECT_CHILDREN,
-            automatic_bone_orientation=AUTOMATIC_BONE_ORIENTATION,
-            primary_bone_axis=PRIMARY_BONE_AXIS,
-            secondary_bone_axis=SECONDARY_BONE_AXIS,
-            use_prepost_rot=USE_PREPOST_ROT,
-            axis_forward=AXIS_FORWARD,
-            axis_up=AXIS_UP,
-        )
-        print("Imported")
-        # if i!=0:
-        if os.path.splitext(os.path.basename(FILEPATH))[0] not in bpy.data.collections:
-            col = bpy.data.collections.new(
-                name=os.path.splitext(os.path.basename(FILEPATH))[0]
-            )
-            bpy.context.scene.collection.children.link(col)
-        for obj in bpy.data.objects:
-            if obj not in init_objs:
-                for c in obj.users_collection:
-                    c.name = os.path.splitext(os.path.basename(FILEPATH))[0]
-                    try:
-                        c.objects.unlink(obj)
-                    except Exception:
-                        pass
-
-                col.objects.link(obj)
-        if not SINGLE_FILE:
-            break
-
 if __name__ == "__main__":
+    TOTAL_FILES = len(FILEPATHS)
+    # if IMPORTER == "Better FBX":
+    if False:
+        for i in range(TOTAL_FILES):
+            FILEPATH = FILEPATHS.pop(0)
+            init_objs = bpy.data.objects[:]
+            bpy.ops.better_import.fbx(
+                filepath=FILEPATH,
+                use_auto_bone_orientation=USE_AUTO_BONE_ORIENTATION,
+                my_calculate_roll=MY_CALCULATE_ROLL,
+                my_bone_length=MY_BONE_LENGTH,
+                my_leaf_bone=MY_LEAF_BONE,
+                use_fix_bone_poses=USE_FIX_BONE_POSES,
+                use_fix_attributes=USE_FIX_ATTRIBUTES,
+                use_only_deform_bones=USE_ONLY_DEFORM_BONES,
+                use_vertex_animation=USE_VERTEX_ANIMATION,
+                use_animation=USE_ANIMATION,
+                my_animation_offset=MY_ANIMATION_OFFSET,
+                use_animation_prefix=USE_ANIMATION_PREFIX,
+                use_triangulate=USE_TRIANGULATE,
+                my_import_normal=MY_IMPORT_NORMAL,
+                use_auto_smooth=USE_AUTO_SMOOTH,
+                my_angle=MY_ANGLE,
+                my_shade_mode=MY_SHADE_MODE,
+                my_scale=MY_SCALE,
+                use_optimize_for_blender=USE_OPTIMIZE_FOR_BLENDER,
+                use_reset_mesh_origin=USE_RESET_MESH_ORIGIN,
+                use_edge_crease=USE_EDGE_CREASE,
+                my_edge_crease_scale=MY_EDGE_CREASE_SCALE,
+                my_edge_smoothing=MY_EDGE_SMOOTHING,
+                use_import_materials=USE_IMPORT_MATERIALS,
+                use_rename_by_filename=USE_RENAME_BY_FILENAME,
+                my_rotation_mode=MY_ROTATION_MODE,
+            )
+            # if i!=0:
+            if (
+                os.path.splitext(os.path.basename(FILEPATH))[0]
+                not in bpy.data.collections
+            ):
+                col = bpy.data.collections.new(
+                    name=os.path.splitext(os.path.basename(FILEPATH))[0]
+                )
+                bpy.context.scene.collection.children.link(col)
+            for obj in bpy.data.objects:
+                if obj not in init_objs:
+                    for c in obj.users_collection:
+                        c.name = os.path.splitext(os.path.basename(FILEPATH))[0]
+                        try:
+                            c.objects.unlink(obj)
+                        except Exception:
+                            pass
+
+                    col.objects.link(obj)
+            if not SINGLE_FILE:
+                break
+    else:
+        orig_total_objects = len(bpy.data.objects)
+        orig_total_materials = len(bpy.data.materials)
+        orig_total_worlds = len(bpy.data.worlds)
+        orig_total_collections = len(bpy.data.collections)
+        orig_total_actions = len(bpy.data.actions)
+        orig_total_images = len(bpy.data.images)
+        orig_total_node_groups = len(bpy.data.node_groups)
+        orig_total_pointclouds = len(bpy.data.pointclouds)
+        orig_total_volumes = len(bpy.data.volumes)
+
+        for i in range(TOTAL_FILES):
+            FILEPATH = FILEPATHS.pop(0)
+            init_objs = bpy.data.objects[:]
+            print(
+                f"OUTER ::: bpy.ops.import_scene.fbx(\n\tfilepath='{FILEPATH}',\n\tui_tab='MAIN',\n\tuse_manual_orientation={USE_MANUAL_ORIENTATION},\n\tglobal_scale={GLOBAL_SCALE},\n\tbake_space_transform={BAKE_SPACE_TRANSFORM},\n\tuse_custom_normals={USE_CUSTOM_NORMALS},\n\tcolors_type='{COLORS_TYPE}',\n\tuse_image_search={USE_IMAGE_SEARCH},\n\tuse_alpha_decals={USE_ALPHA_DECALS},\n\tdecal_offset={DECAL_OFFSET},\n\tuse_anim={USE_ANIM},\n\tanim_offset={ANIM_OFFSET},\n\tuse_subsurf={USE_SUBSURF},\n\tuse_custom_props={USE_CUSTOM_PROPS},\n\tuse_custom_props_enum_as_string={USE_CUSTOM_PROPS_ENUM_AS_STRING},\n\tignore_leaf_bones={IGNORE_LEAF_BONES},\n\tforce_connect_children={FORCE_CONNECT_CHILDREN},\n\tautomatic_bone_orientation={AUTOMATIC_BONE_ORIENTATION},\n\tprimary_bone_axis='{PRIMARY_BONE_AXIS}',\n\tsecondary_bone_axis='{SECONDARY_BONE_AXIS}',\n\tuse_prepost_rot={USE_PREPOST_ROT},\n\taxis_forward='{AXIS_FORWARD}',\n\taxis_up='{AXIS_UP}'\n)"
+            )
+            bpy.ops.import_scene.fbx(
+                filepath=FILEPATH,
+                ui_tab="MAIN",
+                use_manual_orientation=USE_MANUAL_ORIENTATION,
+                global_scale=GLOBAL_SCALE,
+                bake_space_transform=BAKE_SPACE_TRANSFORM,
+                use_custom_normals=USE_CUSTOM_NORMALS,
+                colors_type=COLORS_TYPE,
+                use_image_search=USE_IMAGE_SEARCH,
+                use_alpha_decals=USE_ALPHA_DECALS,
+                decal_offset=DECAL_OFFSET,
+                use_anim=USE_ANIM,
+                anim_offset=ANIM_OFFSET,
+                use_subsurf=USE_SUBSURF,
+                use_custom_props=USE_CUSTOM_PROPS,
+                use_custom_props_enum_as_string=USE_CUSTOM_PROPS_ENUM_AS_STRING,
+                ignore_leaf_bones=IGNORE_LEAF_BONES,
+                force_connect_children=FORCE_CONNECT_CHILDREN,
+                automatic_bone_orientation=AUTOMATIC_BONE_ORIENTATION,
+                primary_bone_axis=PRIMARY_BONE_AXIS,
+                secondary_bone_axis=SECONDARY_BONE_AXIS,
+                use_prepost_rot=USE_PREPOST_ROT,
+                axis_forward=AXIS_FORWARD,
+                axis_up=AXIS_UP,
+            )
+
+            if (
+                os.path.splitext(os.path.basename(FILEPATH))[0]
+                not in bpy.data.collections
+            ):
+                col = bpy.data.collections.new(
+                    name=os.path.splitext(os.path.basename(FILEPATH))[0]
+                )
+                bpy.context.scene.collection.children.link(col)
+            for obj in bpy.data.objects:
+                if obj not in init_objs:
+                    for c in obj.users_collection:
+                        c.name = os.path.splitext(os.path.basename(FILEPATH))[0]
+                        try:
+                            c.objects.unlink(obj)
+                        except Exception:
+                            pass
+
+                    col.objects.link(obj)
+            if not SINGLE_FILE:
+                break
+
+        total_objects = len(bpy.data.objects)
+        total_materials = len(bpy.data.materials)
+        total_worlds = len(bpy.data.worlds)
+        total_collections = len(bpy.data.collections)
+        total_actions = len(bpy.data.actions)
+        total_images = len(bpy.data.images)
+        total_node_groups = len(bpy.data.node_groups)
+        total_pointclouds = len(bpy.data.pointclouds)
+        total_volumes = len(bpy.data.volumes)
+
+        if not any((
+            total_objects - orig_total_objects,
+            total_materials - orig_total_materials,
+            total_worlds - orig_total_worlds,
+            total_collections - orig_total_collections,
+            total_actions - orig_total_actions,
+            total_images - orig_total_images,
+            total_node_groups - orig_total_node_groups,
+            total_pointclouds - orig_total_pointclouds,
+            total_volumes - orig_total_volumes,
+        )):
+            print("~NOTHING IMPORTED~")
+            bpy.ops.wm.quit_blender()
+
     if PACK:
         try:
             bpy.ops.file.pack_all()

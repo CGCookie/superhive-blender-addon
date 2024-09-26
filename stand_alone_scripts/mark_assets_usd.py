@@ -1375,15 +1375,22 @@ def Create_Mesh_Assets(collection_objects):
         )
 
 
-# import inspect
-# print(inspect.getsource(bpy.ops.wm.usd_import))
-# def start_creating():
-#     print("Hi")
 override = context.copy()
 for area in context.window_manager.windows[0].screen.areas:
     area.type = "VIEW_3D"
     override["window"] = context.window_manager.windows[0]
     break
+
+orig_total_objects = len(bpy.data.objects)
+orig_total_materials = len(bpy.data.materials)
+orig_total_worlds = len(bpy.data.worlds)
+orig_total_collections = len(bpy.data.collections)
+orig_total_actions = len(bpy.data.actions)
+orig_total_images = len(bpy.data.images)
+orig_total_node_groups = len(bpy.data.node_groups)
+orig_total_pointclouds = len(bpy.data.pointclouds)
+orig_total_volumes = len(bpy.data.volumes)
+
 with context.temp_override(**override):
     bpy.ops.wm.usd_import(
         filepath=FILEPATH,
@@ -1432,6 +1439,40 @@ for a in os.listdir(os.path.dirname(FILEPATH)):
         setup_materials(os.path.splitext(a)[0], images)
         print(os.path.splitext(a)[0], images)
 # bpy.app.handlers.load_post.append(start_creating)
+
+total_objects = len(bpy.data.objects)
+total_materials = len(bpy.data.materials)
+total_worlds = len(bpy.data.worlds)
+total_collections = len(bpy.data.collections)
+total_actions = len(bpy.data.actions)
+total_images = len(bpy.data.images)
+total_node_groups = len(bpy.data.node_groups)
+total_pointclouds = len(bpy.data.pointclouds)
+total_volumes = len(bpy.data.volumes)
+
+if not any((
+    total_objects - orig_total_objects,
+    total_materials - orig_total_materials,
+    total_worlds - orig_total_worlds,
+    total_collections - orig_total_collections,
+    total_actions - orig_total_actions,
+    total_images - orig_total_images,
+    total_node_groups - orig_total_node_groups,
+    total_pointclouds - orig_total_pointclouds,
+    total_volumes - orig_total_volumes,
+)):
+    print("~NOTHING IMPORTED~")
+    bpy.ops.wm.quit_blender()
+# else:
+#     print(f"{total_objects=}")
+#     print(f"{total_materials=}")
+#     print(f"{total_worlds=}")
+#     print(f"{total_collections=}")
+#     print(f"{total_actions=}")
+#     print(f"{total_images=}")
+#     print(f"{total_node_groups=}")
+#     print(f"{total_pointclouds=}")
+#     print(f"{total_volumes=}")
 
 if PACK:
     try:

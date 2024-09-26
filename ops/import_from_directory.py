@@ -606,21 +606,39 @@ class SH_OT_USD_Assets_From_Directory(
     bl_description = "Create Assets from Directory"
     bl_options = {"REGISTER", "UNDO"}
 
+    updated = False
+    cancelled = False
+
+    progress = 0.0
+    pre_label = ""
+    label = ""
+    post_label = ""
+
+    total_files = 1
+    total_imported = 0
+    total_skipped = 0
+
     def draw(self, context):
         super().draw(self.layout)
 
     def invoke(self, context, event):
         self.thread = None
 
-        self.lib = utils.from_active(context, area=context.area)
+        self.progress = 0.0
+        self.label = "Importing:"
 
-        context.window_manager.fileselect_add(self)
+        scene_sets: "scene.SH_Scene" = context.scene.superhive
+        self.prog = scene_sets.import_from_directory
+
+        self.lib = utils.from_active(context, area=context.area)
 
         self.load_settings(utils.get_prefs().usd_import_settings)
 
         self.active_library_name = utils.get_active_library_name(
             context, area=context.area
         )
+
+        context.window_manager.fileselect_add(self)
 
         return {"RUNNING_MODAL"}
 
@@ -633,9 +651,6 @@ class SH_OT_USD_Assets_From_Directory(
 
         catalog = self.catalog if self.catalog != "NEW" else self.new_catalog_name
         lib = utils.from_active(context, area=context.area)
-        # objects_lib_path, mats_lib_path, worlds_lib_path, node_groups_lib_path, _, _ = (
-        #     ensure_all_libraries()
-        # )
 
         files = []
         if self.files:
@@ -692,34 +707,14 @@ class SH_OT_USD_Assets_From_Directory(
         }
 
         if filters and dir_path.is_dir() and lib:
-            if False:
-                t1 = Thread(
-                    target=functools.partial(
-                        files,
-                        files,
-                        lib.path,
-                        self.override,
-                        shading=self.shading,
-                        engine=self.engine,
-                        max_time=self.max_time,
-                        force_previews=self.force_previews,
-                        angle=utils.resolve_angle(
-                            self.camera_angle, self.flip_x, self.flip_y, self.flip_z
-                        ),
-                        catalog=catalog,
-                        add_plane=prefs.add_ground_plane and not self.flip_z,
-                        pack=self.pack,
-                        make_collection=self.make_collection == "Collection",
-                        **args_dict,
-                    )
-                )
-                t1.start()
-                self.thread = t1
-            else:
-                utils.create_usd_assets_from_path(
+            self.thread = Thread(
+                target=utils.create_usd_assets_from_path,
+                args=(
                     files,
                     lib.path,
                     self.override,
+                ),
+                kwargs=dict(
                     shading=self.shading,
                     engine=self.engine,
                     max_time=self.max_time,
@@ -731,29 +726,76 @@ class SH_OT_USD_Assets_From_Directory(
                     add_plane=prefs.add_ground_plane and not self.flip_z,
                     pack=self.pack,
                     make_collection=self.make_collection == "Collection",
+                    op=self,
                     **args_dict,
-                )
-        if False:
-            wm = context.window_manager
-            self.timer = wm.event_timer_add(0.2, window=context.window)
-            wm.modal_handler_add(self)
-            return {"RUNNING_MODAL"}
-        else:
-            utils.update_asset_browser_areas(context=context)
-            return {"FINISHED"}
+                ),
+            )
+            self.total_files = len(files)
+            self.total_imported = 0
+            self.total_skipped = 0
+            self.prog.pre_label = self.pre_label = (
+                f"Importing (1/{self.total_files}): {files[0].name}"
+            )
+            self.prog.label = self.label = ""
+            self.prog.post_label = self.post_label = (
+                "Report| Imported: -- | Success: -- | Errors: 0"
+            )
+            self.cancelled = False
+            self.thread.start()
 
-    # def modal(self, context, event):
-    #     if event.type == "TIMER":
-    #         # context.scene.ta_progress = "Creating Assets..."
-    #         if context.area:
-    #             context.area.tag_redraw()
-    #         if self.thread and not self.thread.is_alive():
-    #             self.report({"INFO"}, "Assets Creation Completed!")
-    #             # context.scene.ta_progress = ""
-    #             return {"FINISHED"}
-    #     else:
-    #         return {"PASS_THROUGH"}
-    #     return {"RUNNING_MODAL"}
+        wm = context.window_manager
+        self.timer = wm.event_timer_add(0.1, window=context.window)
+        wm.modal_handler_add(self)
+        self.prog.start()
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        if context.area:
+            context.area.tag_redraw()
+            self.prog.update_formated_time()
+
+        if self.updated:
+            self.updated = False
+            self.prog.progress = self.progress
+            self.prog.pre_label = self.pre_label
+            self.prog.label = self.label
+            self.prog.post_label = self.post_label
+            # bpy.ops.asset.library_refresh()
+
+        if event.type == "ESC":
+            self.cancelled = True
+
+        if self.cancelled and not self.prog.cancel:
+            self.prog.label = "Cancelling..."
+            self.prog.cancel = True
+
+        if self.thread and not self.thread.is_alive():
+            self.thread.join()
+            bpy.app.timers.register(self.follow_up, first_interval=1)
+            utils.update_asset_browser_areas()
+            if self.cancelled:
+                self.report(
+                    {"WARNING"},
+                    f"USD Assets Creation User Cancelled. {self.total_imported} of {self.total_files} Imported, {self.total_skipped} Errors",
+                )
+                return {"CANCELLED"}
+            else:
+                self.report(
+                    {"INFO"},
+                    f"USD Assets Creation Finished! {self.total_files} Chosen, {self.total_imported} Imported, {self.total_skipped} Not Imported due to Errors",
+                )
+                return {"FINISHED"}
+
+        return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        if hasattr(self, "_thread"):  # Ensure `execute` has run
+            self.thread.join()
+        self.prog.end()
+
+    def follow_up(self):
+        scene_sets: "scene.SH_Scene" = bpy.context.scene.superhive
+        scene_sets.import_from_directory.end()
 
 
 class SH_OT_FBX_Assets_From_Directory(
@@ -764,19 +806,37 @@ class SH_OT_FBX_Assets_From_Directory(
     bl_description = "Create Assets from Directory"
     bl_options = {"REGISTER", "UNDO"}
 
+    updated = False
+    cancelled = False
+
+    progress = 0.0
+    pre_label = ""
+    label = ""
+    post_label = ""
+
+    total_files = 1
+    total_imported = 0
+    total_skipped = 0
+
     def draw(self, context):
         super().draw(self.layout)
 
     def invoke(self, context, event):
         self.thread = None
 
-        context.window_manager.fileselect_add(self)
+        self.progress = 0.0
+        self.label = "Importing:"
+
+        scene_sets: "scene.SH_Scene" = context.scene.superhive
+        self.prog = scene_sets.import_from_directory
 
         self.load_settings(utils.get_prefs().fbx_import_settings)
 
         self.active_library_name = utils.get_active_library_name(
             context, area=context.area
         )
+
+        context.window_manager.fileselect_add(self)
 
         return {"RUNNING_MODAL"}
 
@@ -789,9 +849,7 @@ class SH_OT_FBX_Assets_From_Directory(
 
         catalog = self.catalog if self.catalog != "NEW" else self.new_catalog_name
         lib = utils.from_active(context, area=context.area)
-        # objects_lib_path, mats_lib_path, worlds_lib_path, node_groups_lib_path, _, _ = (
-        #     ensure_all_libraries()
-        # )
+
         files = []
         if self.files:
             dir_path = Path(self.filepath).parent
@@ -806,81 +864,14 @@ class SH_OT_FBX_Assets_From_Directory(
             files = get_all_files_with_extension(dir_path, "fbx")
 
         if filters and dir_path.is_dir():
-            if False:
-                t1 = Thread(
-                    target=functools.partial(
-                        files,
-                        files,
-                        lib.path,
-                        self.override,
-                        shading=self.shading,
-                        engine=self.engine,
-                        max_time=self.max_time,
-                        force_previews=self.force_previews,
-                        angle=utils.resolve_angle(
-                            self.camera_angle, self.flip_x, self.flip_y, self.flip_z
-                        ),
-                        catalog=catalog,
-                        add_plane=prefs.add_ground_plane and not self.flip_z,
-                        use_auto_bone_orientation=self.use_auto_bone_orientation,
-                        my_calculate_roll=self.my_calculate_roll,
-                        my_bone_length=self.my_bone_length,
-                        my_leaf_bone=self.my_leaf_bone,
-                        use_fix_bone_poses=self.use_fix_bone_poses,
-                        use_fix_attributes=self.use_fix_attributes,
-                        use_only_deform_bones=self.use_only_deform_bones,
-                        use_vertex_animation=self.use_vertex_animation,
-                        use_animation=self.use_animation,
-                        my_animation_offset=self.my_animation_offset,
-                        use_animation_prefix=self.use_animation_prefix,
-                        use_triangulate=self.use_triangulate,
-                        my_import_normal=self.my_import_normal,
-                        use_auto_smooth=self.use_auto_smooth,
-                        my_angle=self.my_angle,
-                        my_shade_mode=self.my_shade_mode,
-                        my_scale=self.my_scale,
-                        use_optimize_for_blender=self.use_optimize_for_blender,
-                        use_reset_mesh_origin=self.use_reset_mesh_origin,
-                        use_edge_crease=self.use_edge_crease,
-                        my_edge_crease_scale=self.my_edge_crease_scale,
-                        my_edge_smoothing=self.my_edge_smoothing,
-                        use_import_materials=self.use_import_materials,
-                        use_rename_by_filename=self.use_rename_by_filename,
-                        my_rotation_mode=self.my_rotation_mode,
-                        use_manual_orientation=self.use_manual_orientation,
-                        global_scale=self.global_scale,
-                        bake_space_transform=self.bake_space_transform,
-                        use_custom_normals=self.use_custom_normals,
-                        colors_type=self.colors_type,
-                        use_image_search=self.use_image_search,
-                        use_alpha_decals=self.use_alpha_decals,
-                        decal_offset=self.decal_offset,
-                        use_anim=self.use_anim,
-                        anim_offset=self.anim_offset,
-                        use_subsurf=self.use_subsurf,
-                        use_custom_props=self.use_custom_props,
-                        use_custom_props_enum_as_string=self.use_custom_props_enum_as_string,
-                        ignore_leaf_bones=self.ignore_leaf_bones,
-                        force_connect_children=self.force_connect_children,
-                        automatic_bone_orientation=self.automatic_bone_orientation,
-                        primary_bone_axis=self.primary_bone_axis,
-                        secondary_bone_axis=self.secondary_bone_axis,
-                        use_prepost_rot=self.use_prepost_rot,
-                        axis_forward=self.axis_forward,
-                        axis_up=self.axis_up,
-                        importer=prefs.fbx_importer,
-                        pack=self.pack,
-                        single_file=self.single_file,
-                        make_collection=self.make_collection == "Collection",
-                    )
-                )
-                t1.start()
-                self.thread = t1
-            else:
-                utils.create_fbx_assets_from_path(
+            self.thread = Thread(
+                target=utils.create_fbx_assets_from_path,
+                args=(
                     files,
                     lib.path,
                     self.override,
+                ),
+                kwargs=dict(
                     shading=self.shading,
                     engine=self.engine,
                     max_time=self.max_time,
@@ -941,28 +932,75 @@ class SH_OT_FBX_Assets_From_Directory(
                     pack=self.pack,
                     single_file=self.single_file,
                     make_collection=self.make_collection == "Collection",
-                )
-        if False:
-            wm = context.window_manager
-            self.timer = wm.event_timer_add(0.2, window=context.window)
-            wm.modal_handler_add(self)
-            return {"RUNNING_MODAL"}
-        else:
-            utils.update_asset_browser_areas(context=context)
-            return {"FINISHED"}
+                    op=self,
+                ),
+            )
+            self.total_files = len(files)
+            self.total_imported = 0
+            self.total_skipped = 0
+            self.prog.pre_label = self.pre_label = (
+                f"Importing (1/{self.total_files}): {files[0].name}"
+            )
+            self.prog.label = self.label = ""
+            self.prog.post_label = self.post_label = (
+                "Report| Imported: -- | Success: -- | Errors: 0"
+            )
+            self.cancelled = False
+            self.thread.start()
 
-    # def modal(self, context, event):
-    #     if event.type == "TIMER":
-    #         # context.scene.ta_progress = "Creating Assets..."
-    #         if context.area:
-    #             context.area.tag_redraw()
-    #         if self.thread and not self.thread.is_alive():
-    #             self.report({"INFO"}, "Assets Creation Completed!")
-    #             # context.scene.ta_progress = ""
-    #             return {"FINISHED"}
-    #     else:
-    #         return {"PASS_THROUGH"}
-    #     return {"RUNNING_MODAL"}
+        wm = context.window_manager
+        self.timer = wm.event_timer_add(0.1, window=context.window)
+        wm.modal_handler_add(self)
+        self.prog.start()
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        if context.area:
+            context.area.tag_redraw()
+            self.prog.update_formated_time()
+
+        if self.updated:
+            self.updated = False
+            self.prog.progress = self.progress
+            self.prog.pre_label = self.pre_label
+            self.prog.label = self.label
+            self.prog.post_label = self.post_label
+            # bpy.ops.asset.library_refresh()
+
+        if event.type == "ESC":
+            self.cancelled = True
+
+        if self.cancelled and not self.prog.cancel:
+            self.prog.label = "Cancelling..."
+            self.prog.cancel = True
+
+        if self.thread and not self.thread.is_alive():
+            self.thread.join()
+            bpy.app.timers.register(self.follow_up, first_interval=1)
+            utils.update_asset_browser_areas()
+            if self.cancelled:
+                self.report(
+                    {"WARNING"},
+                    f"FBX Assets Creation User Cancelled. {self.total_imported} of {self.total_files} Imported, {self.total_skipped} Errors",
+                )
+                return {"CANCELLED"}
+            else:
+                self.report(
+                    {"INFO"},
+                    f"FBX Assets Creation Finished! {self.total_files} Chosen, {self.total_imported} Imported, {self.total_skipped} Not Imported due to Errors",
+                )
+                return {"FINISHED"}
+
+        return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        if hasattr(self, "_thread"):  # Ensure `execute` has run
+            self.thread.join()
+        self.prog.end()
+
+    def follow_up(self):
+        scene_sets: "scene.SH_Scene" = bpy.context.scene.superhive
+        scene_sets.import_from_directory.end()
 
 
 class SH_OT_OBJ_Assets_From_Directory(
@@ -973,27 +1011,37 @@ class SH_OT_OBJ_Assets_From_Directory(
     bl_description = "Create Assets from Directory"
     bl_options = {"REGISTER", "UNDO"}
 
+    updated = False
+    cancelled = False
+
+    progress = 0.0
+    pre_label = ""
+    label = ""
+    post_label = ""
+
+    total_files = 1
+    total_imported = 0
+    total_skipped = 0
+
     def draw(self, context):
         super().draw(self.layout)
 
     def invoke(self, context, event):
         self.thread = None
 
-        # Delete this!
-        p = Path(
-            "T:/Autotroph/Superhive Blender Addon/import_from_file_format_help/objs/"
-        )
-        if p.exists():
-            self.filepath = str(p)
-            self.directory = str(p.parent)
+        self.progress = 0.0
+        self.label = "Importing:"
 
-        context.window_manager.fileselect_add(self)
+        scene_sets: "scene.SH_Scene" = context.scene.superhive
+        self.prog = scene_sets.import_from_directory
 
         self.load_settings(utils.get_prefs().obj_import_settings)
 
         self.active_library_name = utils.get_active_library_name(
             context, area=context.area
         )
+
+        context.window_manager.fileselect_add(self)
 
         return {"RUNNING_MODAL"}
 
@@ -1006,9 +1054,6 @@ class SH_OT_OBJ_Assets_From_Directory(
 
         catalog = self.catalog if self.catalog != "NEW" else self.new_catalog_name
         lib = utils.from_active(context, area=context.area)
-        # objects_lib_path, mats_lib_path, worlds_lib_path, node_groups_lib_path, _, _ = (
-        #     ensure_all_libraries()
-        # )
 
         files = []
         dir_path = self.filepath
@@ -1025,75 +1070,14 @@ class SH_OT_OBJ_Assets_From_Directory(
             files = get_all_files_with_extension(dir_path, "obj")
 
         if filters and dir_path.is_dir() and lib:
-            if False:
-                t1 = Thread(
-                    target=functools.partial(
-                        files,
-                        files,
-                        lib.path,
-                        self.override,
-                        shading=self.shading,
-                        engine=self.engine,
-                        max_time=self.max_time,
-                        force_previews=self.force_previews,
-                        angle=utils.resolve_angle(
-                            self.camera_angle, self.flip_x, self.flip_y, self.flip_z
-                        ),
-                        catalog=catalog,
-                        add_plane=prefs.add_ground_plane and not self.flip_z,
-                        use_auto_bone_orientation=self.use_auto_bone_orientation,
-                        my_calculate_roll=self.my_calculate_roll,
-                        my_bone_length=self.my_bone_length,
-                        my_leaf_bone=self.my_leaf_bone,
-                        use_fix_bone_poses=self.use_fix_bone_poses,
-                        use_fix_attributes=self.use_fix_attributes,
-                        use_only_deform_bones=self.use_only_deform_bones,
-                        use_vertex_animation=self.use_vertex_animation,
-                        use_animation=self.use_animation,
-                        my_animation_offset=self.my_animation_offset,
-                        use_animation_prefix=self.use_animation_prefix,
-                        use_triangulate=self.use_triangulate,
-                        my_import_normal=self.my_import_normal,
-                        use_auto_smooth=self.use_auto_smooth,
-                        my_angle=self.my_angle,
-                        my_shade_mode=self.my_shade_mode,
-                        my_scale=self.my_scale,
-                        use_optimize_for_blender=self.use_optimize_for_blender,
-                        use_reset_mesh_origin=self.use_reset_mesh_origin,
-                        use_edge_crease=self.use_edge_crease,
-                        my_edge_crease_scale=self.my_edge_crease_scale,
-                        my_edge_smoothing=self.my_edge_smoothing,
-                        use_import_materials=self.use_import_materials,
-                        use_rename_by_filename=self.use_rename_by_filename,
-                        my_rotation_mode=self.my_rotation_mode,
-                        use_edges=self.use_edges,
-                        use_smooth_groups=self.use_smooth_groups,
-                        use_split_objects=self.use_split_objects,
-                        use_split_groups=self.use_split_groups,
-                        use_groups_as_vgroups=self.use_groups_as_vgroups,
-                        use_image_search=self.use_image_search,
-                        split_mode=self.split_mode,
-                        global_clamp_size=self.global_clamp_size,
-                        clamp_size=self.clamp_size,
-                        global_scale=self.global_scale,
-                        import_vertex_groups=self.import_vertex_groups,
-                        validate_meshes=self.validate_meshes,
-                        collection_separator=self.collection_separator,
-                        axis_forward=self.axis_forward,
-                        axis_up=self.axis_up,
-                        importer=prefs.fbx_importer,
-                        pack=self.pack,
-                        single_file=self.single_file,
-                        make_collection=self.make_collection == "Collection",
-                    )
-                )
-                t1.start()
-                self.thread = t1
-            else:
-                utils.create_obj_assets_from_path(
+            self.thread = Thread(
+                target=utils.create_obj_assets_from_path,
+                args=(
                     files,
                     lib.path,
                     self.override,
+                ),
+                kwargs=dict(
                     shading=self.shading,
                     engine=self.engine,
                     max_time=self.max_time,
@@ -1144,32 +1128,78 @@ class SH_OT_OBJ_Assets_From_Directory(
                     axis_forward=self.axis_forward,
                     axis_up=self.axis_up,
                     # importer=prefs.fbx_importer,
-                    importer="Blender",
                     pack=self.pack,
                     single_file=self.single_file,
                     make_collection=self.make_collection == "Collection",
-                )
-        if False:
-            wm = context.window_manager
-            self.timer = wm.event_timer_add(0.2, window=context.window)
-            wm.modal_handler_add(self)
-            return {"RUNNING_MODAL"}
-        else:
-            utils.update_asset_browser_areas(context=context)
-            return {"FINISHED"}
+                    op=self,
+                ),
+            )
+            self.total_files = len(files)
+            self.total_imported = 0
+            self.total_skipped = 0
+            self.prog.pre_label = self.pre_label = (
+                f"Importing (1/{self.total_files}): {files[0].name}"
+            )
+            self.prog.label = self.label = ""
+            self.prog.post_label = self.post_label = (
+                "Report| Imported: -- | Success: -- | Errors: 0"
+            )
+            self.cancelled = False
+            self.thread.start()
 
-    # def modal(self, context, event):
-    #     if event.type == "TIMER":
-    #         # context.scene.ta_progress = f"Creating Assets..."
-    #         if context.area:
-    #             context.area.tag_redraw()
-    #         if self.thread and not self.thread.is_alive():
-    #             self.report({"INFO"}, "Assets Creation Completed!")
-    #             # context.scene.ta_progress = ""
-    #             return {"FINISHED"}
-    #     else:
-    #         return {"PASS_THROUGH"}
-    #     return {"RUNNING_MODAL"}
+        wm = context.window_manager
+        self.timer = wm.event_timer_add(0.1, window=context.window)
+        wm.modal_handler_add(self)
+        self.prog.start()
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        if context.area:
+            context.area.tag_redraw()
+            self.prog.update_formated_time()
+
+        if self.updated:
+            self.updated = False
+            self.prog.progress = self.progress
+            self.prog.pre_label = self.pre_label
+            self.prog.label = self.label
+            self.prog.post_label = self.post_label
+            # bpy.ops.asset.library_refresh()
+
+        if event.type == "ESC":
+            self.cancelled = True
+
+        if self.cancelled and not self.prog.cancel:
+            self.prog.label = "Cancelling..."
+            self.prog.cancel = True
+
+        if self.thread and not self.thread.is_alive():
+            self.thread.join()
+            bpy.app.timers.register(self.follow_up, first_interval=1)
+            utils.update_asset_browser_areas()
+            if self.cancelled:
+                self.report(
+                    {"WARNING"},
+                    f"OBJ Assets Creation User Cancelled. {self.total_imported} of {self.total_files} Imported, {self.total_skipped} Errors",
+                )
+                return {"CANCELLED"}
+            else:
+                self.report(
+                    {"INFO"},
+                    f"OBJ Assets Creation Finished! {self.total_files} Chosen, {self.total_imported} Imported, {self.total_skipped} Not Imported due to Errors",
+                )
+                return {"FINISHED"}
+
+        return {"RUNNING_MODAL"}
+
+    def cancel(self, context):
+        if hasattr(self, "_thread"):  # Ensure `execute` has run
+            self.thread.join()
+        self.prog.end()
+
+    def follow_up(self):
+        scene_sets: "scene.SH_Scene" = bpy.context.scene.superhive
+        scene_sets.import_from_directory.end()
 
 
 classes = (

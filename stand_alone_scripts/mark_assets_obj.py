@@ -377,9 +377,6 @@ def get_biggest_object_from(col):
 
 
 def join_meshes_with_same_parent(scene):
-    # return
-
-    # print(parent,objects)
     objects = scene.objects
     for col in bpy.data.collections:
         objects = col.all_objects
@@ -412,35 +409,17 @@ def join_meshes_with_same_parent(scene):
                     )
             except:
                 print("Could not make single user!")
-            # for obj in objects:
-            #     print(obj)
-            # bpy.ops.object.convert(override,target='MESH', keep_original=False)
-
-            # if APPLY_ROTATION:
-            # bpy.ops.transform.resize(value=(SCALE, SCALE, SCALE), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
 
             with context.temp_override(**override):
                 bpy.ops.object.transform_apply(
                     location=False, rotation=True, scale=False, isolate_users=True
                 )
-            # if CLEAR_PARENT:
-            #     bpy.ops.object.parent_clear(override,type='CLEAR_KEEP_TRANSFORM')
-            # if not MAKE_COLLECTION:
-            #     if len(objects)>1:
-            #         bpy.ops.object.join(override)
-            # else:
-            #     #print("Moving..",objects,parent)
-            #     bpy.ops.object.move_to_collection(override,collection_index=0, is_new=True, new_collection_name=parent)
 
 
 def capture_thumbnail_for_collection(
     context, col, path, shading="Material", angle="X", add_plane=True
 ):
-    # print(object)
     hidden = []
-    # if object not in context.window_manager.windows[0].scene.objects[:]:
-    #     context.window_manager.windows[0].scene=find_scene_from_object(object) if find_scene_from_object(object) else context.window_manager.windows[0].scene
-    #     print("New Scene",context.window_manager.windows[0].scene)
 
     scene = context.scene
     scene.render.image_settings.file_format = "PNG"
@@ -627,11 +606,7 @@ def capture_thumbnail_for_collection(
 def capture_thumbnail(
     context, object, path, shading="Material", angle="X", add_plane=True
 ):
-    # print(object)
     hidden = []
-    # if object not in context.window_manager.windows[0].scene.objects[:]:
-    #     context.window_manager.windows[0].scene=find_scene_from_object(object) if find_scene_from_object(object) else context.window_manager.windows[0].scene
-    #     print("New Scene",context.window_manager.windows[0].scene)
 
     scene = context.scene
     scene.render.image_settings.file_format = "PNG"
@@ -901,38 +876,22 @@ def create_preview(type, objects, objects_to_check_previews):
                 )
             else:
                 override = context.copy()
-                if bpy.app.version >= (3, 5, 0):
-                    for area in context.window_manager.windows[0].screen.areas:
-                        area.type = "VIEW_3D"
-                        override["window"] = context.window_manager.windows[0]
-                        break
-                    with context.temp_override(**override):
-                        bpy.ops.wm.obj_import(
-                            filepath=FILEPATH,
-                            global_scale=GLOBAL_SCALE,
-                            clamp_size=CLAMP_SIZE,
-                            forward_axis=AXIS_FORWARD,
-                            up_axis=AXIS_UP,
-                            use_split_objects=USE_SPLIT_OBJECTS,
-                            use_split_groups=USE_SPLIT_GROUPS,
-                            import_vertex_groups=IMPORT_VERTEX_GROUPS,
-                            validate_meshes=VALIDATE_MESHES,
-                            collection_separator=COLLECTION_SEPARATOR,
-                        )
-                else:
-                    print(
-                        f"INNER ::: bpy.ops.import_scene.obj(filepath='{FILEPATH}', use_edges={USE_EDGES}, use_smooth_groups={USE_SMOOTH_GROUPS}, use_split_objects={USE_SPLIT_OBJECTS}, use_split_groups={USE_SPLIT_GROUPS}, use_groups_as_vgroups={USE_GROUPS_AS_VGROUPS}, use_image_search={USE_IMAGE_SEARCH}, split_mode='{SPLIT_MODE}', global_clamp_size={GLOBAL_CLAMP_SIZE})"
-                    )
-                    bpy.ops.import_scene.obj(
+                for area in context.window_manager.windows[0].screen.areas:
+                    area.type = "VIEW_3D"
+                    override["window"] = context.window_manager.windows[0]
+                    break
+                with context.temp_override(**override):
+                    bpy.ops.wm.obj_import(
                         filepath=FILEPATH,
-                        use_edges=USE_EDGES,
-                        use_smooth_groups=USE_SMOOTH_GROUPS,
+                        global_scale=GLOBAL_SCALE,
+                        clamp_size=CLAMP_SIZE,
+                        forward_axis=AXIS_FORWARD,
+                        up_axis=AXIS_UP,
                         use_split_objects=USE_SPLIT_OBJECTS,
                         use_split_groups=USE_SPLIT_GROUPS,
-                        use_groups_as_vgroups=USE_GROUPS_AS_VGROUPS,
-                        use_image_search=USE_IMAGE_SEARCH,
-                        split_mode=SPLIT_MODE,
-                        global_clamp_size=GLOBAL_CLAMP_SIZE,
+                        import_vertex_groups=IMPORT_VERTEX_GROUPS,
+                        validate_meshes=VALIDATE_MESHES,
+                        collection_separator=COLLECTION_SEPARATOR,
                     )
             if PACK:
                 try:
@@ -944,6 +903,7 @@ def create_preview(type, objects, objects_to_check_previews):
             if not MAKE_COLLECTION:
                 for scene in bpy.data.scenes:
                     join_meshes_with_same_parent(scene)
+
             Create_Collection_Assets()
         else:
             # pass
@@ -968,7 +928,7 @@ def get_available_name(path, name):
 def write_to_blend(type, objects):
     blend_name = os.path.basename(FILEPATH)
     blend_name = blend_name.replace("fbx", "blend").replace("obj", "blend")
-    print(blend_name, OVERRIDE)
+    # print(blend_name, OVERRIDE)
     if objects:
         if type == "OBJECTS":
             if OVERRIDE == "COPY":
@@ -985,7 +945,7 @@ def Create_Collection_Assets():
         OVERRIDE != "SKIP"
         or not os.path.isfile(os.path.join(OBJECTS_PATH, os.path.basename(FILEPATH)))
     ):
-        objects = [
+        objects_to_go_through = [
             ob
             for scene in bpy.data.scenes
             for ob in [c for c in bpy.data.collections if scene.user_of_id(c)]
@@ -995,14 +955,7 @@ def Create_Collection_Assets():
                 and [a for a in ob.all_objects if a.type != "EMPTY"]
             )
         ]
-        # for scene in bpy.data.scenes:
-        #     for ob in [c for c in bpy.data.collections if scene.user_of_id(c)]:
-        #         if (
-        #             not ob.hide_viewport
-        #             and ob not in data_used
-        #             and [a for a in ob.all_objects if a.type != "EMPTY"]
-        #         ):
-        for i, ob in enumerate(objects):
+        for i, ob in enumerate(objects_to_go_through):
             data_used.append(ob)
             if not SINGLE_FILE:
                 ob.name = os.path.splitext(os.path.basename(FILEPATH))[0]
@@ -1019,8 +972,6 @@ def Create_Collection_Assets():
             objects_to_check_previews.append(ob)
             if not (ob.preview and any(ob.preview.image_pixels[:])) or FORCE_PREVIEWS:
                 create_thumbnail(context, ob, SHADING)
-
-            # ob.asset_generate_preview()
     if SHADING == "Solid":
         bpy.app.timers.register(
             functools.partial(
@@ -1179,13 +1130,11 @@ if __name__ == "__main__":
             if not SINGLE_FILE:
                 break
     else:
+        print(f"{TOTAL_FILES=}")
         for i in range(TOTAL_FILES):
             FILEPATH = FILEPATHS.pop(0)
+            print(f"{FILEPATH=}")
             init_objs = bpy.data.objects[:]
-            if bpy.app.version >= (3, 5, 0):
-                print(
-                    f"OUTER ::: bpy.ops.wm.obj_import(filepath='{FILEPATH}', global_scale={GLOBAL_SCALE}, clamp_size={CLAMP_SIZE}, forward_axis='{AXIS_FORWARD}', up_axis='{AXIS_UP}', use_split_objects={USE_SPLIT_OBJECTS}, use_split_groups={USE_SPLIT_GROUPS}, import_vertex_groups={IMPORT_VERTEX_GROUPS}, validate_meshes={VALIDATE_MESHES})"
-                )
             with context.temp_override(**override):
                 bpy.ops.wm.obj_import(
                     filepath=FILEPATH,
@@ -1216,18 +1165,21 @@ if __name__ == "__main__":
                             c.objects.unlink(obj)
                         except Exception:
                             pass
-
                     col.objects.link(obj)
+
             if not SINGLE_FILE:
                 break
+
     if PACK:
         try:
             bpy.ops.file.pack_all()
         except Exception as e:
             print(e)
+
     bpy.ops.file.make_paths_absolute()
+
     if not MAKE_COLLECTION:
         for scene in bpy.data.scenes:
             join_meshes_with_same_parent(scene)
+
     Create_Collection_Assets()
-    # Create_Mesh_Assets()

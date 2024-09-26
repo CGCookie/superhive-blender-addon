@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from platform import system
 from typing import TYPE_CHECKING, Generator, Union
+from types import SimpleNamespace
 
 import bpy
 from bpy.types import (
@@ -3290,6 +3291,7 @@ def export_helper(
             line = proc.stdout.readline()
             if not line and proc.poll() is not None:
                 break
+
             if line.startswith("="):
                 prop, value = line[1:].split("=")
                 value = value.replace("\n", "")
@@ -3580,6 +3582,7 @@ def create_usd_assets_from_path(
     import_defined_only: bool = None,
     pack: bool = False,
     make_collection: bool = True,
+    op: "import_from_directory.SH_OT_USD_Assets_From_Directory" = None,
 ):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "mark_assets_usd.py"
     prefs = get_prefs()
@@ -3589,80 +3592,116 @@ def create_usd_assets_from_path(
     if shading != "Material":
         args += ("-b",)
 
-    args += (
-        "--factory-startup",
-        "-P",
-        python_file,
-        "--",
-        ":-path-:".join(str(p) for p in paths),  # 0
-        str(lib_path),  # 1
-        override,  # 2
-        shading,  # 3
-        engine,  # 4
-        str(max_time),  # 5
-        str(force_previews),  # 6
-        angle,  # 7
-        catalog,  # 8
-        str(add_plane),  # 9
-        str(prefs.world_strength),  # 10
-        # USD Settings
-        str(scale),  # 11
-        str(set_frame_range),  # 12
-        str(import_cameras),  # 13
-        str(import_curves),  # 14
-        str(import_lights),  # 15
-        str(import_materials),  # 16
-        str(import_meshes),  # 17
-        str(import_volumes),  # 18
-        str(import_shapes),  # 19
-        str(import_skeletons),  # 20
-        str(import_blendshapes),  # 21
-        str(import_points),  # 22
-        str(import_subdiv),  # 23
-        # str(import_instance_proxies),  # No longer supported
-        str(support_scene_instancing),  # 24
-        str(import_visible_only),  # 25
-        str(create_collection),  # 26
-        str(read_mesh_uvs),  # 27
-        str(read_mesh_colors),  # 28
-        str(read_mesh_attributes),  # 29
-        str(prim_path_mask),  # 30
-        str(import_guide),  # 31
-        str(import_proxy),  # 32
-        str(import_render),  # 33
-        str(import_usd_preview),  # 34
-        str(set_material_blend),  # 35
-        str(light_intensity_scale),  # 36
-        str(mtl_name_collision_mode),  # 37
-        str(import_all_materials),  # 38
-        import_textures_mode,  # 39
-        import_textures_dir,  # 40
-        tex_name_collision_mode,  # 41
-        attr_import_mode,  # 42
-        str(create_world_material),  # 43
-        str(import_defined_only),  # 44
-        str(pack),  # 45
-        str(make_collection),  # 46
-        bpy.context.preferences.addons["cycles"].preferences.compute_device_type
-        if "cycles" in bpy.context.preferences.addons.keys()
-        else "NONE",  # 47
-    )
-    # t1=threading.Thread(target=functools.partial(run,cmd))
-    # t1.start()
-    # print(cmd)
-    proc = subprocess.Popen(
-        args,
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-        text=True,
-    )
+    for i, p in enumerate(paths):
+        # print(f"\n\nPATH: {p}")
+        if op:
+            op.pre_label = f"Importing ({i + 1}/{len(paths)}): {p.name}"
+            op.updated = True
 
-    if proc.stderr:
-        print("ERRORS:")
-        print(proc.stderr.read())
-    if proc.stdout:
-        print("Output:")
-        print(proc.stdout.read())
+        args_local = args + (
+            "--factory-startup",
+            "-P",
+            python_file,
+            "--",
+            # ":-path-:".join(str(p) for p in paths),  # 0
+            str(p),  # 0
+            str(lib_path),  # 1
+            override,  # 2
+            shading,  # 3
+            engine,  # 4
+            str(max_time),  # 5
+            str(force_previews),  # 6
+            angle,  # 7
+            catalog,  # 8
+            str(add_plane),  # 9
+            str(prefs.world_strength),  # 10
+            # USD Settings
+            str(scale),  # 11
+            str(set_frame_range),  # 12
+            str(import_cameras),  # 13
+            str(import_curves),  # 14
+            str(import_lights),  # 15
+            str(import_materials),  # 16
+            str(import_meshes),  # 17
+            str(import_volumes),  # 18
+            str(import_shapes),  # 19
+            str(import_skeletons),  # 20
+            str(import_blendshapes),  # 21
+            str(import_points),  # 22
+            str(import_subdiv),  # 23
+            # str(import_instance_proxies),  # No longer supported
+            str(support_scene_instancing),  # 24
+            str(import_visible_only),  # 25
+            str(create_collection),  # 26
+            str(read_mesh_uvs),  # 27
+            str(read_mesh_colors),  # 28
+            str(read_mesh_attributes),  # 29
+            str(prim_path_mask),  # 30
+            str(import_guide),  # 31
+            str(import_proxy),  # 32
+            str(import_render),  # 33
+            str(import_usd_preview),  # 34
+            str(set_material_blend),  # 35
+            str(light_intensity_scale),  # 36
+            str(mtl_name_collision_mode),  # 37
+            str(import_all_materials),  # 38
+            import_textures_mode,  # 39
+            import_textures_dir,  # 40
+            tex_name_collision_mode,  # 41
+            attr_import_mode,  # 42
+            str(create_world_material),  # 43
+            str(import_defined_only),  # 44
+            str(pack),  # 45
+            str(make_collection),  # 46
+            bpy.context.preferences.addons["cycles"].preferences.compute_device_type
+            if "cycles" in bpy.context.preferences.addons.keys()
+            else "NONE",  # 47
+        )
+
+        if op and op.cancelled:
+            return
+
+        try:
+            # proc = subprocess.Popen(
+            proc = subprocess.run(
+                args_local,
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+
+            was_skipped = (
+                "_ReportErrors" in proc.stdout or "~NOTHING IMPORTED~" in proc.stdout
+            )
+        except Exception as e:
+            proc = SimpleNamespace()
+            proc.stderr = None
+            proc.stdout = str(e)
+            was_skipped = True
+
+        if op:
+            op.progress = (i + 1) / len(paths)
+            if was_skipped:
+                op.total_skipped += 1
+            else:
+                op.total_imported += 1
+            total = op.total_imported + op.total_skipped
+            op.post_label = f"Report|  Imported: {total or '--'}  |  Success: {op.total_imported or '--'}  |  Errored: {op.total_skipped}"
+            op.updated = True
+
+        if proc.stderr or was_skipped:
+            if proc.stderr:
+                print("ERRORS:")
+                # print(proc.stderr.read())
+                print(proc.stderr)
+            if proc.stdout:
+                if was_skipped:
+                    print(f"\n\nISSUE: File `{p}` skipped!")
+                    print("REASON:")
+                else:
+                    print("Output:")
+                # print(proc.stdout.read())
+                print(proc.stdout)
 
 
 def create_fbx_assets_from_path(
@@ -3726,6 +3765,7 @@ def create_fbx_assets_from_path(
     pack: bool = False,
     single_file: bool = False,
     make_collection: bool = True,
+    op: "import_from_directory.SH_OT_FBX_Assets_From_Directory" = None,
 ):
     python_file = Path(__file__).parent / "stand_alone_scripts" / "mark_assets_fbx.py"
     prefs = get_prefs()
@@ -3736,93 +3776,129 @@ def create_fbx_assets_from_path(
         args += ("-b",)
 
     args += ("--factory-startup",)
+
     if importer == "Better FBX":
         args += ("--addons", "better_fbx")
 
-    args += (
-        "-P",
-        str(python_file),
-        "--",
-        ":-path-:".join(str(p) for p in paths),  # 0
-        str(lib_path),  # 1
-        str(override),  # 2
-        str(shading),  # 3
-        str(engine),  # 4
-        str(max_time),  # 5
-        str(force_previews),  # 6
-        str(angle),  # 7
-        str(catalog),  # 8
-        str(add_plane),  # 9
-        str(prefs.world_strength),  # 10
-        str(use_auto_bone_orientation),  # 11
-        str(my_calculate_roll),  # 12
-        str(my_bone_length),  # 13
-        str(my_leaf_bone),  # 14
-        str(use_fix_bone_poses),  # 15
-        str(use_fix_attributes),  # 16
-        str(use_only_deform_bones),  # 17
-        str(use_vertex_animation),  # 18
-        str(use_animation),  # 19
-        str(my_animation_offset),  # 20
-        str(use_animation_prefix),  # 21
-        str(use_triangulate),  # 22
-        str(my_import_normal),  # 23
-        str(use_auto_smooth),  # 24
-        str(my_angle),  # 25
-        str(my_shade_mode),  # 26
-        str(my_scale),  # 27
-        str(use_optimize_for_blender),  # 28
-        str(use_reset_mesh_origin),  # 29
-        str(use_edge_crease),  # 30
-        str(my_edge_crease_scale),  # 31
-        str(my_edge_smoothing),  # 32
-        str(use_import_materials),  # 33
-        str(use_rename_by_filename),  # 34
-        str(my_rotation_mode),  # 35
-        str(use_manual_orientation),  # 36
-        str(global_scale),  # 37
-        str(bake_space_transform),  # 38
-        str(use_custom_normals),  # 39
-        str(colors_type),  # 40
-        str(use_image_search),  # 41
-        str(use_alpha_decals),  # 42
-        str(decal_offset),  # 43
-        str(use_anim),  # 44
-        str(anim_offset),  # 45
-        str(use_subsurf),  # 46
-        str(use_custom_props),  # 47
-        str(use_custom_props_enum_as_string),  # 48
-        str(ignore_leaf_bones),  # 49
-        str(force_connect_children),  # 50
-        str(automatic_bone_orientation),  # 51
-        str(primary_bone_axis),  # 52
-        str(secondary_bone_axis),  # 53
-        str(use_prepost_rot),  # 54
-        str(axis_forward),  # 55
-        str(axis_up),  # 56
-        str(importer),  # 57
-        str(pack),  # 58
-        str(single_file),  # 59
-        str(make_collection),  # 60
-        bpy.context.preferences.addons["cycles"].preferences.compute_device_type
-        if "cycles" in bpy.context.preferences.addons.keys()
-        else "NONE",  # 61
-    )
-    # t1=threading.Thread(target=functools.partial(run,cmd))
-    # t1.start()
-    proc = subprocess.Popen(
-        args,
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-        text=True,
-    )
+    for i, p in enumerate(paths):
+        if op:
+            op.pre_label = f"Importing ({i + 1}/{len(paths)}): {p.name}"
+            op.updated = True
 
-    if proc.stderr:
-        print("ERRORS:")
-        print(proc.stderr.read())
-    if proc.stdout:
-        print("Output:")
-        print(proc.stdout.read())
+        args_local = args + (
+            "-P",
+            str(python_file),
+            "--",
+            # ":-path-:".join(str(p) for p in paths),  # 0
+            str(p),  # 0
+            str(lib_path),  # 1
+            str(override),  # 2
+            str(shading),  # 3
+            str(engine),  # 4
+            str(max_time),  # 5
+            str(force_previews),  # 6
+            str(angle),  # 7
+            str(catalog),  # 8
+            str(add_plane),  # 9
+            str(prefs.world_strength),  # 10
+            str(use_auto_bone_orientation),  # 11
+            str(my_calculate_roll),  # 12
+            str(my_bone_length),  # 13
+            str(my_leaf_bone),  # 14
+            str(use_fix_bone_poses),  # 15
+            str(use_fix_attributes),  # 16
+            str(use_only_deform_bones),  # 17
+            str(use_vertex_animation),  # 18
+            str(use_animation),  # 19
+            str(my_animation_offset),  # 20
+            str(use_animation_prefix),  # 21
+            str(use_triangulate),  # 22
+            str(my_import_normal),  # 23
+            str(use_auto_smooth),  # 24
+            str(my_angle),  # 25
+            str(my_shade_mode),  # 26
+            str(my_scale),  # 27
+            str(use_optimize_for_blender),  # 28
+            str(use_reset_mesh_origin),  # 29
+            str(use_edge_crease),  # 30
+            str(my_edge_crease_scale),  # 31
+            str(my_edge_smoothing),  # 32
+            str(use_import_materials),  # 33
+            str(use_rename_by_filename),  # 34
+            str(my_rotation_mode),  # 35
+            str(use_manual_orientation),  # 36
+            str(global_scale),  # 37
+            str(bake_space_transform),  # 38
+            str(use_custom_normals),  # 39
+            str(colors_type),  # 40
+            str(use_image_search),  # 41
+            str(use_alpha_decals),  # 42
+            str(decal_offset),  # 43
+            str(use_anim),  # 44
+            str(anim_offset),  # 45
+            str(use_subsurf),  # 46
+            str(use_custom_props),  # 47
+            str(use_custom_props_enum_as_string),  # 48
+            str(ignore_leaf_bones),  # 49
+            str(force_connect_children),  # 50
+            str(automatic_bone_orientation),  # 51
+            str(primary_bone_axis),  # 52
+            str(secondary_bone_axis),  # 53
+            str(use_prepost_rot),  # 54
+            str(axis_forward),  # 55
+            str(axis_up),  # 56
+            str(importer),  # 57
+            str(pack),  # 58
+            str(single_file),  # 59
+            str(make_collection),  # 60
+            bpy.context.preferences.addons["cycles"].preferences.compute_device_type
+            if "cycles" in bpy.context.preferences.addons.keys()
+            else "NONE",  # 61
+        )
+
+        if op and op.cancelled:
+            return
+
+        try:
+            # proc = subprocess.Popen(
+            proc = subprocess.run(
+                args_local,
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            was_skipped = (
+                "_ReportErrors" in proc.stdout or "~NOTHING IMPORTED~" in proc.stdout
+            )
+        except Exception as e:
+            proc = SimpleNamespace()
+            proc.stderr = None
+            proc.stdout = str(e)
+            was_skipped = True
+
+        if op:
+            op.progress = (i + 1) / len(paths)
+            if was_skipped:
+                op.total_skipped += 1
+            else:
+                op.total_imported += 1
+            total = op.total_imported + op.total_skipped
+            op.post_label = f"Report|  Imported: {total or '--'}  |  Success: {op.total_imported or '--'}  |  Errored: {op.total_skipped}"
+            op.updated = True
+
+        if proc.stderr or was_skipped:
+            if proc.stderr:
+                print("ERRORS:")
+                # print(proc.stderr.read())
+                print(proc.stderr)
+            if proc.stdout:
+                if was_skipped:
+                    print(f"\n\nISSUE: File `{p}` skipped!")
+                    print("REASON:")
+                else:
+                    print("Output:")
+                # print(proc.stdout.read())
+                print(proc.stdout)
 
 
 def create_obj_assets_from_path(
@@ -3895,81 +3971,116 @@ def create_obj_assets_from_path(
     if importer == "Better FBX":
         args += ("--addons", "better_fbx")
 
-    args += (
-        "-P",
-        python_file,
-        "--",
-        ":-path-:".join(str(p) for p in paths),  # 0
-        str(lib_path),  # 1
-        override,  # 2
-        shading,  # 3
-        engine,  # 4
-        str(max_time),  # 5
-        str(force_previews),  # 6
-        angle,  # 7
-        catalog,  # 8
-        str(add_plane),  # 9
-        str(prefs.world_strength),  # 10
-        str(use_auto_bone_orientation),  # 11
-        str(my_calculate_roll),  # 12
-        str(my_bone_length),  # 13
-        str(my_leaf_bone),  # 14
-        str(use_fix_bone_poses),  # 15
-        str(use_fix_attributes),  # 16
-        str(use_only_deform_bones),  # 17
-        str(use_vertex_animation),  # 18
-        str(use_animation),  # 19
-        str(my_animation_offset),  # 20
-        str(use_animation_prefix),  # 21
-        str(use_triangulate),  # 22
-        str(my_import_normal),  # 23
-        str(use_auto_smooth),  # 24
-        str(my_angle),  # 25
-        str(my_shade_mode),  # 26
-        str(my_scale),  # 27
-        str(use_optimize_for_blender),  # 28
-        str(use_reset_mesh_origin),  # 29
-        str(use_edge_crease),  # 30
-        str(my_edge_crease_scale),  # 31
-        str(my_edge_smoothing),  # 32
-        str(use_import_materials),  # 33
-        str(use_rename_by_filename),  # 34
-        str(my_rotation_mode),  # 35
-        str(use_edges),  # 36
-        str(use_smooth_groups),  # 37
-        str(use_split_objects),  # 38
-        str(use_split_groups),  # 39
-        str(use_groups_as_vgroups),  # 40
-        str(use_image_search),  # 41
-        str(split_mode),  # 42
-        str(global_clamp_size),  # 43
-        str(global_scale),  # 44
-        str(clamp_size),  # 45
-        str(import_vertex_groups),  # 46
-        str(validate_meshes),  # 47
-        str(collection_separator),  # 48
-        str(axis_forward),  # 49
-        str(axis_up),  # 50
-        str(importer),  # 51
-        str(pack),  # 52
-        str(single_file),  # 53
-        str(make_collection),  # 54
-        bpy.context.preferences.addons["cycles"].preferences.compute_device_type
-        if "cycles" in bpy.context.preferences.addons.keys()
-        else "NONE",  # 55
-    )
-    # t1=threading.Thread(target=functools.partial(run,cmd))
-    # t1.start()
-    proc = subprocess.Popen(
-        args,
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-        text=True,
-    )
+    for i, p in enumerate(paths):
+        if op:
+            op.pre_label = f"Importing ({i + 1}/{len(paths)}): {p.name}"
+            op.updated = True
 
-    if proc.stderr:
-        print("ERRORS:")
-        print(proc.stderr.read())
-    if proc.stdout:
-        print("Output:")
-        print(proc.stdout.read())
+        args_local = args + (
+            "-P",
+            python_file,
+            "--",
+            # ":-path-:".join(str(p) for p in paths),  # 0
+            str(p),  # 0
+            str(lib_path),  # 1
+            override,  # 2
+            shading,  # 3
+            engine,  # 4
+            str(max_time),  # 5
+            str(force_previews),  # 6
+            angle,  # 7
+            catalog,  # 8
+            str(add_plane),  # 9
+            str(prefs.world_strength),  # 10
+            str(use_auto_bone_orientation),  # 11
+            str(my_calculate_roll),  # 12
+            str(my_bone_length),  # 13
+            str(my_leaf_bone),  # 14
+            str(use_fix_bone_poses),  # 15
+            str(use_fix_attributes),  # 16
+            str(use_only_deform_bones),  # 17
+            str(use_vertex_animation),  # 18
+            str(use_animation),  # 19
+            str(my_animation_offset),  # 20
+            str(use_animation_prefix),  # 21
+            str(use_triangulate),  # 22
+            str(my_import_normal),  # 23
+            str(use_auto_smooth),  # 24
+            str(my_angle),  # 25
+            str(my_shade_mode),  # 26
+            str(my_scale),  # 27
+            str(use_optimize_for_blender),  # 28
+            str(use_reset_mesh_origin),  # 29
+            str(use_edge_crease),  # 30
+            str(my_edge_crease_scale),  # 31
+            str(my_edge_smoothing),  # 32
+            str(use_import_materials),  # 33
+            str(use_rename_by_filename),  # 34
+            str(my_rotation_mode),  # 35
+            str(use_edges),  # 36
+            str(use_smooth_groups),  # 37
+            str(use_split_objects),  # 38
+            str(use_split_groups),  # 39
+            str(use_groups_as_vgroups),  # 40
+            str(use_image_search),  # 41
+            str(split_mode),  # 42
+            str(global_clamp_size),  # 43
+            str(global_scale),  # 44
+            str(clamp_size),  # 45
+            str(import_vertex_groups),  # 46
+            str(validate_meshes),  # 47
+            str(collection_separator),  # 48
+            str(axis_forward),  # 49
+            str(axis_up),  # 50
+            str(importer),  # 51
+            str(pack),  # 52
+            str(single_file),  # 53
+            str(make_collection),  # 54
+            bpy.context.preferences.addons["cycles"].preferences.compute_device_type
+            if "cycles" in bpy.context.preferences.addons.keys()
+            else "NONE",  # 55
+        )
+
+        if op and op.cancelled:
+            return
+
+        try:
+            # proc = subprocess.Popen(
+            proc = subprocess.run(
+                args_local,
+                stderr=subprocess.STDOUT,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            was_skipped = (
+                "_ReportErrors" in proc.stdout or "~NOTHING IMPORTED~" in proc.stdout
+            )
+        except Exception as e:
+            proc = SimpleNamespace()
+            proc.stderr = None
+            proc.stdout = str(e)
+            was_skipped = True
+
+        if op:
+            op.progress = (i + 1) / len(paths)
+            if was_skipped:
+                op.total_skipped += 1
+            else:
+                op.total_imported += 1
+            total = op.total_imported + op.total_skipped
+            op.post_label = f"Report|  Imported: {total or '--'}  |  Success: {op.total_imported or '--'}  |  Errored: {op.total_skipped}"
+            op.updated = True
+
+        if proc.stderr or was_skipped:
+            if proc.stderr:
+                print("ERRORS:")
+                # print(proc.stderr.read())
+                print(proc.stderr)
+            if proc.stdout:
+                if was_skipped:
+                    print(f"\n\nISSUE: File `{p}` skipped!")
+                    print("REASON:")
+                else:
+                    print("Output:")
+                # print(proc.stdout.read())
+                print(proc.stdout)
