@@ -1,5 +1,5 @@
 # superhive-blender-addon
-An add-on for Blender to create, publish, and update assets for the Superhive market.
+An add-on for Blender to create, publish, and update assets for the Superhive Market (formerly Blender Market).
 
 ## [Releases](https://github.com/CGCookie/superhive-blender-addon/releases)
 Release builds can be found on the [release page](https://github.com/CGCookie/superhive-blender-addon/releases). Minor releases will include bug fixes, Major releases will include features. Please check the release notes
