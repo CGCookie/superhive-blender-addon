@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 id = "bkeeper" # Unique identifier for the extension.
 name = "Bkeeper"
-version = "0.0.3"
+version = "0.0.4"
 tagline = "Aid in the creation and uploading of asset libraries"
 maintainer = "Zach Eastin, Richard Traynor"
 # Supported types: "add-on", "theme"
@@ -56,7 +56,7 @@ license = [
 #
 # clipboard = "Copy and paste bone transforms"
 [permissions]
-network = "Need to gather data from the Superhive (formerly Blender Market) API and upload assets"
+network = "Need to gather data from the server and upload assets"
 files = "Import/export files for library creation and upload"
 
 # Optional: build setting.
@@ -66,10 +66,14 @@ paths_exclude_pattern = [
   "/.git/",
   "/.github/",
   "/.vscode/",
+  "/.ruff_cache/",
   "/__ignore__/",
   "__pycache__/",
+  ".gitignore",
+  "ruff.toml",
   "**.blend*",
   "**.zip",
+  "/wheels/",
 ]
 
 # Validate Command
