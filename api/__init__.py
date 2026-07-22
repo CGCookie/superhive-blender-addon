@@ -5,4 +5,4 @@ be unit-tested outside Blender (see tests/). It has no register/unregister,
 so the extension's `_call_globals` registration pattern skips it.
 """
 
-from . import client, payloads, sidecar, taxonomy  # noqa: F401
+from . import client, payloads, publish, sidecar, taxonomy  # noqa: F401

@@ -614,6 +614,15 @@ class CatalogsFile:
             catalogs.extend(catalog.get_catalogs())
         return catalogs
 
+    def to_dict(self) -> list[dict]:
+        """Flat entries for the Superhive declarative catalogs PUT: sending
+        the cats.txt uuids makes the server adopt them, keeping delivered
+        .blends' embedded catalog uuids coherent."""
+        return [
+            {"uuid": c.id, "path": c.path, "simple_name": c.simple_name}
+            for c in self.get_catalogs()
+        ]
+
     def has_child(self, id: str | set[str], recursive=True):
         for child in self.catalogs.values():
             if isinstance(id, set):

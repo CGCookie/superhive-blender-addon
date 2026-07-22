@@ -7,6 +7,7 @@ from . import (
     create_hive_asset_library,
     export_library,
     import_from_directory,
+    publish_ops,
     remove_empty_catalogs,
     save_out_preview,
     ui_helpers,
