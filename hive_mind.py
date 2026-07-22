@@ -16,6 +16,33 @@ CATALOG_ENUM: list[tuple[str, str, str, int]] = None
 """Enum for blender UI"""
 CATALOG_DICT: dict = None
 
+ROOTS: list[str] = None
+"""Curated top-level catalog roots — every published catalog path must start
+with one of these (server: GET /api/v1/assets/taxonomy/roots)."""
+
+
+def license_to_server_string(license_id: str) -> str:
+    """The license free-string the server stores.
+
+    Enum ids map to their display names ("SRF" -> "Standard Royalty Free");
+    custom license text (already resolved by utils.Asset) passes through.
+    """
+    info = (LICENSES_DICT or {}).get(license_id)
+    return info["name"] if info else license_id
+
+
+def load_roots(client=None) -> list[str]:
+    """Load the curated roots, from the Superhive API when a client is given.
+
+    Without a client (or offline) this returns the session-cached roots,
+    falling back to the static list mirroring the server's AssetCatalog::ROOTS.
+    """
+    global ROOTS
+    from .api import taxonomy
+
+    ROOTS = taxonomy.get_cached_roots(client)
+    return ROOTS
+
 
 def load_licenses():
     # TODO: Get licenses from Superhive API
@@ -384,3 +411,4 @@ def get_catalog_by_name(name: str, is_catalog_simple_name=False) -> dict:
 load_categories()
 load_licenses()
 load_tags()
+load_roots()

@@ -11,6 +11,17 @@ class SH_OT_AddCategoriesToLibrary(Operator):
     bl_description = "Add Superhive's (formerly Blender Market) categories to the asset library. Hold Alt to remove existing categories."
     bl_options = {"REGISTER", "UNDO"}
 
+    seed_from_server: bpy.props.BoolProperty(
+        name="Superhive Catalog Roots",
+        description=(
+            "Create one top-level catalog per curated Superhive root (fetched"
+            " from the server when possible). Published catalog paths must"
+            " start with one of these roots. Disable to add the legacy"
+            " category tree instead"
+        ),
+        default=True,
+    )
+
     load_from_superhive: bpy.props.BoolProperty(
         name="Load from Superhive",
         description="Load categories from Superhive (formerly Blender Market)",
@@ -43,6 +54,36 @@ class SH_OT_AddCategoriesToLibrary(Operator):
             lib.catalogs.write_empty_file()
             lib.catalogs.load_catalogs()
 
+        if self.seed_from_server:
+            self.seed_curated_roots(lib)
+        else:
+            self.add_legacy_categories(lib)
+
+        bpy.ops.asset.library_refresh()
+
+        return {"FINISHED"}
+
+    def seed_curated_roots(self, lib: "utils.AssetLibrary"):
+        """One top-level catalog per curated root, fresh uuids — the server's
+        declarative catalog sync adopts client uuids, so no fixed ids needed."""
+        client = None
+        if bpy.app.online_access:
+            try:
+                client = utils.get_prefs().get_api_client()
+            except RuntimeError:
+                client = None  # no token/wheel yet — cached or static roots
+        roots = hive_mind.load_roots(client)
+
+        with lib.open_catalogs_file() as cat_file:
+            cat_file: utils.CatalogsFile
+            existing_root_names = {
+                catalog.name for catalog in cat_file.catalogs.values()
+            }
+            for root_name in roots:
+                if root_name not in existing_root_names:
+                    cat_file.add_catalog(root_name)
+
+    def add_legacy_categories(self, lib: "utils.AssetLibrary"):
         if self.load_from_superhive:
             hive_mind.load_categories()
 
@@ -57,10 +98,6 @@ class SH_OT_AddCategoriesToLibrary(Operator):
                     sub = cat.find_catalog(sub_uuid)
                     if not sub:
                         sub = cat.add_child(sub_info["name"], id=sub_uuid)
-
-        bpy.ops.asset.library_refresh()
-
-        return {"FINISHED"}
 
 
 classes = (SH_OT_AddCategoriesToLibrary,)
