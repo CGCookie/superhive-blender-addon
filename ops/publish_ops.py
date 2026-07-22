@@ -221,7 +221,7 @@ class SH_OT_BindLibrary(Operator):
             self._lib.path,
             {
                 "library_id": library_id,
-                "base_url": prefs.server_url,
+                "base_url": api_client.normalize_base_url(prefs.server_url),
                 "assets": {},
             },
         )

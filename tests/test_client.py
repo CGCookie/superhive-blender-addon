@@ -74,6 +74,31 @@ def test_session_carries_token_header(fake_requests):
     assert client.base_url == "http://test"
 
 
+@pytest.mark.parametrize(
+    "entered,expected",
+    [
+        ("https://superhivemarket.com", "https://superhivemarket.com"),
+        ("http://localhost:3000/", "http://localhost:3000"),
+        ("superhivemarket.com", "https://superhivemarket.com"),
+        ("superhivemarket.com/", "https://superhivemarket.com"),
+        ("localhost:3000", "http://localhost:3000"),
+        ("localhost", "http://localhost"),
+        ("127.0.0.1:3000", "http://127.0.0.1:3000"),
+        ("[::1]:3000", "http://[::1]:3000"),
+        ("0.0.0.0:3000", "http://0.0.0.0:3000"),
+        (" superhivemarket.com ", "https://superhivemarket.com"),
+        ("", ""),
+    ],
+)
+def test_normalize_base_url(entered, expected):
+    assert client_mod.normalize_base_url(entered) == expected
+
+
+def test_bare_local_host_gets_http_scheme(fake_requests):
+    client = SuperhiveClient("localhost:3000/", "shk_x", min_request_interval=0)
+    assert client.base_url == "http://localhost:3000"
+
+
 def test_success_parses_json(fake_requests):
     client = make_client()
     client._session.queue = [FakeResponse(200, {"roots": [{"name": "Models"}]})]

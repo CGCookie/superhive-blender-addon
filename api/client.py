@@ -16,6 +16,23 @@ except ImportError:  # wheels not bundled (dev checkout run without a build)
     requests = None
 
 
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "[::1]", "0.0.0.0"}
+
+
+def normalize_base_url(url: str) -> str:
+    """Fill in the scheme when the user typed a bare host — requests refuses
+    URLs without one ("No connection adapters were found"). https by default,
+    http for local dev hosts, which won't have TLS."""
+    url = url.strip().rstrip("/")
+    if not url or "://" in url:
+        return url
+    host, _, port = url.split("/", 1)[0].rpartition(":")
+    if not host or not port.isdigit():
+        host = url.split("/", 1)[0]
+    scheme = "http" if host in _LOCAL_HOSTS else "https"
+    return f"{scheme}://{url}"
+
+
 def require_requests():
     if requests is None:
         raise RuntimeError(
@@ -130,7 +147,7 @@ class SuperhiveClient:
         min_request_interval: float = 1.05,
     ):
         require_requests()
-        self.base_url = base_url.rstrip("/")
+        self.base_url = normalize_base_url(base_url)
         self.timeout = timeout
         self.min_request_interval = min_request_interval
         self._last_request_at = 0.0
