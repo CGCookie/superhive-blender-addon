@@ -476,6 +476,13 @@ class SH_OT_PublishAsset(_PublishModalMixin, Operator):
         local_assets = [
             asset for asset in snapshot_local_assets(lib) if asset.name == target_name
         ]
+        if len(local_assets) > 1:
+            # The same name may exist in several catalogs — narrow to the
+            # active asset's catalog.
+            target_catalog = context.asset.metadata.catalog_id
+            local_assets = [
+                asset for asset in local_assets if asset.catalog_id == target_catalog
+            ]
         if not local_assets:
             self.report({"ERROR"}, f"'{target_name}' not found in the library")
             return {"CANCELLED"}

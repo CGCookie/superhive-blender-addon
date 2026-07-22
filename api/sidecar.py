@@ -3,7 +3,9 @@
 The publish flow is otherwise stateless (asset diffing rides the server's
 sha256s, catalog identity rides cats.txt uuids) — the sidecar only remembers
 which server library this directory publishes to, plus the name→server-id map
-that makes renames expressible (previous_asset_id).
+that makes renames and catalog moves expressible (previous_asset_id). The map
+is best-effort for the same name in several catalogs (last publish wins) —
+the diff's two-pass id claiming keeps a stale entry harmless.
 """
 
 from __future__ import annotations

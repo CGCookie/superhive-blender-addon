@@ -52,7 +52,9 @@ class LocalAsset:
     license: str = ""
     copyright: str = ""
     created_blender_version: str = ""
-    data_collection: str = ""  # bpy.data collection name ("objects"), for subprocess scripts
+    data_collection: str = (
+        ""  # bpy.data collection name ("objects"), for subprocess scripts
+    )
     server_id: str | None = None
     sha256: str | None = None
     size: int = 0
@@ -63,7 +65,9 @@ class PublishPlan:
     to_upload: list[LocalAsset] = field(default_factory=list)
     metadata_only: list[LocalAsset] = field(default_factory=list)
     unchanged: list[LocalAsset] = field(default_factory=list)
-    renames: dict[str, str] = field(default_factory=dict)  # local name -> server id
+    renames: dict[tuple[str, str, str], str] = field(
+        default_factory=dict
+    )  # local identity -> server id
     server_only: list[dict] = field(default_factory=list)
     errors: list[tuple[LocalAsset, str]] = field(default_factory=list)
 
@@ -112,6 +116,19 @@ def build_catalog_entries(catalogs: list[tuple[str, str, str]]) -> list[dict]:
     ]
 
 
+def local_identity(asset: LocalAsset) -> tuple[str, str, str]:
+    """The server's asset identity: (catalog, id_type, case-insensitive name)."""
+    return (asset.catalog_id or "", asset.id_type or "", asset.name.casefold())
+
+
+def remote_identity(remote: dict) -> tuple[str, str, str]:
+    return (
+        remote.get("catalog_uuid") or "",
+        remote.get("id_type") or "",
+        remote["name"].casefold(),
+    )
+
+
 def metadata_matches(local: LocalAsset, remote: dict) -> bool:
     """Would a metadata-only upsert change anything the server stores?"""
     if local.name != remote.get("name"):  # case change is a real rename
@@ -136,20 +153,21 @@ def diff_assets(
 ) -> PublishPlan:
     """Decide, per local asset, what (if anything) to send.
 
-    Identity is the server's: case-insensitive name within the library. A
-    local asset whose name is absent remotely but whose sidecar-known server
-    id still exists is a rename (previous_asset_id). Server assets no local
-    asset accounts for are reported, never deleted.
+    Identity is the server's: (catalog, id_type, case-insensitive name) within
+    the library — the same name may exist in different catalogs. A local asset
+    whose identity is absent remotely but whose sidecar-known server id still
+    exists is a rename or catalog move (previous_asset_id). Server assets no
+    local asset accounts for are reported, never deleted.
     """
     plan = PublishPlan()
-    remote_by_name = {a["name"].casefold(): a for a in remote}
+    remote_by_key = {remote_identity(a): a for a in remote}
     remote_by_id = {a["id"]: a for a in remote}
 
-    # Case-insensitive collisions among the local assets themselves: the
-    # server would silently fold them into one asset, so refuse both.
-    by_key: dict[str, list[LocalAsset]] = {}
+    # Identity collisions among the local assets themselves: the server would
+    # silently fold them into one asset, so refuse both.
+    by_key: dict[tuple[str, str, str], list[LocalAsset]] = {}
     for asset in local:
-        by_key.setdefault(asset.name.casefold(), []).append(asset)
+        by_key.setdefault(local_identity(asset), []).append(asset)
     collided = {key for key, group in by_key.items() if len(group) > 1}
     for key in sorted(collided):
         names = ", ".join(f"'{a.name}'" for a in by_key[key])
@@ -157,15 +175,29 @@ def diff_assets(
             plan.errors.append(
                 (
                     asset,
-                    f"Name clash ({names}): asset names must be unique in a"
-                    " library ignoring case — rename one and re-publish",
+                    f"Duplicate asset ({names}): same name ignoring case, same"
+                    " type, same catalog — rename or re-catalog one and"
+                    " re-publish",
                 )
             )
 
     matched_remote_ids: set[str] = set()
 
+    def classify(asset: LocalAsset, existing: dict, renamed: bool):
+        matched_remote_ids.add(existing["id"])
+        remote_sha = (existing.get("file") or {}).get("sha256")
+        if asset.sha256 and asset.sha256 == remote_sha:
+            if renamed or not metadata_matches(asset, existing):
+                plan.metadata_only.append(asset)
+            else:
+                plan.unchanged.append(asset)
+        else:
+            plan.to_upload.append(asset)
+
+    # Pass 1: validation + direct identity matches, reserving their server ids.
+    pending: list[LocalAsset] = []
     for asset in local:
-        if asset.name.casefold() in collided:
+        if local_identity(asset) in collided:
             continue
         if asset.catalog_path and asset.catalog_path.split("/")[0] not in roots:
             plan.errors.append(
@@ -186,26 +218,33 @@ def diff_assets(
             )
             continue
 
-        existing = remote_by_name.get(asset.name.casefold())
-        if existing is None:
-            server_id = asset.server_id or name_to_server_id.get(asset.name)
-            renamed_from = remote_by_id.get(server_id) if server_id else None
-            if renamed_from is not None:
-                plan.renames[asset.name] = server_id
-                existing = renamed_from
-            else:
-                plan.to_upload.append(asset)
-                continue
+        existing = remote_by_key.get(local_identity(asset))
+        if existing is not None:
+            classify(asset, existing, renamed=False)
+        else:
+            pending.append(asset)
 
-        matched_remote_ids.add(existing["id"])
-        remote_sha = (existing.get("file") or {}).get("sha256")
-        if asset.sha256 and asset.sha256 == remote_sha:
-            if asset.name in plan.renames or not metadata_matches(asset, existing):
-                plan.metadata_only.append(asset)
-            else:
-                plan.unchanged.append(asset)
+    # Pass 2: rename/catalog-move fallback via sidecar-known server ids. Ids
+    # already matched in pass 1 are off-limits, and an id claimed by more than
+    # one pending local is granted to none (never guess identity — uploading
+    # as new is safe, moving the wrong server asset is not).
+    claims: dict[str, list[LocalAsset]] = {}
+    for asset in pending:
+        server_id = asset.server_id or name_to_server_id.get(asset.name)
+        if (
+            server_id
+            and server_id in remote_by_id
+            and server_id not in matched_remote_ids
+        ):
+            claims.setdefault(server_id, []).append(asset)
         else:
             plan.to_upload.append(asset)
+    for server_id, group in claims.items():
+        if len(group) == 1:
+            plan.renames[local_identity(group[0])] = server_id
+            classify(group[0], remote_by_id[server_id], renamed=True)
+        else:
+            plan.to_upload.extend(group)
 
     plan.server_only = [a for a in remote if a["id"] not in matched_remote_ids]
     return plan

@@ -288,7 +288,7 @@ class PublishJob:
                 result = self._publish_one(
                     asset,
                     with_file=with_file,
-                    previous_asset_id=plan.renames.get(asset.name),
+                    previous_asset_id=plan.renames.get(payloads.local_identity(asset)),
                 )
             except ValidationError as error:
                 message = str(error)
@@ -370,7 +370,9 @@ class PublishJob:
 
     def _poll_processing(self):
         pending = {
-            r.name: r for r in self.results if r.status == "processing" and r.server_id
+            r.server_id: r
+            for r in self.results
+            if r.status == "processing" and r.server_id
         }
         if not pending:
             return
@@ -381,7 +383,7 @@ class PublishJob:
             self._check_cancel()
             self._set_phase(f"Waiting on file scans ({len(pending)} left)")
             self._sleep(interval)
-            for name, result in list(pending.items()):
+            for server_id, result in list(pending.items()):
                 self._check_cancel()
                 asset = self.client.get_asset(self.library_id, result.server_id)
                 status = asset.get("status")
@@ -397,7 +399,7 @@ class PublishJob:
                         )
                         or "Rejected by the file scan"
                     )
-                del pending[name]
+                del pending[server_id]
                 self.updated = True
             interval = min(interval * 1.5, self.POLL_CAP)
 

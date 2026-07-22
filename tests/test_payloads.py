@@ -7,6 +7,7 @@ from api.payloads import (
     build_catalog_entries,
     clean_tags,
     diff_assets,
+    local_identity,
     major_minor,
     metadata_matches,
     sha256_file,
@@ -155,10 +156,9 @@ def test_diff_metadata_only():
 
 def test_diff_rename_via_sidecar_id():
     remote = make_remote(name="OldChair")
-    plan = diff_assets(
-        [make_local(name="NewChair")], [remote], ROOTS, {"NewChair": remote["id"]}
-    )
-    assert plan.renames == {"NewChair": remote["id"]}
+    local = make_local(name="NewChair")
+    plan = diff_assets([local], [remote], ROOTS, {"NewChair": remote["id"]})
+    assert plan.renames == {local_identity(local): remote["id"]}
     # hash matches, so the rename rides a metadata-only upsert
     assert [a.name for a in plan.metadata_only] == ["NewChair"]
     assert not plan.server_only
@@ -166,13 +166,9 @@ def test_diff_rename_via_sidecar_id():
 
 def test_diff_rename_with_changed_file_uploads():
     remote = make_remote(name="OldChair")
-    plan = diff_assets(
-        [make_local(name="NewChair", sha256="SHA256:bbb")],
-        [remote],
-        ROOTS,
-        {"NewChair": remote["id"]},
-    )
-    assert plan.renames == {"NewChair": remote["id"]}
+    local = make_local(name="NewChair", sha256="SHA256:bbb")
+    plan = diff_assets([local], [remote], ROOTS, {"NewChair": remote["id"]})
+    assert plan.renames == {local_identity(local): remote["id"]}
     assert [a.name for a in plan.to_upload] == ["NewChair"]
 
 
@@ -199,8 +195,100 @@ def test_diff_uncatalogued_is_fine():
 
 
 def test_diff_case_insensitive_local_collision():
+    # Same catalog, same type, names differing only by case: identical
+    # server identity, so both are refused.
     plan = diff_assets(
         [make_local(name="Chair"), make_local(name="chair")], [], ROOTS, {}
     )
     assert len(plan.errors) == 2
     assert not plan.to_upload
+
+
+def test_diff_same_name_different_catalogs_no_collision():
+    plan = diff_assets(
+        [
+            make_local(catalog_id="cat-2k", catalog_path="Models/Furniture/2K"),
+            make_local(catalog_id="cat-4k", catalog_path="Models/Furniture/4K"),
+        ],
+        [],
+        ROOTS,
+        {},
+    )
+    assert not plan.errors
+    assert len(plan.to_upload) == 2
+
+
+def test_diff_same_name_two_catalogs_both_match():
+    locals_ = [
+        make_local(catalog_id="cat-2k", catalog_path="Models/Furniture/2K"),
+        make_local(
+            catalog_id="cat-4k", catalog_path="Models/Furniture/4K", sha256="SHA256:bbb"
+        ),
+    ]
+    remotes = [
+        make_remote(id="srv-2k", catalog_uuid="cat-2k"),
+        make_remote(
+            id="srv-4k",
+            catalog_uuid="cat-4k",
+            file={"sha256": "SHA256:bbb", "size": 1024},
+        ),
+    ]
+    plan = diff_assets(locals_, remotes, ROOTS, {})
+    assert len(plan.unchanged) == 2
+    assert not plan.to_upload and not plan.metadata_only
+    assert not plan.server_only
+
+
+def test_diff_catalog_move_is_a_rename():
+    remote = make_remote(name="Oak", catalog_uuid="cat-2k")
+    local = make_local(
+        name="Oak", catalog_id="cat-4k", catalog_path="Models/Furniture/4K"
+    )
+    plan = diff_assets([local], [remote], ROOTS, {"Oak": remote["id"]})
+    assert plan.renames == {local_identity(local): remote["id"]}
+    assert [a.name for a in plan.metadata_only] == ["Oak"]
+    assert not plan.server_only
+
+
+def test_diff_new_duplicate_does_not_steal_id():
+    # Remote Oak lives in cat-2k; locally there is the unchanged Oak in cat-2k
+    # AND a brand-new Oak in cat-4k. The sidecar's name map points at the
+    # existing server asset — the new duplicate must NOT claim its id (that
+    # would move the server asset), it must upload as new.
+    remote = make_remote(name="Oak", catalog_uuid="cat-2k")
+    existing = make_local(
+        name="Oak", catalog_id="cat-2k", catalog_path="Models/Furniture/2K"
+    )
+    new = make_local(
+        name="Oak", catalog_id="cat-4k", catalog_path="Models/Furniture/4K"
+    )
+    plan = diff_assets([existing, new], [remote], ROOTS, {"Oak": remote["id"]})
+    assert [a.catalog_id for a in plan.unchanged] == ["cat-2k"]
+    assert [a.catalog_id for a in plan.to_upload] == ["cat-4k"]
+    assert plan.renames == {}
+    assert not plan.server_only
+
+
+def test_diff_ambiguous_claim_uploads_both():
+    # Two pending locals resolve to the same unclaimed server id: identity is
+    # ambiguous, so neither gets it — both upload as new and the remote is
+    # reported server_only.
+    remote = make_remote(name="Oak", catalog_uuid="cat-old", id="srv-oak")
+    locals_ = [
+        make_local(
+            name="Oak",
+            catalog_id="cat-2k",
+            catalog_path="Models/Furniture/2K",
+            server_id="srv-oak",
+        ),
+        make_local(
+            name="Oak",
+            catalog_id="cat-4k",
+            catalog_path="Models/Furniture/4K",
+            server_id="srv-oak",
+        ),
+    ]
+    plan = diff_assets(locals_, [remote], ROOTS, {})
+    assert len(plan.to_upload) == 2
+    assert plan.renames == {}
+    assert [a["id"] for a in plan.server_only] == ["srv-oak"]

@@ -299,3 +299,60 @@ def test_rename_sends_previous_asset_id(tmp_path):
     upsert = next(c[1] for c in client.calls if c[0] == "upsert")
     assert upsert["previous_asset_id"] == "srv-old"
     assert upsert["name"] == "NewName"
+
+
+def test_catalog_move_sends_previous_asset_id(tmp_path):
+    blend = make_blend(tmp_path)
+    sha = sha256_file(blend)
+    remote = [
+        {
+            "id": "srv-old",
+            "name": "Chair",
+            "id_type": "OBJECT",
+            "catalog_uuid": "cat-u1",
+            "tags": ["prop"],
+            "description": "d",
+            "author": "a",
+            "license": "Standard Royalty Free",
+            "copyright": "",
+            "file": {"sha256": sha, "size": 1},
+        }
+    ]
+    client = StubClient(
+        remote=remote, upsert_responses=[{"id": "srv-old", "status": "published"}]
+    )
+    job = make_job(
+        client,
+        [make_asset(blend, catalog_id="cat-u2", catalog_path="Models/Stools")],
+        name_to_server_id={"Chair": "srv-old"},
+    )
+    job.run()
+
+    assert not [c for c in client.calls if c[0] in ("presign", "upload")]
+    upsert = next(c[1] for c in client.calls if c[0] == "upsert")
+    assert upsert["previous_asset_id"] == "srv-old"
+    assert upsert["catalog_uuid"] == "cat-u2"
+
+
+def test_same_name_in_two_catalogs_both_publish(tmp_path):
+    asset_2k = make_asset(
+        make_blend(tmp_path, "Chair2K"), name="Chair", catalog_id="cat-2k"
+    )
+    asset_4k = make_asset(
+        make_blend(tmp_path, "Chair4K"), name="Chair", catalog_id="cat-4k"
+    )
+    client = StubClient(
+        upsert_responses=[
+            {"id": "srv-2k", "status": "processing"},
+            {"id": "srv-4k", "status": "processing"},
+        ],
+        poll_statuses={"srv-2k": ["published"], "srv-4k": ["published"]},
+    )
+    job = make_job(client, [asset_2k, asset_4k])
+    job.run()
+
+    assert job.fatal_error is None
+    # both same-name rows get polled to completion (pending is server_id-keyed)
+    assert [r.status for r in job.results] == ["published", "published"]
+    upserts = [c[1] for c in client.calls if c[0] == "upsert"]
+    assert [u["catalog_uuid"] for u in upserts] == ["cat-2k", "cat-4k"]
