@@ -121,6 +121,7 @@ class PublishJob:
         thumbnail_extractor: Callable[[LocalAsset], Path | None] | None = None,
         pack_fn: Callable[[str], None] | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        report_server_only: bool = True,
     ):
         self.client = client
         self.library_id = library_id
@@ -131,6 +132,7 @@ class PublishJob:
         self.thumbnail_extractor = thumbnail_extractor
         self.pack_fn = pack_fn
         self._sleep = sleep
+        self.report_server_only = report_server_only
 
         # ---- observable state (worker writes, modal reads) ----
         self.phase = "Starting"
@@ -256,16 +258,17 @@ class PublishJob:
             self.results.append(AssetResult(asset.name, "unchanged"))
         for asset, message in plan.errors:
             self.results.append(AssetResult(asset.name, "error", message))
-        for remote in plan.server_only:
-            self.results.append(
-                AssetResult(
-                    remote["name"],
-                    "server_only",
-                    "Exists on Superhive but not in this library — never deleted"
-                    " automatically",
-                    server_id=remote["id"],
+        if self.report_server_only:
+            for remote in plan.server_only:
+                self.results.append(
+                    AssetResult(
+                        remote["name"],
+                        "server_only",
+                        "Exists on Superhive but not in this library — never"
+                        " deleted automatically",
+                        server_id=remote["id"],
+                    )
                 )
-            )
         self.updated = True
 
     def _publish_assets(self, plan: PublishPlan):

@@ -1145,6 +1145,9 @@ class SH_Scene(PropertyGroup):
     publish: PointerProperty(type=MultiProgressBarPublish)
     publish_results: CollectionProperty(type=SH_PublishAssetResult)
     publish_results_index: IntProperty()
+    publish_library_id: StringProperty(
+        description="Server library id of the last publish (report actions)"
+    )
 
     library_mode: EnumProperty(
         items=(

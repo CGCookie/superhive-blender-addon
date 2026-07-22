@@ -59,6 +59,17 @@ class SH_OT_UpdateAsset(Operator):
 
         asset.update_asset(prefs.ensure_default_blender_version().path)
 
+        if asset.new_name and asset.new_name != asset.name:
+            # Re-key the Superhive sidecar so the next publish renames the
+            # server asset (previous_asset_id) instead of duplicating it.
+            from pathlib import Path
+
+            from ..api import sidecar
+
+            sidecar.rename_asset(
+                Path(asset.blend_path).parent, asset.name, asset.new_name
+            )
+
         bpy.ops.asset.library_refresh()
 
         return {"FINISHED"}

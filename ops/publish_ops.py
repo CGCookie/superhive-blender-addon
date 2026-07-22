@@ -139,6 +139,12 @@ class SH_OT_BindLibrary(Operator):
         items=_library_items,
     )
 
+    then_operator: bpy.props.StringProperty(
+        default="publish_library",
+        description="bkeeper operator to invoke once the link is stored",
+        options={"HIDDEN", "SKIP_SAVE"},
+    )
+
     @classmethod
     def poll(cls, context):
         if not polls.is_not_all_library(context, cls=cls):
@@ -220,95 +226,24 @@ class SH_OT_BindLibrary(Operator):
             },
         )
         self.report({"INFO"}, "Library linked — starting publish")
-        bpy.ops.bkeeper.publish_library("INVOKE_DEFAULT")
+        getattr(bpy.ops.bkeeper, self.then_operator)("INVOKE_DEFAULT")
         return {"FINISHED"}
 
 
-class SH_OT_PublishLibrary(Operator):
-    bl_idname = "bkeeper.publish_library"
-    bl_label = "Publish to Superhive"
-    bl_description = (
-        "Sync this library to Superhive: catalogs first, then upload new or"
-        " changed assets (diffed by file hash — unchanged assets are skipped)."
-        " Large first publishes can take several minutes due to server rate"
-        " limits"
-    )
-    bl_options = {"REGISTER"}
+class _PublishModalMixin:
+    """Shared thread+modal+progress harness for the publish operators. The
+    operator's execute() builds a PublishJob and calls _start_publish_job."""
 
-    pack_files: BoolProperty(
-        name="Pack External Files First",
-        description=(
-            "Pack textures and other external references into each asset's"
-            " .blend before upload, so downloaded assets are self-contained."
-            " Slower (re-saves every file, so every asset re-uploads); use when"
-            " the library was created without packing"
-        ),
-        default=False,
-    )
-
-    @classmethod
-    def poll(cls, context):
-        if not polls.is_not_all_library(context, cls=cls):
-            return False
-        return online_access_poll(cls, context)
-
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width=400)
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "pack_files")
-        col = layout.column(align=True)
-        col.active = False
-        col.label(text="Unchanged assets are skipped automatically.")
-        col.label(text="Assets removed locally are never deleted on Superhive.")
-
-    def execute(self, context):
-        from ..api import publish, sidecar
-
-        prefs = utils.get_prefs()
-        try:
-            client = prefs.get_api_client()
-        except RuntimeError as error:
-            self.report({"ERROR"}, str(error))
-            return {"CANCELLED"}
-
-        lib = utils.from_active(
-            context, area=context.area, load_assets=True, load_catalogs=True
-        )
-        binding = sidecar.read_sidecar(lib.path)
-        if binding is None:
-            bpy.ops.bkeeper.bind_library("INVOKE_DEFAULT")
-            return {"CANCELLED"}
-
+    def _start_publish_job(self, context: Context, job, lib, warnings):
+        self._job = job
         self._lib_path = lib.path
         self._orig_assets = {
             asset.name: asset.orig_asset for asset in (lib.assets or [])
         }
-
-        local_assets = snapshot_local_assets(lib)
-        if not local_assets and not (lib.catalogs and lib.catalogs.catalogs):
-            self.report({"WARNING"}, "Nothing to publish — the library is empty")
-            return {"CANCELLED"}
-
-        self._warnings = dirty_asset_warnings(lib)
-
-        self._tmpdir = Path(tempfile.mkdtemp(prefix="bkeeper_publish_"))
-        roots = hive_mind.load_roots(client)
-        self._job = publish.PublishJob(
-            client,
-            binding["library_id"],
-            local_assets,
-            lib.catalogs.to_dict() if lib.catalogs else [],
-            roots,
-            binding.get("assets", {}),
-            thumbnail_extractor=make_thumbnail_extractor(
-                bpy.app.binary_path, self._tmpdir
-            ),
-            pack_fn=make_pack_fn(bpy.app.binary_path) if self.pack_files else None,
-        )
+        self._warnings = warnings
 
         scn_sets: "scene.SH_Scene" = context.scene.superhive
+        scn_sets.publish_library_id = job.library_id
         self.prog = scn_sets.publish
         self.prog.start()
 
@@ -399,12 +334,12 @@ class SH_OT_PublishLibrary(Operator):
         elif job.cancelled:
             self.report({"WARNING"}, "Publish cancelled")
         else:
-            uploaded = sum(
+            synced = sum(
                 1
                 for item in job.results
                 if item.status in ("published", "pending", "processing", "metadata")
             )
-            self.report({"INFO"}, f"Publish finished — {uploaded} assets synced")
+            self.report({"INFO"}, f"Publish finished — {synced} assets synced")
 
         interesting = any(row.status != "unchanged" for row in results)
         if interesting and not job.cancelled:
@@ -416,6 +351,199 @@ class SH_OT_PublishLibrary(Operator):
         self.prog.end()
         for area in bpy.context.screen.areas:
             area.tag_redraw()
+
+
+class SH_OT_PublishLibrary(_PublishModalMixin, Operator):
+    bl_idname = "bkeeper.publish_library"
+    bl_label = "Publish to Superhive"
+    bl_description = (
+        "Sync this library to Superhive: catalogs first, then upload new or"
+        " changed assets (diffed by file hash — unchanged assets are skipped)."
+        " Large first publishes can take several minutes due to server rate"
+        " limits"
+    )
+    bl_options = {"REGISTER"}
+
+    pack_files: BoolProperty(
+        name="Pack External Files First",
+        description=(
+            "Pack textures and other external references into each asset's"
+            " .blend before upload, so downloaded assets are self-contained."
+            " Slower (re-saves every file, so every asset re-uploads); use when"
+            " the library was created without packing"
+        ),
+        default=False,
+    )
+
+    @classmethod
+    def poll(cls, context):
+        if not polls.is_not_all_library(context, cls=cls):
+            return False
+        return online_access_poll(cls, context)
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=400)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "pack_files")
+        col = layout.column(align=True)
+        col.active = False
+        col.label(text="Unchanged assets are skipped automatically.")
+        col.label(text="Assets removed locally are never deleted on Superhive.")
+
+    def execute(self, context):
+        from ..api import publish, sidecar
+
+        prefs = utils.get_prefs()
+        try:
+            client = prefs.get_api_client()
+        except RuntimeError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+
+        lib = utils.from_active(
+            context, area=context.area, load_assets=True, load_catalogs=True
+        )
+        binding = sidecar.read_sidecar(lib.path)
+        if binding is None:
+            bpy.ops.bkeeper.bind_library(
+                "INVOKE_DEFAULT", then_operator="publish_library"
+            )
+            return {"CANCELLED"}
+
+        local_assets = snapshot_local_assets(lib)
+        if not local_assets and not (lib.catalogs and lib.catalogs.catalogs):
+            self.report({"WARNING"}, "Nothing to publish — the library is empty")
+            return {"CANCELLED"}
+
+        self._tmpdir = Path(tempfile.mkdtemp(prefix="bkeeper_publish_"))
+        roots = hive_mind.load_roots(client)
+        job = publish.PublishJob(
+            client,
+            binding["library_id"],
+            local_assets,
+            lib.catalogs.to_dict() if lib.catalogs else [],
+            roots,
+            binding.get("assets", {}),
+            thumbnail_extractor=make_thumbnail_extractor(
+                bpy.app.binary_path, self._tmpdir
+            ),
+            pack_fn=make_pack_fn(bpy.app.binary_path) if self.pack_files else None,
+        )
+        return self._start_publish_job(context, job, lib, dirty_asset_warnings(lib))
+
+
+class SH_OT_PublishAsset(_PublishModalMixin, Operator):
+    bl_idname = "bkeeper.publish_asset"
+    bl_label = "Publish Asset to Superhive"
+    bl_description = (
+        "Publish just the active asset to the linked Superhive library"
+        " (catalogs are synced first; the file is skipped when unchanged)"
+    )
+    bl_options = {"REGISTER"}
+
+    @classmethod
+    def poll(cls, context):
+        if not polls.is_not_all_library(context, cls=cls):
+            return False
+        if not context.asset or context.asset.local_id:
+            cls.poll_message_set("An asset from the library must be active")
+            return False
+        return online_access_poll(cls, context)
+
+    def execute(self, context):
+        from ..api import publish, sidecar
+
+        prefs = utils.get_prefs()
+        try:
+            client = prefs.get_api_client()
+        except RuntimeError as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+
+        lib = utils.from_active(
+            context, area=context.area, load_assets=True, load_catalogs=True
+        )
+        binding = sidecar.read_sidecar(lib.path)
+        if binding is None:
+            bpy.ops.bkeeper.bind_library(
+                "INVOKE_DEFAULT", then_operator="publish_asset"
+            )
+            return {"CANCELLED"}
+
+        target_name = context.asset.name
+        local_assets = [
+            asset for asset in snapshot_local_assets(lib) if asset.name == target_name
+        ]
+        if not local_assets:
+            self.report({"ERROR"}, f"'{target_name}' not found in the library")
+            return {"CANCELLED"}
+
+        self._tmpdir = Path(tempfile.mkdtemp(prefix="bkeeper_publish_"))
+        roots = hive_mind.load_roots(client)
+        job = publish.PublishJob(
+            client,
+            binding["library_id"],
+            local_assets,
+            lib.catalogs.to_dict() if lib.catalogs else [],
+            roots,
+            binding.get("assets", {}),
+            thumbnail_extractor=make_thumbnail_extractor(
+                bpy.app.binary_path, self._tmpdir
+            ),
+            report_server_only=False,
+        )
+        warnings = [w for w in dirty_asset_warnings(lib) if w[0] == target_name]
+        return self._start_publish_job(context, job, lib, warnings)
+
+
+class SH_OT_DeleteServerAsset(Operator):
+    bl_idname = "bkeeper.delete_server_asset"
+    bl_label = "Delete From Superhive"
+    bl_description = (
+        "Delete this asset from the linked Superhive library. Customers lose"
+        " access to it — this cannot be undone"
+    )
+    bl_options = {"INTERNAL"}
+
+    asset_name: bpy.props.StringProperty()
+    server_id: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context):
+        return online_access_poll(cls, context)
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(
+            self,
+            event,
+            title="Delete From Superhive",
+            message=f"Permanently delete '{self.asset_name}' from Superhive?",
+        )
+
+    def execute(self, context):
+        from ..api import client as api_client
+
+        scn_sets: "scene.SH_Scene" = context.scene.superhive
+        library_id = scn_sets.publish_library_id
+        if not library_id or not self.server_id:
+            self.report({"ERROR"}, "No Superhive library link found — publish first")
+            return {"CANCELLED"}
+
+        try:
+            client = utils.get_prefs().get_api_client()
+            client.delete_asset(library_id, self.server_id)
+        except (api_client.ApiError, RuntimeError) as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+
+        for index, row in enumerate(scn_sets.publish_results):
+            if row.server_id == self.server_id and row.status == "server_only":
+                scn_sets.publish_results.remove(index)
+                break
+        self.report({"INFO"}, f"Deleted '{self.asset_name}' from Superhive")
+        return {"FINISHED"}
 
 
 def _show_report_deferred():
@@ -475,6 +603,12 @@ class SH_OT_ShowPublishReport(Operator):
                 col.scale_y = 0.8
                 for chunk in _wrap(active.message, 90):
                     col.label(text=chunk)
+            if active.status == "server_only" and active.server_id:
+                row = layout.row()
+                row.alert = True
+                op = row.operator("bkeeper.delete_server_asset", icon="TRASH")
+                op.asset_name = active.name
+                op.server_id = active.server_id
 
     def execute(self, context):
         return {"FINISHED"}
@@ -544,6 +678,8 @@ class SH_OT_SyncCatalogs(Operator):
 classes = (
     SH_OT_BindLibrary,
     SH_OT_PublishLibrary,
+    SH_OT_PublishAsset,
+    SH_OT_DeleteServerAsset,
     SH_UL_PublishResults,
     SH_OT_ShowPublishReport,
     SH_OT_SyncCatalogs,

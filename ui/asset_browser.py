@@ -258,6 +258,13 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
         row.active = asset.metadata.sh_is_dirty()
         row.operator("bkeeper.update_asset", text="Save Changes", icon="FILE_TICK")
 
+        row = layout.row()
+        row.operator(
+            "bkeeper.publish_asset",
+            text="Update on Superhive" if asset.metadata.sh_uuid else "Publish to Superhive",
+            icon="URL",
+        )
+
     def draw_single_local_id(self, context: Context, layout: UILayout):
         col = layout.column(align=True)
         col.scale_y = 0.75
