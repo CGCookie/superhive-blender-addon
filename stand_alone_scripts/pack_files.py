@@ -28,3 +28,7 @@ if __name__ == "__main__":
     bpy.context.view_layer.update()
 
     bpy.ops.file.pack_all()
+
+    # Without an explicit save the pack is discarded when this headless
+    # Blender exits.
+    bpy.ops.wm.save_mainfile(compress=True)

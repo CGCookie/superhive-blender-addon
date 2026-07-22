@@ -52,6 +52,7 @@ class LocalAsset:
     license: str = ""
     copyright: str = ""
     created_blender_version: str = ""
+    data_collection: str = ""  # bpy.data collection name ("objects"), for subprocess scripts
     server_id: str | None = None
     sha256: str | None = None
     size: int = 0

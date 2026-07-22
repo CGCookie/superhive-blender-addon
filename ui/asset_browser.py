@@ -74,7 +74,11 @@ class SH_MT_AssetBrowserHeaderMenu(bpy.types.Menu):
         layout.separator()
 
         layout.operator(
-            "bkeeper.export_library", text="Export to Superhive", icon="EXPORT"
+            "bkeeper.publish_library", text="Publish to Superhive", icon="EXPORT"
+        )
+        layout.operator("bkeeper.sync_catalogs", icon="OUTLINER")
+        layout.operator(
+            "bkeeper.show_publish_report", text="Last Publish Report", icon="INFO"
         )
 
 
@@ -124,6 +128,8 @@ class SH_PT_AssetSettings(asset_utils.AssetMetaDataPanel, Panel):
 
         if scene_sets.side_panel_batch_asset_update_progress_bar.show:
             scene_sets.side_panel_batch_asset_update_progress_bar.draw(layout)
+        elif scene_sets.publish.show:
+            scene_sets.publish.draw(layout)
         elif scene_sets.export_library.show:
             scene_sets.export_library.draw(layout)
         elif scene_sets.remove_assets_progress_bar.show:

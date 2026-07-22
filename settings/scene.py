@@ -1032,6 +1032,105 @@ class MultiProgressBarExportLibrary(PropertyGroup):
         # self.upload_bar.draw(split.column())
 
 
+class SH_PublishAssetResult(PropertyGroup):
+    # name is the asset (or catalog path) the row concerns
+    status: EnumProperty(
+        items=(
+            ("uploaded", "Uploaded", "File uploaded, scan not yet finished"),
+            ("processing", "Processing", "Waiting on the server file scan"),
+            ("published", "Published", "Live on Superhive"),
+            ("pending", "Pending", "Awaiting publish/review on Superhive"),
+            ("metadata", "Updated", "Metadata updated (file unchanged)"),
+            ("unchanged", "Unchanged", "Already up to date on Superhive"),
+            ("rejected", "Rejected", "The server rejected the file"),
+            ("error", "Error", "Not published — see the message"),
+            ("server_only", "Server Only", "On Superhive but not in this library"),
+            ("warning", "Warning", "Published with a caveat — see the message"),
+        ),
+        default="unchanged",
+    )
+    message: StringProperty()
+    server_id: StringProperty()
+
+    ICONS = {
+        "uploaded": "EXPORT",
+        "processing": "SORTTIME",
+        "published": "CHECKMARK",
+        "pending": "PAUSE",
+        "metadata": "CHECKMARK",
+        "unchanged": "BLANK1",
+        "rejected": "CANCEL",
+        "error": "ERROR",
+        "server_only": "URL",
+        "warning": "ERROR",
+    }
+
+    @property
+    def icon(self) -> str:
+        return self.ICONS.get(self.status, "BLANK1")
+
+
+class MultiProgressBarPublish(PropertyGroup):
+    show: BoolProperty()
+    phase_label: StringProperty()
+    assets_bar: PointerProperty(type=ProgressBar)
+    upload_bar: PointerProperty(type=ProgressBar)
+    show_upload: BoolProperty()
+
+    cancel: BoolProperty(
+        name="Cancel",
+        description="Stop publishing after the current step",
+        default=False,
+    )
+
+    def start(self) -> None:
+        self.reset()
+        self.show = True
+        self.assets_bar.update_start_time()
+
+    def end(self) -> None:
+        self.show = False
+        self.reset()
+
+    def reset(self) -> None:
+        self.assets_bar.reset()
+        self.upload_bar.reset()
+        self.phase_label = ""
+        self.show_upload = False
+        self.cancel = False
+
+    def update_formated_time(self) -> None:
+        self.assets_bar.update_formated_time()
+
+    def draw(self, layout: UILayout) -> None:
+        self.assets_bar: ProgressBar
+        self.upload_bar: ProgressBar
+
+        layout.label(text="Publishing to Superhive:")
+        split = layout.split(factor=0.05)
+        split.separator()
+        col = split.column()
+
+        row = col.row()
+        row.alignment = "LEFT"
+        row.label(text=self.phase_label or "Working…")
+
+        self.assets_bar.draw(col, draw_time=True)
+
+        if self.show_upload:
+            self.upload_bar.draw(col.column())
+
+        row = col.row()
+        row.alert = self.cancel
+        row.prop(
+            self,
+            "cancel",
+            text="Cancelling…" if self.cancel else "Cancel",
+            icon="X",
+            toggle=True,
+        )
+
+
 class SH_Scene(PropertyGroup):
     header_progress_bar: PointerProperty(type=ProgressBar)
     remove_assets_progress_bar: PointerProperty(type=ProgressBar)
@@ -1042,6 +1141,10 @@ class SH_Scene(PropertyGroup):
     import_from_directory: PointerProperty(type=ProgressBar)
 
     export_library: PointerProperty(type=MultiProgressBarExportLibrary)
+
+    publish: PointerProperty(type=MultiProgressBarPublish)
+    publish_results: CollectionProperty(type=SH_PublishAssetResult)
+    publish_results_index: IntProperty()
 
     library_mode: EnumProperty(
         items=(
@@ -1086,6 +1189,8 @@ classes = (
     MultiProgressBarUpdate_Assets,
     MovingFilesProgressBar,
     MultiProgressBarExportLibrary,
+    SH_PublishAssetResult,
+    MultiProgressBarPublish,
     SH_Scene,
 )
 
