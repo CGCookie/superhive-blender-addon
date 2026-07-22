@@ -71,6 +71,7 @@ files = "Import/export files for library creation and upload"
 paths_exclude_pattern = [
   "/.git/",
   "/.github/",
+  "/.venv/",
   "/.vscode/",
   "/.ruff_cache/",
   "/__ignore__/",
@@ -81,6 +82,7 @@ paths_exclude_pattern = [
   "**.zip",
   "download_wheels.py",
   "/tests/",
+  "CLAUDE.md",
 ]
 
 # Validate Command

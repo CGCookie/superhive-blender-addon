@@ -132,8 +132,10 @@ def load_tags():
 
 
 def load_categories():
-    # TODO: Get catalogs from Superhive API
-    # ! Catalogs need to be sent with a unique integer id
+    # DEPRECATED: this hardcoded category tree predates the server's curated
+    # ROOTS (see load_roots). Blender's native catalogs (cats.txt) are the
+    # source of truth for publishing; the sh_catalog enum UI still reads these
+    # dicts, so they stay until that enum is retired.
     global CATEGORIES_DICT
     global SUBCATEGORIES_DICT
     global CATALOG_ENUM

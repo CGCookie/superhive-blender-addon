@@ -1038,7 +1038,7 @@ class AssetLibrary:
         json_path = (directory or self.path) / "library.json"
         if json_path.exists():
             orig_data = json.loads(json_path.read_text())
-            orig_data["libaries"] = data or self.to_dict()
+            orig_data["libraries"] = data or self.to_dict()
             data = orig_data
         elif not data:
             data = self.to_dict()
