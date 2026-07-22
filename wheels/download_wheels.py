@@ -7,6 +7,12 @@ module_names = (
     "fuzzywuzzy",
 )
 
+# Downloaded with --platform any so we get the universal py3-none-any wheels
+# (requests pulls urllib3/certifi/idna/charset_normalizer — all pure Python).
+pure_universal_modules = (
+    "requests",
+)
+
 compiled_modules = (
     "levenshtein", # will download rapidfuzz
 )
@@ -61,6 +67,21 @@ if __name__ == "__main__":
             module_name,
             "-w",
             "./wheels",
+        )
+        download_wheels(args)
+
+    print("   Pure Universal Modules...")
+    for module_name in pure_universal_modules:
+        print(f"      Module: '{module_name}'")
+        args = (
+            "pip",
+            "download",
+            module_name,
+            "--dest",
+            "./wheels",
+            "--only-binary=:all:",
+            "--platform=any",
+            f"--python-version={PY_VERSION}",
         )
         download_wheels(args)
 

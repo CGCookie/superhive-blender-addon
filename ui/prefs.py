@@ -96,6 +96,43 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
         default=False,
     )
 
+    server_url: StringProperty(
+        name="Superhive Server",
+        description="Base URL of the Superhive server (change only for development)",
+        default="https://superhivemarket.com",
+    )
+
+    api_token: StringProperty(
+        name="API Token",
+        description=(
+            "shk_ token from Account > API Tokens on Superhive, created with the"
+            " 'Asset publishing (BeeKeeper)' preset. Tokens are shown once —"
+            " stored here in your Blender preferences (userpref.blend, unencrypted)"
+        ),
+        subtype="PASSWORD",
+    )
+
+    api_token_status: StringProperty(
+        name="Token Status",
+        description="Result of the last token verification",
+        default="",
+    )
+
+    def get_api_client(self):
+        """Build a SuperhiveClient from these prefs; raises RuntimeError with a
+        user-actionable message when requests or the token is missing."""
+        from ..api import client as api_client
+
+        api_client.require_requests()
+        token = self.api_token.strip()
+        if not token:
+            raise RuntimeError(
+                "No API token set — create one under Account > API Tokens on"
+                " Superhive (Asset publishing preset) and paste it into the"
+                " Bkeeper add-on preferences."
+            )
+        return api_client.SuperhiveClient(self.server_url, token)
+
     default_author_name: StringProperty(
         name="Author Name",
         description="The name to put by default in the author field",
@@ -233,6 +270,30 @@ class SH_AddonPreferences(AddonPreferences, scene.RenderThumbnailProps):
                 text=" " * 16
                 + "to create a new library. Items will be marked as an asset and added."
             )
+
+        box = layout.box()
+        box.label(text="Superhive Account:", icon="URL")
+        if not bpy.app.online_access:
+            row = box.row()
+            row.alert = True
+            row.label(
+                text="Online access is disabled (Preferences > System > Network)",
+                icon="ERROR",
+            )
+        box.prop(self, "server_url")
+        box.prop(self, "api_token")
+        row = box.row()
+        row.operator("bkeeper.verify_api_token", icon="CHECKMARK")
+        if self.api_token_status:
+            status_row = box.row()
+            ok = self.api_token_status.startswith("OK")
+            status_row.alert = not ok
+            status_row.label(
+                text=self.api_token_status,
+                icon="CHECKMARK" if ok else "ERROR",
+            )
+
+        layout.separator()
 
         layout.label(text="Metadata Defaults:")
         layout.prop(self, "default_author_name")

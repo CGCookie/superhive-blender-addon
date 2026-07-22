@@ -1,6 +1,7 @@
 from . import (
     add_categories_to_library,
     add_to_library,
+    api_ops,
     asset_ops,
     blender_exes_ops,
     create_hive_asset_library,
